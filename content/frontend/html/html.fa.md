@@ -4,42 +4,45 @@ language: fa
 version: 1.0
 ---
 
-# سوالات مصاحبه HTML (فارسی)
+# سوالات مصاحبه HTML
 
 ## دسته‌بندی‌ها
-- Fundamentals
-- Semantic & Accessibility
-- Forms
-- SEO & Meta
-- Browser Behavior
-- Performance
+
+- اصول اولیه
+- معنایی و دسترسی‌پذیری
+- فرم ها
+- سئو و متا
+- رفتار مرورگر
+- عملکرد
 
 ## سطح سوال‌ها
-- Easy
-- Medium
-- Hard
+
+- آسان
+- متوسط
+- سخت
 
 ---
 
-## Question 1
+## سوال 1
 
-**ID**: html-001  
-**Title**: تفاوت `<div>` و `<span>` چیست؟  
-**Difficulty**: Easy  
-**Category**: Fundamentals  
-**Tags**: basics, elements, layout  
+**آیدی**: html-001  
+**عنوان**: تفاوت `<div>` و `<span>` چیست؟  
+**سختی**: آسان  
+**دسته بندی**: اصول اولیه
 
 ### Answer
 
 `<div>` و `<span>` هر دو عناصر عمومی هستند اما در رفتار نمایش تفاوت دارند.
 
 **`<div>`**
+
 - عنصر block-level
 - کل عرض موجود را می‌گیرد
 - از خط جدید شروع می‌شود
 - برای بخش‌های بزرگ‌تر استفاده می‌شود
 
 **`<span>`**
+
 - عنصر inline
 - فقط به اندازه محتوا عرض می‌گیرد
 - از خط جدید شروع نمی‌شود

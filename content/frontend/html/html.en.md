@@ -269,3 +269,225 @@ Standard usage:
 - `initial-scale=1.0`: Sets initial zoom level
 
 It is essential for responsive web design.
+
+## 🧠 Question 11
+
+**ID**: html-011  
+**Title**: What is the difference between `async` and `defer` in `<script>` tags, and how do they affect parsing and rendering?  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+By default, when the browser encounters a `<script>` tag:
+
+1. HTML parsing pauses
+2. The script is downloaded
+3. The script is executed
+4. Parsing resumes
+
+This behavior makes scripts render-blocking.
+
+---
+
+### `async`
+
+```html
+<script src="app.js" async></script>
+```
+
+- Script downloads in parallel with HTML parsing
+- Executes immediately after download
+- Does NOT guarantee execution order
+- May execute before DOM is fully parsed
+
+Best for independent scripts (e.g., analytics, ads).
+
+### `async`
+
+```html
+<script src="app.js" defer></script>
+```
+
+- Script downloads in parallel
+- Executes after HTML parsing completes
+- Execution order is preserved
+- Runs before DOMContentLoaded
+
+Best for application scripts that rely on DOM structure.
+
+## 🧠 Question 12
+
+**ID**: html-012  
+**Title**: What is the difference between `<meta>` tags and HTTP headers, and when should each be used?  
+**Difficulty**: Hard  
+**Category**: SEO & Meta
+
+### Answer 📄
+
+Both `<meta>` tags and HTTP headers provide metadata about a document, but they operate at different levels.
+
+---
+
+### `<meta>` Tags
+
+- Defined inside the `<head>` section of an HTML document
+- Provide metadata interpreted by browsers and search engines
+- Processed after the HTML document begins loading
+
+Common examples:
+
+```html
+<meta charset="UTF-8" />
+<meta name="description" content="HTML interview questions" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+```
+
+Use cases:
+
+- Page description for SEO
+- Character encoding
+- Viewport configuration
+
+---
+
+### HTTP Headers
+
+- Sent by the server before the HTML document
+- Control browser behavior at the protocol level
+- More authoritative than meta tags
+
+Examples:
+
+- `Content-Type`
+- `Cache-Control`
+- `Content-Security-Policy`
+- `Set-Cookie`
+
+Use cases:
+
+- Security policies
+- Caching control
+- Redirection
+- Content negotiation
+
+## 🧠 Question 13
+
+**ID**: html-013  
+**Title**: What is ARIA and when should it be used?  
+**Difficulty**: Hard  
+**Category**: Semantic & Accessibility
+
+### Answer 📄
+
+ARIA stands for **Accessible Rich Internet Applications**.
+
+It is a set of attributes that enhance accessibility in complex web applications.
+
+Example:
+
+```html
+<div role="button" aria-pressed="true"></div>
+```
+
+However, the first rule of ARIA is:
+
+If a native semantic HTML element can solve the problem, use it instead.
+
+Incorrect:
+
+```html
+<div role="button"></div>
+```
+
+Correct:
+
+```html
+<button></button>
+```
+
+ARIA should be used when:
+
+- Building custom UI components
+- Native HTML semantics are insufficient
+- Dynamic state changes must be announced (e.g., `aria-live`)
+
+ARIA complements semantic HTML but does not replace it.
+
+## 🧠 Question 14
+
+**ID**: html-014  
+**Title**: What is the Critical Rendering Path and what role does HTML play in it?  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+The Critical Rendering Path (CRP) is the sequence of steps the browser follows to render a page.
+
+Main stages:
+
+1.  Parse HTML → Build DOM
+2.  Parse CSS → Build CSSOM
+3.  Combine into Render Tree
+4.  Layout
+5.  Paint
+
+HTML directly affects:
+
+- DOM size and depth
+- Resource loading order
+- Blocking scripts
+- Images without defined dimensions
+
+HTML optimization techniques:
+
+- Use `defer` for scripts
+- Minimize DOM depth
+- Specify `width` and `height` for images
+- Preload critical resources
+
+Understanding CRP is essential for performance optimization.
+
+## 🧠 Question 15
+
+**ID**: html-015  
+**Title**: What is the difference between `id` and `data-*` attributes in HTML, and when should each be used?  
+**Difficulty**: Medium  
+**Category**: Fundamentals
+
+### Answer 📄
+
+Both `id` and `data-*` attributes attach information to elements, but they serve different purposes.
+
+---
+
+### `id`
+
+- Must be unique within the document
+- Used for:
+  - Fragment navigation (`#section`)
+  - JavaScript DOM selection
+  - Label associations (`for` attribute)
+- Has semantic meaning in document structure
+
+Example:
+
+```html
+<section id="pricing"></section>
+```
+
+### `data-*` attributes
+
+- Custom attributes for storing extra data
+- Do not affect semantics
+- Accessible via JavaScript (`element.dataset`)
+
+Example:
+
+```html
+<button data-user-id="42"></button>
+```
+
+Use `id` for document identity.  
+Use `data-*` for storing custom metadata.

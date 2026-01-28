@@ -21,8 +21,6 @@ version: 1.0
 - Medium
 - Hard
 
----
-
 ## 🧠 Question 1
 
 **ID**: html-001  

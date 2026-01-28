@@ -491,3 +491,178 @@ Example:
 
 Use `id` for document identity.  
 Use `data-*` for storing custom metadata.
+
+## 🧠 Question 16
+
+**ID**: html-016  
+**Title**: What is the difference between `<section>` and `<div>` from a document outline perspective?  
+**Difficulty**: Medium  
+**Category**: Semantic & Accessibility
+
+### Answer 📄
+
+`<div>` is a generic container with no semantic meaning.
+
+`<section>` represents a thematic grouping of content and contributes to the document outline.
+
+Key differences:
+
+- `<section>` should typically contain a heading
+- It signals structure to assistive technologies and search engines
+- `<div>` is purely structural with no semantic value
+
+Use `<section>` when the content represents a logical section of the document.  
+Use `<div>` only when no semantic element is appropriate.
+
+## 🧠 Question 17
+
+**ID**: html-017  
+**Title**: What is the purpose of the `<template>` element and how does it differ from regular HTML content?  
+**Difficulty**: Hard  
+**Category**: Browser Behavior
+
+### Answer 📄
+
+The `<template>` element holds HTML content that is not rendered immediately.
+
+Key characteristics:
+
+- Its content is parsed but not rendered
+- Not part of the active DOM
+- Can be cloned and inserted via JavaScript
+
+Example:
+
+```html
+<template id="card-template">
+  <div class="card"><h3></h3></div>
+</template>
+```
+
+Use cases:
+
+- Client-side rendering
+- Reusable UI fragments
+- Performance optimization
+
+Unlike hidden elements, `<template>` content does not affect layout or accessibility until explicitly added to the DOM.
+
+## 🧠 Question 18
+
+**ID**: html-018  
+**Title**: What is the difference between `<iframe>` and embedding content using `<object>` or `<embed>`?  
+**Difficulty**: Hard  
+**Category**: Browser Behavior
+
+### Answer 📄
+
+All three elements embed external content, but they differ in capabilities and historical usage.
+
+---
+
+### `<iframe>`
+
+- Embeds another HTML document
+- Creates a nested browsing context
+- Commonly used for videos, maps, widgets
+- Supports sandboxing for security
+
+---
+
+### `<object>`
+
+- Can embed various types of resources
+- Historically used for plugins (e.g., Flash)
+- Supports fallback content
+
+---
+
+### `<embed>`
+
+- Similar to `<object>`
+- Self-closing
+- Historically used for multimedia plugins
+
+Modern best practice:
+
+- Use `<iframe>` for embedding web pages
+- Avoid plugin-based embedding
+- Use sandbox and proper attributes for security
+
+## 🧠 Question 19
+
+**ID**: html-019  
+**Title**: What is the difference between `<link>` and `<a>` in HTML?  
+**Difficulty**: Medium  
+**Category**: Fundamentals
+
+### Answer 📄
+
+Both create relationships, but they serve different purposes.
+
+---
+
+### `<a>` (Anchor)
+
+- Creates hyperlinks within page content
+- Visible and interactive
+- Used for navigation
+
+Example:
+
+```html
+<a href="/about">About</a>
+```
+
+### `<link>`
+
+- Defines relationships between the document and external resources
+- Placed inside `<head>`
+- Not visible to users
+
+Common uses:
+
+- Stylesheets
+- Preload / Prefetch
+- Icons
+
+Example:
+
+```html
+<link rel="stylesheet" href="styles.css" />
+```
+
+`<a>` is for user navigation.  
+`<link>` is for document-level resource relationships.
+
+## 🧠 Question 20
+
+**ID**: html-020  
+**Title**: What are Web Components in HTML and what core technologies enable them?  
+**Difficulty**: Hard  
+**Category**: Browser Behavior
+
+### Answer 📄
+
+Web Components allow creation of reusable, encapsulated custom elements.
+
+They are built on four core technologies:
+
+1.  **Custom Elements** – Define new HTML tags
+2.  **Shadow DOM** – Encapsulated DOM subtree
+3.  **HTML Templates** – Reusable markup
+4.  **ES Modules** – Modular JavaScript
+
+Example concept:
+
+```html
+<user-card></user-card>
+```
+
+Benefits:
+
+- Encapsulation
+- Reusability
+- Framework-independent components
+
+Web Components enable native component architecture without relying on external frameworks.

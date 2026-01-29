@@ -186,3 +186,108 @@ Used for:
 
 **Flexbox is content-first.**  
 **Grid is layout-first.**
+
+## 🧠 Question 6
+
+**ID**: css-006  
+**Title**: What is the CSS cascade and how does the browser decide which rule to apply?  
+**Difficulty**: Medium  
+**Category**: Fundamentals
+
+### Answer 📄
+
+The CSS cascade is the algorithm used to determine which style rule applies when multiple rules target the same element.
+
+The browser resolves conflicts in this order:
+
+1. **Origin** (user agent, user styles, author styles)
+2. **Importance** (`!important`)
+3. **Specificity**
+4. **Source order** (last declared wins)
+
+Understanding the cascade is essential for debugging unexpected styling behavior.
+
+## 🧠 Question 7
+
+**ID**: css-007  
+**Title**: What is a stacking context and how is it created?  
+**Difficulty**: Hard  
+**Category**: Layout
+
+### Answer 📄
+
+A stacking context controls how elements are layered along the z-axis.
+
+A new stacking context is created when:
+
+- An element has `position` other than static AND `z-index` is set
+- `opacity` is less than 1
+- `transform` is applied
+- `filter`, `perspective`, `will-change`, etc. are used
+
+Elements inside a stacking context are layered independently of elements outside it.
+
+Understanding stacking context is crucial for solving z-index issues.
+
+## 🧠 Question 8
+
+**ID**: css-008  
+**Title**: What is the difference between `overflow: hidden`, `auto`, and `scroll`?  
+**Difficulty**: Medium  
+**Category**: Layout
+
+### Answer 📄
+
+The `overflow` property controls what happens when content exceeds its container.
+
+- `hidden` → Content is clipped, no scrollbars
+- `auto` → Scrollbars appear only if needed
+- `scroll` → Scrollbars always visible
+
+Overflow can also create a new block formatting context (BFC), affecting layout behavior.
+
+## 🧠 Question 9
+
+**ID**: css-009  
+**Title**: What is a Block Formatting Context (BFC) and why is it useful?  
+**Difficulty**: Hard  
+**Category**: Layout
+
+### Answer 📄
+
+A Block Formatting Context (BFC) is a layout mechanism that controls how block elements interact.
+
+A BFC is created when:
+
+- `overflow` is not visible
+- `display: flow-root`
+- `float` is used
+- `position: absolute` or `fixed`
+
+Benefits:
+
+- Prevents margin collapsing
+- Contains floating elements
+- Creates isolated layout environments
+
+BFC is often used to fix layout bugs involving floats or collapsing margins.
+
+## 🧠 Question 10
+
+**ID**: css-010  
+**Title**: What is margin collapsing and when does it occur?  
+**Difficulty**: Medium  
+**Category**: Layout
+
+### Answer 📄
+
+Margin collapsing occurs when vertical margins of adjacent block elements combine into a single margin.
+
+It happens when:
+
+- Two sibling block elements have vertical margins
+- A parent and its first/last child both have vertical margins
+
+The resulting margin equals the larger of the two, not their sum.
+
+Margin collapsing does NOT occur in flex or grid containers.

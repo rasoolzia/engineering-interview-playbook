@@ -291,3 +291,143 @@ It happens when:
 The resulting margin equals the larger of the two, not their sum.
 
 Margin collapsing does NOT occur in flex or grid containers.
+
+## 🧠 Question 11
+
+**ID**: css-011  
+**Title**: What is the difference between `em`, `rem`, `%`, `vh`, and `vw` units?  
+**Difficulty**: Medium  
+**Category**: Fundamentals
+
+### Answer 📄
+
+CSS provides multiple relative units.
+
+- `em` → Relative to the font-size of the parent
+- `rem` → Relative to the root (`html`) font-size
+- `%` → Relative to the parent element
+- `vh` → 1% of viewport height
+- `vw` → 1% of viewport width
+
+Use `rem` for consistent scaling across components.  
+Use viewport units for responsive layouts.
+
+---
+
+## 🧠 Question 12
+
+**ID**: css-012  
+**Title**: What is the difference between `min-width`, `max-width`, and `width`?  
+**Difficulty**: Medium  
+**Category**: Layout
+
+### Answer 📄
+
+- `width` sets the base width of an element
+- `min-width` defines the minimum allowed width
+- `max-width` defines the maximum allowed width
+
+If constraints conflict:
+
+- `min-width` overrides `max-width`
+- `min-width` can override `width`
+
+These properties are essential for responsive design.
+
+---
+
+## 🧠 Question 13
+
+**ID**: css-013  
+**Title**: What is the difference between `reflow` (layout) and `repaint` in CSS rendering?  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+When styles change, the browser may trigger:
+
+### Reflow (Layout)
+
+- Recalculates element positions and dimensions
+- More expensive
+- Triggered by changes to layout-affecting properties (width, height, position)
+
+---
+
+### Repaint
+
+- Updates visual appearance without changing layout
+- Less expensive
+- Triggered by changes like color or background
+
+Frequent reflows can significantly hurt performance.
+
+Optimizing CSS includes minimizing layout-triggering changes.
+
+## 🧠 Question 14
+
+**ID**: css-014  
+**Title**: What are CSS Custom Properties (CSS Variables) and what are their advantages?  
+**Difficulty**: Medium  
+**Category**: Fundamentals
+
+### Answer 📄
+
+CSS Custom Properties allow you to store and reuse values throughout your stylesheet.
+
+Syntax:
+
+```css
+:root {
+  --primary-color: #3498db;
+  --spacing: 16px;
+}
+
+.button {
+  background: var(--primary-color);
+  padding: var(--spacing);
+}
+```
+
+Advantages:
+
+- Can be changed dynamically with JavaScript
+- Inherit through the cascade
+- Scoped to elements (unlike preprocessor variables)
+- Enable theming and dynamic styling
+
+Unlike Sass/Less variables, CSS variables are evaluated at runtime.
+
+## 🧠 Question 15
+
+**ID**: css-015  
+**Title**: What are CSS logical properties and why are they important?  
+**Difficulty**: Medium  
+**Category**: Responsive Design
+
+### Answer 📄
+
+Logical properties allow layout control based on writing direction rather than physical direction.
+
+Instead of:
+
+```css
+margin-left
+padding-right
+```
+
+Use:
+
+```css
+margin-inline-start
+padding-inline-end
+```
+
+Benefits:
+
+- Better internationalization (RTL/LTR support)
+- More adaptable layouts
+- Cleaner responsive design
+
+Logical properties make layouts direction-aware.

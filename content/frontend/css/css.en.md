@@ -431,3 +431,131 @@ Benefits:
 - Cleaner responsive design
 
 Logical properties make layouts direction-aware.
+
+## 🧠 Question 16
+
+**ID**: css-016  
+**Title**: What are CSS cascade layers (`@layer`) and why were they introduced?  
+**Difficulty**: Hard  
+**Category**: Architecture
+
+### Answer 📄
+
+Cascade layers allow developers to control the cascade order explicitly.
+
+Example:
+
+```css
+@layer base, components, utilities;
+```
+
+Styles inside layers follow the declared layer order, regardless of specificity.
+
+Benefits:
+
+- Prevents specificity wars
+- Better control over large codebases
+- Improves CSS architecture
+
+Cascade layers provide structured style prioritization.
+
+## 🧠 Question 17
+
+**ID**: css-017  
+**Title**: What are container queries and how do they differ from media queries?  
+**Difficulty**: Hard  
+**Category**: Responsive Design
+
+### Answer 📄
+
+Media queries respond to the viewport size.
+
+Container queries respond to the size of a parent container.
+
+Example:
+
+```css
+@container (min-width: 400px) {
+  .card {
+    flex-direction: row;
+  }
+}
+```
+
+Container queries enable truly component-based responsive design.
+
+They allow components to adapt based on available space rather than screen size.
+
+## 🧠 Question 18
+
+**ID**: css-018  
+**Title**: What is the difference between `:nth-child()` and `:nth-of-type()`?  
+**Difficulty**: Medium  
+**Category**: Selectors & Specificity
+
+### Answer 📄
+
+`:nth-child(n)` selects an element based on its position among all siblings.
+
+`:nth-of-type(n)` selects an element based on its position among siblings of the same type.
+
+Example:
+
+```css
+p:nth-child(2)
+p:nth-of-type(2)
+```
+
+If the second child is not a `<p>`, `nth-child` will not match it, but `nth-of-type` may.
+
+## 🧠 Question 19
+
+**ID**: css-019  
+**Title**: How does `will-change` affect performance and when should it be used?  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+The `will-change` property informs the browser about upcoming changes.
+
+Example:
+
+```css
+will-change: transform;
+```
+
+It allows the browser to optimize rendering (often promoting to GPU layer).
+
+However:
+
+- It consumes memory
+- Overuse can degrade performance
+
+Use it sparingly and remove it after the animation completes.
+
+## 🧠 Question 20
+
+**ID**: css-020  
+**Title**: What is the difference between BEM and utility-first CSS architecture?  
+**Difficulty**: Medium  
+**Category**: Architecture
+
+### Answer 📄
+
+BEM (Block Element Modifier):
+
+- Structured naming convention
+- Component-focused
+- Predictable and readable class names
+
+Utility-first (e.g., Tailwind approach):
+
+- Small, single-purpose classes
+- Styles applied directly in markup
+- Less custom CSS written
+
+BEM emphasizes semantic structure.  
+Utility-first emphasizes rapid development and consistency.
+
+Both aim to solve scalability and maintainability issues in large projects.

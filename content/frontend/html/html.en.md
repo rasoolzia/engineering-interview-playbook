@@ -1,7 +1,7 @@
 ---
 topic: html
 language: en
-version: 1.0
+version: 1.1
 ---
 
 # HTML Interview Questions
@@ -271,46 +271,40 @@ It is essential for responsive web design.
 ## 🧠 Question 11
 
 **ID**: html-011  
-**Title**: What is the difference between `async` and `defer` in `<script>` tags, and how do they affect parsing and rendering?  
+**Title**: What is the difference between `async` and `defer` attributes on `<script>` tags? Explain their impact on the Critical Rendering Path.  
 **Difficulty**: Hard  
 **Category**: Performance
 
 ### Answer 📄
 
-By default, when the browser encounters a `<script>` tag:
+Both `async` and `defer` allow non-blocking script loading, but they differ in execution timing:
 
-1. HTML parsing pauses
-2. The script is downloaded
-3. The script is executed
-4. Parsing resumes
+- **async**:
+  - Downloads in parallel
+  - Executes as soon as download finishes (may interrupt HTML parsing)
+  - No guarantee of order between multiple async scripts
+  - Good for independent scripts (analytics, ads)
 
-This behavior makes scripts render-blocking.
+- **defer**:
+  - Downloads in parallel
+  - Executes only after HTML parsing is complete (just before DOMContentLoaded)
+  - Preserves script order
+  - Ideal for scripts that depend on DOM (most app scripts)
 
----
+**Impact on Critical Rendering Path (CRP)**:
 
-### `async`
+- Without attributes → render-blocking (parsing pauses)
+- async → may still block render if executes early
+- defer → truly non-blocking for rendering
 
-```html
-<script src="app.js" async></script>
-```
+Best practice: Use `defer` for most cases unless you need immediate execution.
 
-- Script downloads in parallel with HTML parsing
-- Executes immediately after download
-- Does NOT guarantee execution order
-- May execute before DOM is fully parsed
-
-Best for independent scripts (e.g., analytics, ads).
-
-### `async`
+Example:
 
 ```html
+<script src="analytics.js" async></script>
 <script src="app.js" defer></script>
 ```
-
-- Script downloads in parallel
-- Executes after HTML parsing completes
-- Execution order is preserved
-- Runs before DOMContentLoaded
 
 Best for application scripts that rely on DOM structure.
 
@@ -372,45 +366,41 @@ Use cases:
 ## 🧠 Question 13
 
 **ID**: html-013  
-**Title**: What is ARIA and when should it be used?  
+**Title**: What are some common ARIA mistakes developers make, and how should you prioritize native HTML over ARIA?  
 **Difficulty**: Hard  
 **Category**: Semantic & Accessibility
 
 ### Answer 📄
 
-ARIA stands for **Accessible Rich Internet Applications**.
+Common mistakes:
 
-It is a set of attributes that enhance accessibility in complex web applications.
+1.  Using ARIA when native HTML exists (e.g., `role="button"` on `<div>` instead of `<button>`)
+2.  Adding redundant ARIA (e.g., `aria-label` on image with good `alt`)
+3.  Forgetting `aria-hidden` on decorative content
+4.  Incorrect live regions (`aria-live="polite"` vs `assertive`)
+5.  Missing keyboard focus management for custom components
 
-Example:
+**Golden rule (ARIA Authoring Practices)**:  
+**"No ARIA is better than bad ARIA"**  
+**"If you can use a native semantic element, do it"**
 
-```html
-<div role="button" aria-pressed="true"></div>
-```
+Priority order:
 
-However, the first rule of ARIA is:
+1.  Native HTML (button, input, nav, etc.)
+2.  ARIA roles/states only when needed
+3.  JavaScript for dynamic behavior
 
-If a native semantic HTML element can solve the problem, use it instead.
-
-Incorrect:
-
-```html
-<div role="button"></div>
-```
-
-Correct:
+Example bad → good:
 
 ```html
-<button></button>
+<!-- Bad -->
+<div role="button" onclick="...">Click</div>
+
+<!-- Good -->
+<button onclick="...">Click</button>
 ```
 
-ARIA should be used when:
-
-- Building custom UI components
-- Native HTML semantics are insufficient
-- Dynamic state changes must be announced (e.g., `aria-live`)
-
-ARIA complements semantic HTML but does not replace it.
+Use tools like Lighthouse / axe to catch mistakes.
 
 ## 🧠 Question 14
 
@@ -514,78 +504,97 @@ Use `<div>` only when no semantic element is appropriate.
 
 ## 🧠 Question 17
 
-**ID**: html-017  
-**Title**: What is the purpose of the `<template>` element and how does it differ from regular HTML content?  
+**ID**: html-017
+**Title**: How do HTML templates (`<template>`) and Shadow DOM work together in Web Components, and what problems do they solve?  
 **Difficulty**: Hard  
-**Category**: Browser Behavior
+**Category**: Browser Behavior & Modern HTML
 
 ### Answer 📄
 
-The `<template>` element holds HTML content that is not rendered immediately.
+`<template>` + Shadow DOM are core to Web Components:
 
-Key characteristics:
+- `<template>`: Parsed but inert HTML fragment (not rendered, no side effects until cloned)
+- Shadow DOM: Encapsulated subtree attached to a custom element (styles/DOM isolated)
 
-- Its content is parsed but not rendered
-- Not part of the active DOM
-- Can be cloned and inserted via JavaScript
+Together they solve:
 
-Example:
+- Style leakage (component CSS doesn't affect page)
+- DOM encapsulation (no accidental querySelector conflicts)
+- Reusability without framework (no React/Vue needed)
+
+Basic example:
 
 ```html
-<template id="card-template">
-  <div class="card"><h3></h3></div>
+<template id="my-card">
+  <style>
+    .card {
+      border: 1px solid;
+      padding: 1em;
+    }
+  </style>
+  <div class="card"><slot name="title"></slot></div>
 </template>
+
+<script>
+  class MyCard extends HTMLElement {
+    constructor() {
+      super();
+      const shadow = this.attachShadow({ mode: 'open' });
+      const template = document
+        .getElementById('my-card')
+        .content.cloneNode(true);
+      shadow.appendChild(template);
+    }
+  }
+  customElements.define('my-card', MyCard);
+</script>
+
+<my-card><span slot="title">Hello</span></my-card>
 ```
 
-Use cases:
-
-- Client-side rendering
-- Reusable UI fragments
-- Performance optimization
-
-Unlike hidden elements, `<template>` content does not affect layout or accessibility until explicitly added to the DOM.
+Benefits: Framework-agnostic, performant, future-proof components.
 
 ## 🧠 Question 18
 
 **ID**: html-018  
-**Title**: What is the difference between `<iframe>` and embedding content using `<object>` or `<embed>`?  
+**Title**: How does the sandbox attribute work on `<iframe>` and why is it important for security?  
 **Difficulty**: Hard  
-**Category**: Browser Behavior
+**Category**: Browser Behavior & Security
 
 ### Answer 📄
 
-All three elements embed external content, but they differ in capabilities and historical usage.
+The sandbox attribute restricts what an embedded iframe can do, adding a security layer against malicious content.
 
----
+Common values (space-separated):
 
-### `<iframe>`
+- (empty) → full restrictions (very safe)
+- `allow-scripts` → allows JS execution
+- `allow-same`-origin → treats iframe as same-origin (dangerous!)
+- `allow-popups` → allows new windows
+- `allow-forms` → allows form submission
 
-- Embeds another HTML document
-- Creates a nested browsing context
-- Commonly used for videos, maps, widgets
-- Supports sandboxing for security
+Default (sandbox=""): Disables:
 
----
+- Navigation
+- Scripts
+- Forms
+- Plugins
+- Same-origin policy bypass
 
-### `<object>`
+Use case: Embedding third-party content (ads, user-generated HTML, previews).
 
-- Can embed various types of resources
-- Historically used for plugins (e.g., Flash)
-- Supports fallback content
+Example (safe embed):
 
----
+HTML
 
-### `<embed>`
+```html
+<iframe
+  src="https://example.com/widget"
+  sandbox="allow-scripts allow-same-origin"
+></iframe>
+```
 
-- Similar to `<object>`
-- Self-closing
-- Historically used for multimedia plugins
-
-Modern best practice:
-
-- Use `<iframe>` for embedding web pages
-- Avoid plugin-based embedding
-- Use sandbox and proper attributes for security
+Without sandbox → potential XSS or clickjacking risk.
 
 ## 🧠 Question 19
 

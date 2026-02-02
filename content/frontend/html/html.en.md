@@ -673,3 +673,235 @@ Benefits:
 - Framework-independent components
 
 Web Components enable native component architecture without relying on external frameworks.
+
+## 🧠 Question 21
+
+**ID**: html-021  
+**Title**: Explain how `<picture>` + `srcset` + `sizes` work together for responsive images, and why they are better than CSS media queries for images.  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+This trio enables art-direction and resolution switching without JavaScript:
+
+- `<picture>`: Container with multiple `<source>` options
+- `srcset`: List of image candidates (with descriptors like 1x, 2x, or widths)
+- `sizes`: Tells browser expected rendered width at different media conditions
+
+Browser picks best source based on:
+
+- Device pixel ratio (DPR)
+- Viewport width
+- Supported format (e.g., WebP)
+
+Why better than CSS media queries?
+
+- Browser decides before download (saves bandwidth)
+- No extra HTTP requests for detection
+- Supports art direction (different crops per breakpoint)
+
+Example:
+
+```html
+<picture>
+  <source media="(min-width: 800px)" srcset="large.jpg 1x, large-2x.jpg 2x" />
+  <source media="(min-width: 400px)" srcset="medium.jpg" />
+  <img
+    src="small.jpg"
+    srcset="small.jpg 400w, medium.jpg 800w"
+    sizes="(max-width: 400px) 100vw, 800px"
+    alt="..."
+  />
+</picture>
+```
+
+Saves data, improves Core Web Vitals (LCP).
+
+## 🧠 Question 22
+
+**ID**: html-022  
+**Title**: How does HTML5 form validation work, and how can you implement custom validation using the Constraint Validation API?  
+**Difficulty**: Hard  
+**Category**: Forms
+
+### Answer 📄
+
+HTML5 provides built-in form validation via attributes like `required`, `pattern`, `min/max`, and type-specific checks (e.g., email, url).
+
+Process:
+
+- Browser checks on submit or focusout (with `novalidate` to disable)
+- Invalid fields show browser-native error bubbles
+- Custom errors via JS API
+
+**Constraint Validation API**:
+
+- Access via `element.validity` (object with states like `valueMissing`, `patternMismatch`)
+- Set custom errors: `element.setCustomValidity('Error message')` (empty string to clear)
+- Trigger: `element.reportValidity()` or `form.checkValidity()`
+
+Why hard? Handling i18n, async validation (e.g., unique username check), and polyfills for old browsers.
+
+Example (custom email domain check):
+
+```html
+<form>
+  <input id="email" type="email" required pattern="[^@]+@example\.com" />
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+  const email = document.getElementById('email');
+  email.addEventListener('input', () => {
+    if (email.value.endsWith('@gmail.com')) {
+      email.setCustomValidity('Only @example.com allowed');
+    } else {
+      email.setCustomValidity('');
+    }
+  });
+</script>
+```
+
+This API integrates with ARIA for accessibility (e.g., auto aria-invalid).
+
+## 🧠 Question 23
+
+**ID**: html-023  
+**Title**: How can you implement structured data in HTML using schema.org, and what benefits does it provide for SEO?  
+**Difficulty**: Hard  
+**Category**: SEO & Meta
+
+### Answer 📄
+
+Structured data uses JSON-LD, Microdata, or RDFa to mark up content with schema.org vocabulary, helping search engines understand entities (e.g., Product, Event, Recipe).
+
+Preferred format: JSON-LD in `<script type="application/ld+json">` (easiest, no markup pollution).
+
+Benefits:
+
+- Rich snippets (stars, prices in SERPs)
+- Better crawlability (Google, Bing use it for features like Knowledge Graph)
+- Voice search/featured snippets
+- Potential ranking boost (indirect via better understanding)
+
+Challenges: Validation with Google's Structured Data Testing Tool, avoiding spam (must match visible content).
+
+Example (Product schema):
+
+```html
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Wireless Headphones",
+    "image": "headphones.jpg",
+    "description": "Noise-cancelling over-ear headphones",
+    "offers": {
+      "@type": "Offer",
+      "price": "199.99",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.5",
+      "reviewCount": "89"
+    }
+  }
+</script>
+```
+
+Implement for key pages; test with rich results tool.
+
+## 🧠 Question 24
+
+**ID**: html-024  
+**Title**: What is the `contenteditable` attribute, what are its common pitfalls, and how can you make it accessible?  
+**Difficulty**: Hard  
+**Category**: Browser Behavior
+
+### Answer 📄
+
+contenteditable="true" makes an element editable by users (like a rich text editor).
+
+Behavior:
+
+- Applies to any element
+- Inherited by children unless overridden
+- Browser handles basic editing (bold via Ctrl+B, but inconsistent)
+
+Pitfalls:
+
+- Security: Sanitize input to prevent XSS (e.g., injected `<script>`)
+- Inconsistent across browsers (e.g., IE/Edge vs Chrome on paste)
+- No native undo stack control
+- Performance with large content
+- Accessibility issues (no default ARIA roles)
+
+To make accessible:
+
+- Add ARIA: role="textbox" or "region", aria-label, aria-multiline="true"
+- Handle keyboard: focus, arrow navigation
+- Use execCommand or modern Clipboard API for features
+
+Example (simple editor):
+
+```html
+<div
+  contenteditable="true"
+  role="textbox"
+  aria-multiline="true"
+  aria-label="Editable area"
+>
+  Edit me!
+</div>
+
+<script>
+  const editor = document.querySelector('[contenteditable]');
+  editor.addEventListener('input', (e) => {
+    // Sanitize: e.target.innerHTML = sanitize(e.target.innerHTML);
+  });
+</script>
+```
+
+For production, use libraries like Quill/ProseMirror.
+
+## 🧠 Question 25
+
+**ID**: html-025  
+**Title**: Explain resource hints in HTML (`preload`, `prefetch`, `preconnect`, `dns-prefetch`) and when to use each for performance optimization.  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+Resource hints (`<link rel="...">`) tell browsers to proactively fetch/resolve resources, reducing latency.
+
+- **preload**: Fetch critical resources early (e.g., fonts, scripts needed soon). Mandatory as="type" for priority.
+- **prefetch**: Fetch resources for next navigation (e.g., next page assets) – low priority, speculative.
+- **preconnect**: Establish TCP connection + TLS/SSL handshake early (for third-party domains).
+- **dns-prefetch**: Resolve DNS only (cheaper than preconnect, for many domains).
+
+Order of cost: dns-prefetch (cheapest) < preconnect < prefetch < preload (highest priority).
+
+Benefits: Faster TTFB, better FCP/LCP in Core Web Vitals.
+
+Pitfalls: Overuse wastes bandwidth; test with Lighthouse.
+
+Example:
+
+```html
+<!-- Preload critical font -->
+<link rel="preload" href="font.woff2" as="font" type="font/woff2" crossorigin />
+
+<!-- Preconnect to CDN -->
+<link rel="preconnect" href="https://cdn.example.com" crossorigin />
+
+<!-- DNS prefetch for analytics -->
+<link rel="dns-prefetch" href="https://analytics.com" />
+
+<!-- Prefetch next page -->
+<link rel="prefetch" href="/next-page.html" />
+```
+
+Use preload for above-the-fold; prefetch for navigation flows.

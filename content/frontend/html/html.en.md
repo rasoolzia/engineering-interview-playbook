@@ -1,7 +1,7 @@
 ---
 topic: html
 language: en
-version: 1.1
+version: 1.2
 ---
 
 # HTML Interview Questions

@@ -1,7 +1,7 @@
 ---
 topic: css
 language: en
-version: 1.0
+version: 1.1
 ---
 
 # CSS Interview Questions
@@ -290,7 +290,7 @@ It happens when:
 
 The resulting margin equals the larger of the two, not their sum.
 
-Margin collapsing does NOT occur in flex or grid containers.
+Margin collapsing between adjacent siblings does not occur inside flex or grid containers (they establish new formatting contexts).
 
 ## 🧠 Question 11
 
@@ -334,8 +334,6 @@ If constraints conflict:
 
 These properties are essential for responsive design.
 
----
-
 ## 🧠 Question 13
 
 **ID**: css-013  
@@ -353,17 +351,15 @@ When styles change, the browser may trigger:
 - More expensive
 - Triggered by changes to layout-affecting properties (width, height, position)
 
----
-
 ### Repaint
 
 - Updates visual appearance without changing layout
 - Less expensive
 - Triggered by changes like color or background
 
-Frequent reflows can significantly hurt performance.
-
-Optimizing CSS includes minimizing layout-triggering changes.
+Frequent reflows can significantly hurt performance.  
+Optimizing CSS includes minimizing layout-triggering changes.  
+Modern browsers optimize repaints heavily, but reflows often trigger layout thrashing if overdone in loops.
 
 ## 🧠 Question 14
 
@@ -482,8 +478,9 @@ Example:
 }
 ```
 
-Container queries enable truly component-based responsive design.
+> **_NOTE:_** The parent must have container-type: inline-size (or size) to enable container queries.
 
+Container queries enable truly component-based responsive design.  
 They allow components to adapt based on available space rather than screen size.
 
 ## 🧠 Question 18
@@ -532,7 +529,8 @@ However:
 - It consumes memory
 - Overuse can degrade performance
 
-Use it sparingly and remove it after the animation completes.
+Use it sparingly and remove it after the animation completes.  
+Avoid applying it globally or to many elements; it can increase memory usage and hurt mobile performance.
 
 ## 🧠 Question 20
 

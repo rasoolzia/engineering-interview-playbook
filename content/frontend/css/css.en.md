@@ -557,3 +557,182 @@ BEM emphasizes semantic structure.
 Utility-first emphasizes rapid development and consistency.
 
 Both aim to solve scalability and maintainability issues in large projects.
+
+## 🧠 Question 21
+
+**ID**: css-021  
+**Title**: What is CSS subgrid, how does it differ from nested grids, and when should you use it?  
+**Difficulty**: Hard  
+**Category**: Layout
+
+### Answer 📄
+
+Subgrid allows a grid item to inherit and participate in its parent's grid tracks (rows/columns).
+
+Without subgrid:
+
+- Nested grid creates an independent grid with its own tracks
+
+With subgrid:
+
+```css
+.grid-item {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1; /* span full parent tracks */
+}
+```
+
+Differences:
+
+- Subgrid uses parent's column/row sizes → consistent alignment
+- No extra wrapper tracks
+
+Use cases:
+
+- Card layouts where inner content must align perfectly with outer grid
+- Forms or tables inside grid items
+
+Browser support: Good in modern browsers (2024+ full).
+
+## 🧠 Question 22
+
+**ID**: css-022  
+**Title**: Explain scroll-snap properties and how to create a full-page carousel with pure CSS.  
+**Difficulty**: Hard  
+**Category**: Layout & UX
+
+### Answer 📄
+
+Scroll snap forces the viewport to "snap" to specific positions after scrolling.
+
+Key properties:
+
+- scroll-snap-type: x mandatory (or y, both, inline, block)
+- scroll-snap-align: start / center / end
+- scroll-snap-stop: always (forces stop at each snap point)
+
+Full-page carousel example:
+
+```css
+.carousel {
+  scroll-snap-type: x mandatory;
+  overflow-x: auto;
+  display: flex;
+  scroll-behavior: smooth;
+}
+
+.slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  height: 100vh;
+}
+```
+
+Benefits: Smooth, native-feeling carousels without JavaScript. Pitfalls: User can still scroll freely unless combined with overscroll-behavior.
+
+## 🧠 Question 23
+
+**ID**: css-023  
+**Title**: What is the aspect-ratio property, and how does it help prevent Cumulative Layout Shift (CLS)?  
+**Difficulty**: Hard  
+**Category**: Performance & Responsive Design
+
+### Answer 📄
+
+aspect-ratio enforces a fixed width-to-height ratio on elements (especially images/videos).
+
+```css
+img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+```
+
+Benefits for CLS:
+
+- Reserves space before image loads (no jump when content appears)
+- Works with width: 100% or max-width
+- Better than old padding-bottom hack
+
+Modern best practice:
+
+- Always pair with width/height attributes in HTML for fallback
+- Use on placeholders or lazy-loaded media
+
+Improves Core Web Vitals significantly.
+
+## 🧠 Question 24
+
+**ID**: css-024  
+**Title**: How do :has() pseudo-class and relational selectors change CSS architecture and component styling?  
+**Difficulty**: Hard  
+**Category**: Selectors & Specificity
+
+### Answer 📄
+
+:has() allows parent-based styling (previously impossible in pure CSS).
+
+Examples:
+
+```css
+/* Style card only if it has a button */
+.card:has(.btn) {
+  border: 2px solid green;
+}
+
+/* Style parent when child is hovered */
+.card:has(:hover) {
+  transform: scale(1.02);
+}
+
+/* Dark mode for section with dark theme */
+section:has(.dark-theme) {
+  background: #111;
+}
+```
+
+Impact:
+
+- Enables component-driven styling without extra classes
+- Reduces reliance on BEM modifiers or utility classes
+- Improves maintainability in large apps
+
+Browser support: Excellent in 2025+ (Chrome 105+, Safari 15.4+, Firefox 121+)
+
+## 🧠 Question 25
+
+**ID**: css-025  
+**Title**: What is accent-color and how does it interact with form controls in modern browsers?  
+**Difficulty**: Hard  
+**Category**: Fundamentals & Accessibility
+
+### Answer 📄
+
+accent-color customizes the color of form controls' accents (checkboxes, radio buttons, range sliders, progress bars).
+
+```css
+:root {
+  --accent: #6200ea;
+}
+
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--accent);
+}
+```
+
+Behavior:
+
+- Applies to native UI parts (thumb, checkmark, track)
+- Respects system preferences (light/dark mode)
+- Fallback: browsers use default accent if not set
+
+Accessibility note:
+
+- Ensure sufficient contrast (WCAG AA)
+- Test in multiple browsers (Safari partial support pre-2024)
+
+Use for consistent branding without overriding entire control styles.

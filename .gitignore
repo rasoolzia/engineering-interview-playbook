@@ -9,6 +9,7 @@ dist
 dist-ssr
 scripts
 *.local
+pnpm-lock.yaml
 
 package.json
 package-lock.json

@@ -736,3 +736,117 @@ Accessibility note:
 - Test in multiple browsers (Safari partial support pre-2024)
 
 Use for consistent branding without overriding entire control styles.
+
+## 🧠 Question 26
+
+**ID**: css-026  
+**Title**: What is the difference between `vh`, `dvh`, `svh`, and `lvh` viewport units, and why were the new ones introduced?  
+**Difficulty**: Hard  
+**Category**: Responsive Design
+
+### Answer 📄
+
+Traditional `vh` (viewport height) is based on the large viewport size (lvh), which can cause layout jumps on mobile when the address bar hides/shows.
+
+New units (CSS Values 4):
+
+- `svh` (small viewport height): 1% of the smallest viewport height (when UI bars are fully visible)
+- `lvh` (large viewport height): 1% of the largest viewport height (when UI bars are hidden/fullscreen)
+- `dvh` (dynamic viewport height): dynamically updates between svh and lvh as UI elements change (recommended for most cases)
+
+`vh` is now equivalent to `lvh` in modern browsers.
+
+Use `dvh` for stable full-height layouts on mobile (e.g., hero sections) to avoid CLS.
+
+## 🧠 Question 27
+
+**ID**: css-027  
+**Title**: Explain the differences between `opacity: 0`, `visibility: hidden`, and `display: none` in terms of layout, performance, accessibility, and interactivity.  
+**Difficulty**: Hard  
+**Category**: Fundamentals
+
+### Answer 📄
+
+These properties hide elements but behave differently:
+
+- `opacity: 0`: Element is invisible but still takes space, remains in flow, interactive (clickable, focusable), and participates in transitions/animations. Screen readers may announce it.
+- `visibility: hidden`: Element invisible, takes space, removed from tab order (not focusable/interactive), but still in DOM flow. Creates stacking context if opacity <1 not set.
+- `display: none`: Element completely removed from layout (no space taken), not rendered, not interactive, not in accessibility tree (screen readers ignore it). Triggers reflow.
+
+Use `display: none` for conditional content; `visibility: hidden` for space-reserving hides; `opacity: 0` for fade animations.
+
+## 🧠 Question 28
+
+**ID**: css-028  
+**Title**: How do margins behave on elements with `display: inline-flex` or `display: inline-grid`, and why do vertical margins not collapse or apply as expected?  
+**Difficulty**: Hard  
+**Category**: Layout
+
+### Answer 📄
+
+`inline-flex` and `inline-grid` make the element inline-level (participates in inline formatting context) but establish an inner flex/grid formatting context.
+
+Key behaviors:
+
+- Horizontal margins (left/right) apply normally.
+- Vertical margins (top/bottom) do not collapse with adjacent elements (like inline elements).
+- Vertical margins are respected but do not affect line height or surrounding inline flow in the same way block margins do.
+- No vertical margin collapsing occurs between inline-flex items and their siblings.
+
+This is because inline-level boxes don't fully participate in block formatting contexts for vertical spacing. Use `display: flex` (block-level) if vertical margins need to behave like block elements.
+
+## 🧠 Question 29
+
+**ID**: css-029  
+**Title**: What is the `color-mix()` function in CSS, and how can it be used for dynamic theming or accessibility?  
+**Difficulty**: Hard  
+**Category**: Fundamentals
+
+### Answer 📄
+
+`color-mix()` blends two colors in a specified color space (e.g., srgb, lch).
+
+Syntax:
+
+```css
+color-mix(in srgb, blue 40%, white)
+```
+
+Use cases:
+
+- Dynamic shades/tints (e.g., hover states: color-mix(in srgb, var(--primary) 80%, black))
+- Accessibility: Ensure contrast by mixing with background
+- Theming: Light/dark mode variants without multiple variables
+
+Browser support: Excellent in 2025+ (Chrome 111+, Safari 16.4+, Firefox 113+). Falls back gracefully.
+
+## 🧠 Question 30
+
+**ID**: css-030  
+**Title**: What is `@property` in CSS and how does it enable better custom property animations/transitions?  
+**Difficulty**: Hard  
+**Category**: Performance & Architecture
+
+### Answer 📄
+
+`@property` registers a custom property so the browser understands its type, allowing smooth interpolation in transitions/animations.
+
+Example:
+
+```css
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+```
+
+Without registration, transitions on custom props (e.g., --hue) jump discretely. With it, they animate smoothly (e.g., hue rotation).
+
+Use for:
+
+- Conic gradients animation
+- Complex color transitions
+- Better performance than JS-driven animations
+
+Support: Chrome/Edge 85+, Firefox 128+, Safari 16.4+.

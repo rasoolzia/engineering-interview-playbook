@@ -850,3 +850,152 @@ Use for:
 - Better performance than JS-driven animations
 
 Support: Chrome/Edge 85+, Firefox 128+, Safari 16.4+.
+
+## 🧠 Question 31
+
+**ID**: css-031  
+**Title**: How does `accent-color` work on form elements, and what are its limitations in cross-browser consistency?  
+**Difficulty**: Hard  
+**Category**: Fundamentals & Accessibility
+
+### Answer 📄
+
+`accent-color` changes the accent color of native form controls (checkbox checkmark, radio dot, range thumb/track, progress bar).
+
+```css
+accent-color: #6200ea;
+```
+
+Limitations:
+
+- Only affects "accent" parts (not full override)
+- Browser inconsistencies (Safari may ignore on some controls pre-2025)
+- Contrast must meet WCAG (pair with color-scheme)
+- Does not work on custom-styled controls
+
+Best for light theming without heavy ::-webkit-appearance resets.
+
+## 🧠 Question 32
+
+**ID**: css-032  
+**Title**: What is scroll-driven animation in CSS, and how does `animation-timeline: scroll()` work?  
+**Difficulty**: Hard  
+**Category**: Performance
+
+### Answer 📄
+
+Scroll-driven animations tie CSS animations to scroll position instead of time.
+
+Key properties:
+
+- **animation-timeline**: scroll() or scroll(root block) or named scrollers
+- **animation-range**: start/end points
+
+Example concept: Progress bar fills as user scrolls page.
+
+Benefits: Native, GPU-accelerated, no JS overhead.
+
+Support: Chrome/Edge 115+, Firefox partial, Safari 18+ (2025+ full).
+
+## 🧠 Question 33
+
+**ID**: css-033  
+**Title**: Explain advanced usage of `object-fit` and `object-position` with `aspect-ratio` for responsive media without CLS.  
+**Difficulty**: Hard  
+**Category**: Responsive Design
+
+### Answer 📄
+
+`object-fit` controls how replaced elements (img, video) fit their box:
+
+- `cover`: Crops to fill (common for heroes)
+- `contain`: Scales to fit without cropping
+- `fill`: Stretches (distorts)
+
+Combined with `aspect-ratio`:
+
+- Reserves space before load
+- Prevents layout shifts
+
+`object-position`: Aligns content inside box (e.g., top left for portraits).
+
+This combo is essential for modern image handling without JS.
+
+## 🧠 Question 34
+
+**ID**: css-034  
+**Title**: What are the differences between physical properties (margin-top) and logical properties (margin-block-start) in depth, including writing-mode and direction impact?  
+**Difficulty**: Hard  
+**Category**: Responsive Design
+
+### Answer 📄
+
+**Physical**: Fixed directions (top/right/bottom/left) – ignore writing-mode/direction.
+
+**Logical**: Flow-relative (block-start/end, inline-start/end) – adapt to:
+
+- writing-mode: vertical-rl (e.g., Japanese)
+- direction: rtl
+
+Use logical for:
+
+- Multilingual sites
+- Vertical text layouts
+- Consistent padding/margin regardless of flow
+
+Modern best practice: Prefer logical properties for future-proof CSS.
+
+## 🧠 Question 35
+
+**ID**: css-035  
+**Title**: How can gap property be used in Flexbox and Grid, and what are browser differences in row-gap/column-gap fallback?  
+**Difficulty**: Hard  
+**Category**: Layout
+
+### Answer 📄
+
+gap (or `row-gap`/`column-gap`) adds space between items in flex/grid (no need for margins).
+
+```css
+.container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+```
+
+Browser notes:
+
+- Older Safari/IE: Only `grid-gap` alias worked
+- Flexbox gap support: Chrome 84+, Safari 14.1+, Firefox 63+
+- In flex, gap works on row/column independently
+
+Gap prevents double-margin issues and simplifies layouts.
+
+### Gap Behavior Difference in Flex vs Grid
+
+**In Flexbox:**
+
+- `gap` adds space between items but doesn't respect `box-sizing`
+- If container is `border-box`, gap can cause overflow
+- Calculation: `width = content + gap` (gap is outside box-sizing)
+
+**In Grid:**
+
+- `gap` is part of grid track calculations
+- Respects `border-box` and doesn't cause overflow
+- Calculation: gap is included in available grid space
+
+**Solution for Flexbox:**
+
+```css
+.flex-container {
+  display: flex;
+  gap: 20px;
+  /* To prevent overflow */
+  box-sizing: border-box;
+  padding: 0; /* or account for gap in width calculations */
+}
+```
+
+This difference is important when working with precise layouts.

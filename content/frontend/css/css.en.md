@@ -1,7 +1,7 @@
 ---
 topic: css
 language: en
-version: 1.3
+version: 1.4
 ---
 
 # CSS Interview Questions

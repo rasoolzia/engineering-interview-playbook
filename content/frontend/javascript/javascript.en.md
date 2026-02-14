@@ -92,6 +92,8 @@ In short:
 
 Additionally, variables declared with `let` and `const` are not accessible before initialization due to the Temporal Dead Zone.
 
+Example:
+
 ```javascript
 // var vs let
 {
@@ -139,6 +141,8 @@ Variables declared with `var` are hoisted but initialized with `undefined`.
 
 Variables declared with `let` and `const` are hoisted but remain in the Temporal Dead Zone until initialized.
 
+Example:
+
 ```javascript
 // Hoisting behavior
 
@@ -165,6 +169,8 @@ Reference values such as objects and arrays are stored in the heap, and variable
 When a primitive is assigned to another variable, a copy is created.
 
 When a reference value is assigned, both variables point to the same memory location.
+
+Example:
 
 ```javascript
 // Primitive vs Reference
@@ -212,6 +218,8 @@ Closures allow functions to access variables that were available at the time the
 
 They are commonly used for data privacy, function factories, and maintaining state in asynchronous code.
 
+Example:
+
 ```javascript
 // Closure
 
@@ -245,6 +253,8 @@ The event loop is a mechanism that allows JavaScript to handle asynchronous oper
 It continuously checks whether the call stack is empty. If it is, it takes tasks from the callback queue and pushes them onto the stack for execution.
 
 This mechanism enables non-blocking behavior while maintaining a single-threaded model.
+
+Example:
 
 ```javascript
 // Event Loop
@@ -289,6 +299,8 @@ During the creation phase, variables and function declarations are stored in mem
 
 Execution contexts are managed using the call stack.
 
+Example:
+
 ```javascript
 // Execution Context
 
@@ -319,6 +331,8 @@ During the creation phase:
 
 No code is executed during this phase.
 
+Example:
+
 ```javascript
 // Creation Phase
 
@@ -344,6 +358,8 @@ When a function is invoked, a new execution context is pushed onto the stack.
 When a function completes, its execution context is removed from the stack.
 
 If the stack exceeds its maximum size due to excessive recursion, a stack overflow error occurs.
+
+Example:
 
 ```javascript
 // Call Stack
@@ -378,6 +394,8 @@ During this period, accessing the variable results in a ReferenceError.
 
 Although `let` and `const` declarations are hoisted, they are not initialized until execution reaches their declaration line.
 
+Example:
+
 ```javascript
 // Temporal Dead Zone
 
@@ -403,6 +421,8 @@ The value of `this` depends on how a function is called.
 - In a method call, `this` refers to the object that owns the method.
 - In arrow functions, `this` is lexically inherited from the surrounding scope.
 - In constructor functions, `this` refers to the newly created instance.
+
+Example:
 
 ```javascript
 // this behavior
@@ -434,6 +454,8 @@ Arrow functions differ from regular functions in several ways:
 - They are always anonymous.
 
 Arrow functions inherit `this` from their lexical scope.
+
+Example:
 
 ```javascript
 // Arrow vs Regular
@@ -467,6 +489,8 @@ A deep copy creates a completely independent clone, including all nested objects
 
 Modifying nested properties in a shallow copy affects the original object, while a deep copy prevents this behavior.
 
+Example:
+
 ```javascript
 // Shallow Copy
 
@@ -495,6 +519,8 @@ In JavaScript’s event loop:
 After each macrotask completes, all microtasks in the queue are executed before the next macrotask begins.
 
 Microtasks have higher priority than macrotasks.
+
+Example:
 
 ```javascript
 // Microtask vs Macrotask
@@ -535,6 +561,8 @@ Once a Promise is fulfilled or rejected, its state becomes settled and cannot ch
 
 Promise handlers are executed asynchronously.
 
+Example:
+
 ```javascript
 // Promise states
 
@@ -562,6 +590,8 @@ The await keyword pauses execution of the async function until the Promise resol
 
 Internally, async/await transforms asynchronous code into a structure similar to chained Promise calls.
 
+Example:
+
 ```javascript
 // async/await
 
@@ -571,3 +601,143 @@ async function fetchData() {
 
 fetchData().then(console.log);
 ```
+
+## 🧠 Question 21
+
+**ID**: js-021  
+**Title**: What is a prototype in JavaScript?  
+**Difficulty**: Medium  
+**Category**: Objects & Prototypes
+
+### Answer 📄
+
+A prototype is an object from which other objects inherit properties and methods.
+
+Every JavaScript object has an internal link to another object called its prototype. When a property is accessed on an object, JavaScript first looks for it on the object itself. If not found, it looks up the prototype chain.
+
+This mechanism is known as prototypal inheritance.
+
+Example:
+
+```javascript
+function Person(name) {
+  this.name = name;
+}
+
+Person.prototype.sayHello = function () {
+  return `Hi, I'm ${this.name}`;
+};
+
+const user = new Person('Rasool');
+
+console.log(user.sayHello()); // Hi, I'm Rasool
+console.log(user.__proto__ === Person.prototype); // true
+```
+
+## 🧠 Question 22
+
+**ID**: js-022  
+**Title**: What is the prototype chain and how does property lookup work?  
+**Difficulty**: Hard  
+**Category**: Objects & Prototypes
+
+### Answer 📄
+
+The prototype chain is a series of linked objects that JavaScript uses to resolve property access.
+
+When a property is requested:
+
+1. The engine checks the object itself.
+2. If not found, it checks the object's prototype.
+3. This continues until reaching null.
+
+If the property is not found anywhere in the chain, undefined is returned.
+
+This lookup process enables inheritance in JavaScript.
+
+Example:
+
+```javascript
+const animal = {
+  eats: true,
+};
+
+const dog = Object.create(animal);
+dog.barks = true;
+
+console.log(dog.barks); // true (own property)
+console.log(dog.eats); // true (inherited from prototype)
+console.log(dog.hasOwnProperty('eats')); // false
+```
+
+## 🧠 Question 23
+
+**ID**: js-023  
+**Title**: What is the difference between `__proto__` and `prototype`?  
+**Difficulty**: Hard  
+**Category**: Objects & Prototypes
+
+### Answer 📄
+
+`prototype` is a property of constructor functions. It defines what will become the prototype of instances created with that constructor.
+
+`__proto__` is an accessor property available on objects that points to their internal prototype.
+
+In simple terms:
+
+- `prototype` exists on functions.
+- `__proto__` exists on objects.
+
+Example:
+
+```javascript
+function Car() {}
+
+const myCar = new Car();
+
+console.log(Car.prototype === myCar.__proto__); // true
+console.log(typeof Car.prototype); // object
+console.log(typeof myCar.prototype); // undefined
+```
+
+`prototype` is on the function  
+`__proto__` on the object created
+
+## 🧠 Question 24
+
+**ID**: js-024  
+**Title**: How does inheritance work in JavaScript?  
+**Difficulty**: Medium  
+**Category**: Objects & Prototypes
+
+### Answer 📄
+
+Inheritance in JavaScript is based on prototypes.
+
+Objects inherit properties and methods from other objects via the prototype chain.
+
+This can be achieved using constructor functions, Object.create, or ES6 classes.
+
+Unlike classical inheritance in other languages, JavaScript uses prototypal inheritance.
+
+Example:
+
+```javascript
+class Animal {
+  speak() {
+    return 'Some sound';
+  }
+}
+
+class Cat extends Animal {
+  speak() {
+    return 'Meow';
+  }
+}
+
+const kitty = new Cat();
+
+console.log(kitty.speak()); // Meow
+```
+
+Behind the scenes, it works the same with prototype, only the syntax is cleaner.

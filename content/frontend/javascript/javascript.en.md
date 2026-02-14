@@ -741,3 +741,241 @@ console.log(kitty.speak()); // Meow
 ```
 
 Behind the scenes, it works the same with prototype, only the syntax is cleaner.
+
+## 🧠 Question 25
+
+**ID**: js-025  
+**Title**: What is strict mode in JavaScript and why is it important?  
+**Difficulty**: Medium  
+**Category**: Language Behavior
+
+### Answer 📄
+
+Strict mode is a way to opt into a restricted version of JavaScript.
+
+It eliminates some silent errors by throwing exceptions and prevents unsafe actions such as:
+
+- Creating global variables accidentally
+- Assigning to non-writable properties
+- Using duplicate parameter names
+
+Strict mode makes code more secure and easier to optimize.
+
+Example:
+
+```javascript
+'use strict';
+
+x = 10; // ❌ ReferenceError
+
+function test(a, a) {
+  // ❌ SyntaxError
+  return a;
+}
+```
+
+Without strict, this would have been done silently.  
+With strict, the engine says no, dear, write it correctly.
+
+## 🧠 Question 26
+
+**ID**: js-026  
+**Title**: What are JavaScript modules and how do they work?  
+**Difficulty**: Medium  
+**Category**: Modules & Architecture
+
+### Answer 📄
+
+JavaScript modules allow code to be split into reusable, isolated files.
+
+Modules use export to expose functionality and import to consume it.
+
+Each module has its own scope and executes only once.
+
+ES Modules are the standard module system in modern JavaScript.
+
+Example:
+
+```javascript
+// math.js
+
+export function add(a, b) {
+  return a + b;
+}
+```
+
+```javascript
+// app.js
+
+import { add } from './math.js';
+
+console.log(add(2, 3)); // 5
+```
+
+Each file has a separate scope.  
+The load is only done once.
+
+## 🧠 Question 27
+
+**ID**: js-027  
+**Title**: What is a memory leak and how can it happen in JavaScript?  
+**Difficulty**: Hard  
+**Category**: Memory & Performance
+
+### Answer 📄
+
+A memory leak occurs when memory that is no longer needed is not released.
+
+In JavaScript, memory leaks often happen due to:
+
+- Unused references being retained
+- Closures holding large objects
+- Forgotten timers or event listeners
+- Detached DOM elements still referenced in code
+
+Memory leaks degrade performance over time.
+
+Example:
+
+```javascript
+function startTimer() {
+  const largeData = new Array(1000000).fill('leak');
+
+  setInterval(() => {
+    console.log(largeData.length);
+  }, 1000);
+}
+
+startTimer();
+```
+
+Here `largeData` gets stuck in the closure.  
+It won't be garbage collected until the interval is cleared.
+
+Solution:
+
+```javascript
+const interval = setInterval(() => {
+  console.log('running');
+}, 1000);
+
+clearInterval(interval);
+```
+
+## 🧠 Question 28
+
+**ID**: js-028  
+**Title**: What are WeakMap and WeakSet and how are they different from Map and Set?  
+**Difficulty**: Hard  
+**Category**: Memory & Performance
+
+### Answer 📄
+
+WeakMap and WeakSet are similar to Map and Set but hold weak references to objects.
+
+Keys in WeakMap must be objects and are garbage-collectable.
+
+If no other references to the key exist, it can be removed automatically.
+
+Weak collections help prevent memory leaks.
+
+Example:
+
+```javascript
+let obj = { name: 'Rasool' };
+
+const map = new Map();
+map.set(obj, 'data');
+
+const weakMap = new WeakMap();
+weakMap.set(obj, 'data');
+
+obj = null;
+
+// Map still holds references
+// WeakMap allows garbage collection
+```
+
+> **_NOTE:_**: WeakMap only accepts object keys and is not iterable.
+
+## 🧠 Question 29
+
+**ID**: js-029  
+**Title**: How does JavaScript handle object property descriptors?  
+**Difficulty**: Hard  
+**Category**: Objects & Internals
+
+### Answer 📄
+
+Each property in a JavaScript object has descriptors that define its behavior.
+
+Property descriptors include:
+
+- value
+- writable
+- enumerable
+- configurable
+- get
+- set
+
+These descriptors control whether a property can be modified, deleted, or enumerated.
+
+Example:
+
+```javascript
+const user = {};
+
+Object.defineProperty(user, 'name', {
+  value: 'Rasool',
+  writable: false,
+  enumerable: true,
+  configurable: false,
+});
+
+user.name = 'Ali'; // Does not change
+
+console.log(user.name); // Rasool
+```
+
+The descriptor determines how the property behaves.
+
+## 🧠 Question 30
+
+**ID**: js-030  
+**Title**: How do JavaScript engines optimize code execution?  
+**Difficulty**: Hard  
+**Category**: Engine & Runtime
+
+### Answer 📄
+
+Modern JavaScript engines use techniques such as Just-In-Time compilation to improve performance.
+
+They analyze code at runtime, optimize frequently executed paths, and apply inline caching.
+
+However, certain patterns such as changing object shapes dynamically can cause de-optimization.
+
+Understanding engine behavior helps write more performant code.
+
+Example:
+
+```javascript
+function createUser(name) {
+  return { name };
+}
+
+const u1 = createUser('A');
+const u2 = createUser('B');
+```
+
+Here the object shape is fixed → the engine optimizes.
+
+But this is not good:
+
+```javascript
+const user = {};
+user.name = 'A';
+user.age = 25;
+user.city = 'NY';
+```
+
+Adding properties sporadically will change the hidden class and may be de-opted.

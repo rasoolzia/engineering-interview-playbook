@@ -1162,3 +1162,158 @@ const increment = counter();
 console.log(increment()); // 1
 console.log(increment()); // 2
 ```
+
+## 🧠 Question 36
+
+**ID**: js-036  
+**Title**: Why can closures cause memory leaks in certain situations?  
+**Difficulty**: Hard  
+**Category**: Memory & Performance
+
+### Answer 📄
+
+Closures can cause memory leaks when they retain references to large objects that are no longer needed.
+
+If a closure keeps a reference alive, the garbage collector cannot free that memory.
+
+Common causes include:
+
+- Unremoved event listeners
+- Long-running timers
+- Cached data in closures
+
+---
+
+Example:
+
+```js
+function createHandler() {
+  const bigData = new Array(1000000).fill('data');
+
+  return function () {
+    console.log(bigData.length);
+  };
+}
+
+const handler = createHandler();
+```
+
+## 🧠 Question 37
+
+**ID**: js-037  
+**Title**: What is the Temporal Dead Zone (TDZ) and how does it work with let and const?  
+**Difficulty**: Medium  
+**Category**: Scope
+
+### Answer 📄
+
+The Temporal Dead Zone is the time between entering a block scope and the actual declaration of a `let` or `const` variable.
+
+During this period, accessing the variable results in a ReferenceError.
+
+Unlike `var`, `let` and `const` are hoisted but not initialized.
+
+---
+
+Example:
+
+```js
+{
+  console.log(a); // ReferenceError
+  let a = 10;
+}
+```
+
+## 🧠 Question 38
+
+**ID**: js-038  
+**Title**: How does block scope differ from function scope?  
+**Difficulty**: Medium  
+**Category**: Scope
+
+### Answer 📄
+
+Function scope means variables declared with `var` are scoped to the entire function.
+
+Block scope means variables declared with `let` and `const` are scoped to the nearest block `{}`.
+
+Block scope prevents accidental variable leakage outside conditional or loop blocks.
+
+---
+
+Example:
+
+```js
+if (true) {
+  var x = 1;
+  let y = 2;
+}
+
+console.log(x); // 1
+console.log(y); // ReferenceError
+```
+
+## 🧠 Question 39
+
+**ID**: js-039  
+**Title**: What happens internally when a function is returned from another function?  
+**Difficulty**: Hard  
+**Category**: Closures
+
+### Answer 📄
+
+When a function is returned, its lexical environment is preserved if it references outer variables.
+
+The engine keeps those variables in memory so the returned function can access them later.
+
+This is the foundation of closures.
+
+---
+
+Example:
+
+```js
+function greet(name) {
+  return function () {
+    console.log('Hello ' + name);
+  };
+}
+
+const sayHello = greet('Rasool');
+sayHello(); // Hello Rasool
+```
+
+## 🧠 Question 40
+
+**ID**: js-040  
+**Title**: How does JavaScript handle variable lookup when multiple nested scopes exist?  
+**Difficulty**: Hard  
+**Category**: Scope
+
+### Answer 📄
+
+JavaScript resolves variables using the Scope Chain.
+
+It searches from the innermost scope outward until it finds the variable.
+
+If the variable does not exist in any scope, a ReferenceError is thrown.
+
+This lookup process is determined at function definition time.
+
+Example:
+
+```js
+const a = 'global';
+
+function first() {
+  const a = 'first';
+
+  function second() {
+    console.log(a);
+  }
+
+  second();
+}
+
+first(); // "first"
+```

@@ -94,7 +94,7 @@ Additionally, variables declared with `let` and `const` are not accessible befor
 
 Example:
 
-```javascript
+```js
 // var vs let
 {
   var x = 10;
@@ -143,7 +143,7 @@ Variables declared with `let` and `const` are hoisted but remain in the Temporal
 
 Example:
 
-```javascript
+```js
 // Hoisting behavior
 
 console.log(a); // undefined
@@ -172,7 +172,7 @@ When a reference value is assigned, both variables point to the same memory loca
 
 Example:
 
-```javascript
+```js
 // Primitive vs Reference
 
 let a = 10;
@@ -220,7 +220,7 @@ They are commonly used for data privacy, function factories, and maintaining sta
 
 Example:
 
-```javascript
+```js
 // Closure
 
 function outer() {
@@ -256,7 +256,7 @@ This mechanism enables non-blocking behavior while maintaining a single-threaded
 
 Example:
 
-```javascript
+```js
 // Event Loop
 
 console.log('Start');
@@ -301,7 +301,7 @@ Execution contexts are managed using the call stack.
 
 Example:
 
-```javascript
+```js
 // Execution Context
 
 function greet(name) {
@@ -333,7 +333,7 @@ No code is executed during this phase.
 
 Example:
 
-```javascript
+```js
 // Creation Phase
 
 console.log(x); // undefined
@@ -361,7 +361,7 @@ If the stack exceeds its maximum size due to excessive recursion, a stack overfl
 
 Example:
 
-```javascript
+```js
 // Call Stack
 
 function first() {
@@ -396,7 +396,7 @@ Although `let` and `const` declarations are hoisted, they are not initialized un
 
 Example:
 
-```javascript
+```js
 // Temporal Dead Zone
 
 {
@@ -424,7 +424,7 @@ The value of `this` depends on how a function is called.
 
 Example:
 
-```javascript
+```js
 // this behavior
 
 const obj = {
@@ -457,7 +457,7 @@ Arrow functions inherit `this` from their lexical scope.
 
 Example:
 
-```javascript
+```js
 // Arrow vs Regular
 
 const obj = {
@@ -491,7 +491,7 @@ Modifying nested properties in a shallow copy affects the original object, while
 
 Example:
 
-```javascript
+```js
 // Shallow Copy
 
 const original = { info: { age: 20 } };
@@ -522,7 +522,7 @@ Microtasks have higher priority than macrotasks.
 
 Example:
 
-```javascript
+```js
 // Microtask vs Macrotask
 
 console.log('Start');
@@ -563,7 +563,7 @@ Promise handlers are executed asynchronously.
 
 Example:
 
-```javascript
+```js
 // Promise states
 
 const promise = new Promise((resolve, reject) => {
@@ -592,7 +592,7 @@ Internally, async/await transforms asynchronous code into a structure similar to
 
 Example:
 
-```javascript
+```js
 // async/await
 
 async function fetchData() {
@@ -619,7 +619,7 @@ This mechanism is known as prototypal inheritance.
 
 Example:
 
-```javascript
+```js
 function Person(name) {
   this.name = name;
 }
@@ -657,7 +657,7 @@ This lookup process enables inheritance in JavaScript.
 
 Example:
 
-```javascript
+```js
 const animal = {
   eats: true,
 };
@@ -690,7 +690,7 @@ In simple terms:
 
 Example:
 
-```javascript
+```js
 function Car() {}
 
 const myCar = new Car();
@@ -722,7 +722,7 @@ Unlike classical inheritance in other languages, JavaScript uses prototypal inhe
 
 Example:
 
-```javascript
+```js
 class Animal {
   speak() {
     return 'Some sound';
@@ -763,7 +763,7 @@ Strict mode makes code more secure and easier to optimize.
 
 Example:
 
-```javascript
+```js
 'use strict';
 
 x = 10; // ❌ ReferenceError
@@ -796,7 +796,7 @@ ES Modules are the standard module system in modern JavaScript.
 
 Example:
 
-```javascript
+```js
 // math.js
 
 export function add(a, b) {
@@ -804,7 +804,7 @@ export function add(a, b) {
 }
 ```
 
-```javascript
+```js
 // app.js
 
 import { add } from './math.js';
@@ -837,7 +837,7 @@ Memory leaks degrade performance over time.
 
 Example:
 
-```javascript
+```js
 function startTimer() {
   const largeData = new Array(1000000).fill('leak');
 
@@ -854,7 +854,7 @@ It won't be garbage collected until the interval is cleared.
 
 Solution:
 
-```javascript
+```js
 const interval = setInterval(() => {
   console.log('running');
 }, 1000);
@@ -881,7 +881,7 @@ Weak collections help prevent memory leaks.
 
 Example:
 
-```javascript
+```js
 let obj = { name: 'Rasool' };
 
 const map = new Map();
@@ -922,7 +922,7 @@ These descriptors control whether a property can be modified, deleted, or enumer
 
 Example:
 
-```javascript
+```js
 const user = {};
 
 Object.defineProperty(user, 'name', {
@@ -958,7 +958,7 @@ Understanding engine behavior helps write more performant code.
 
 Example:
 
-```javascript
+```js
 function createUser(name) {
   return { name };
 }
@@ -971,7 +971,7 @@ Here the object shape is fixed → the engine optimizes.
 
 But this is not good:
 
-```javascript
+```js
 const user = {};
 user.name = 'A';
 user.age = 25;
@@ -979,3 +979,186 @@ user.city = 'NY';
 ```
 
 Adding properties sporadically will change the hidden class and may be de-opted.
+
+## 🧠 Question 31
+
+**ID**: js-031  
+**Title**: What is the Execution Context in JavaScript and what are its main components?  
+**Difficulty**: Hard  
+**Category**: Execution Context
+
+### Answer 📄
+
+An Execution Context is an abstract environment where JavaScript code is evaluated and executed.
+
+There are three types:
+
+- Global Execution Context
+- Function Execution Context
+- Eval Execution Context
+
+Each execution context consists of:
+
+- Variable Environment
+- Lexical Environment
+- This Binding
+
+The engine creates a new execution context whenever a function is invoked.
+
+---
+
+Example:
+
+```js
+var x = 10;
+
+function foo() {
+  var y = 20;
+  console.log(x + y);
+}
+
+foo();
+```
+
+## 🧠 Question 32
+
+**ID**: js-032  
+**Title**: What is the difference between the creation phase and execution phase of an execution context?  
+**Difficulty**: Hard  
+**Category**: Execution Context
+
+### Answer 📄
+
+During the creation phase:
+
+- Memory is allocated for variables and functions.
+- Variables declared with `var` are initialized with `undefined`.
+- Function declarations are fully hoisted.
+
+During the execution phase:
+
+- Code runs line by line.
+- Variables receive assigned values.
+- Functions are executed.
+
+---
+
+Example:
+
+```js
+console.log(a); // undefined
+
+var a = 5;
+```
+
+## 🧠 Question 33
+
+**ID**: js-033  
+**Title**: How does the Scope Chain work during variable resolution?  
+**Difficulty**: Hard  
+**Category**: Scope
+
+### Answer 📄
+
+The Scope Chain is a mechanism used to resolve variable access.
+
+When a variable is referenced:
+
+1. The engine checks the current scope.
+2. If not found, it moves to the outer lexical scope.
+3. This continues until reaching the global scope.
+4. If not found, a ReferenceError is thrown.
+
+This structure enables lexical scoping.
+
+---
+
+Example:
+
+```js
+const a = 1;
+
+function outer() {
+  const b = 2;
+
+  function inner() {
+    const c = 3;
+    console.log(a, b, c);
+  }
+
+  inner();
+}
+
+outer();
+```
+
+## 🧠 Question 34
+
+**ID**: js-034  
+**Title**: What is the difference between Lexical Scope and Dynamic Scope, and which one does JavaScript use?  
+**Difficulty**: Medium  
+**Category**: Scope
+
+### Answer 📄
+
+Lexical Scope means scope is determined by where a function is defined in the source code.
+
+Dynamic Scope means scope is determined by how a function is called.
+
+JavaScript uses Lexical Scope.
+
+The scope of a function is fixed at definition time, not call time.
+
+---
+
+Example:
+
+```js
+function outer() {
+  const x = 10;
+
+  function inner() {
+    console.log(x);
+  }
+
+  return inner;
+}
+
+const fn = outer();
+fn(); // 10
+```
+
+## 🧠 Question 35
+
+**ID**: js-035  
+**Title**: What is a Closure in JavaScript and how does it relate to lexical scoping?  
+**Difficulty**: Medium  
+**Category**: Closures
+
+### Answer 📄
+
+A closure is created when a function remembers variables from its lexical scope even after the outer function has finished executing.
+
+Closures are possible because JavaScript uses lexical scoping.
+
+They allow functions to retain access to variables from their defining environment.
+
+---
+
+Example:
+
+```js
+function counter() {
+  let count = 0;
+
+  return function () {
+    count++;
+    return count;
+  };
+}
+
+const increment = counter();
+
+console.log(increment()); // 1
+console.log(increment()); // 2
+```

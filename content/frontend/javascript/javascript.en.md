@@ -124,6 +124,23 @@ JavaScript has three main types of scope:
 
 Scope is determined lexically, meaning it depends on where variables are written in the code, not where they are executed.
 
+Example:
+
+```js
+let globalVar = 'global'; // Global Scope
+
+function example() {
+  let funcVar = 'function'; // Function Scope
+
+  if (true) {
+    let blockVar = 'block'; // Block Scope
+    console.log(blockVar); // block
+  }
+
+  // console.log(blockVar); // ReferenceError
+}
+```
+
 ## 🧠 Question 6
 
 **ID**: js-006  
@@ -202,6 +219,14 @@ JavaScript automatically allocates memory when variables are declared and frees 
 Memory management relies on garbage collection.
 
 Most modern JavaScript engines use a mark-and-sweep algorithm to identify unused objects. If an object is no longer reachable from the root (such as the global object), it becomes eligible for garbage collection.
+
+Example:
+
+```js
+let user = { name: 'Rasool' }; // memory allocated
+
+user = null; // reference removed → eligible for garbage collection
+```
 
 ## 🧠 Question 9
 
@@ -302,13 +327,17 @@ Execution contexts are managed using the call stack.
 Example:
 
 ```js
-// Execution Context
+// Global Execution Context is created first
+const name = 'Rasool';
 
-function greet(name) {
-  return 'Hello ' + name;
+function greet() {
+  // Function Execution Context is created when greet() is called
+  const message = 'Hello ' + name; // accesses global scope via scope chain
+  return message;
 }
 
-greet('Rasool');
+console.log(greet()); // Hello Rasool
+// After greet() returns, its execution context is removed from the stack
 ```
 
 ## 🧠 Question 12
@@ -400,7 +429,7 @@ Example:
 // Temporal Dead Zone
 
 {
-  // console.log(a); // ReferenceError
+  console.log(a); // ReferenceError: Cannot access 'a' before initialization
   let a = 10;
 }
 ```
@@ -492,14 +521,25 @@ Modifying nested properties in a shallow copy affects the original object, while
 Example:
 
 ```js
-// Shallow Copy
+// Shallow Copy — nested objects are still shared
 
 const original = { info: { age: 20 } };
-const copy = { ...original };
+const shallow = { ...original };
 
-copy.info.age = 30;
+shallow.info.age = 30;
 
-console.log(original.info.age); // 30
+console.log(original.info.age); // 30 (original was mutated)
+```
+
+```js
+// Deep Copy — completely independent clone
+
+const original = { info: { age: 20 } };
+const deep = JSON.parse(JSON.stringify(original));
+
+deep.info.age = 30;
+
+console.log(original.info.age); // 20 (original is unchanged)
 ```
 
 ## 🧠 Question 18
@@ -593,13 +633,25 @@ Internally, async/await transforms asynchronous code into a structure similar to
 Example:
 
 ```js
-// async/await
+// async/await — await pauses the function, not the main thread
 
-async function fetchData() {
-  return 'Data loaded';
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-fetchData().then(console.log);
+async function run() {
+  console.log('Before await');
+  await delay(1000);
+  console.log('After await'); // runs after 1 second
+}
+
+run();
+console.log('This runs immediately');
+
+// Output:
+// Before await
+// This runs immediately
+// After await
 ```
 
 ## 🧠 Question 21
@@ -766,16 +818,16 @@ Example:
 ```js
 'use strict';
 
-x = 10; // ❌ ReferenceError
+x = 10; // ReferenceError: x is not defined
 
 function test(a, a) {
-  // ❌ SyntaxError
+  // SyntaxError: Duplicate parameter name not allowed in this context
   return a;
 }
 ```
 
-Without strict, this would have been done silently.  
-With strict, the engine says no, dear, write it correctly.
+Without strict mode, these errors would be silently ignored.
+With strict mode, the engine throws immediately, making bugs easier to detect.
 
 ## 🧠 Question 26
 
@@ -873,15 +925,18 @@ clearInterval(interval);
 
 WeakMap and WeakSet are similar to Map and Set but hold weak references to objects.
 
-Keys in WeakMap must be objects and are garbage-collectable.
+If no other references to the key or value exist, the garbage collector can reclaim that memory automatically.
 
-If no other references to the key exist, it can be removed automatically.
+Key differences:
 
-Weak collections help prevent memory leaks.
+- **WeakMap**: stores key-value pairs where keys must be objects. Keys are weakly referenced.
+- **WeakSet**: stores a collection of objects. Values are weakly referenced.
+- Neither WeakMap nor WeakSet is iterable.
 
 Example:
 
 ```js
+// WeakMap — key is weakly held
 let obj = { name: 'Rasool' };
 
 const map = new Map();
@@ -891,12 +946,25 @@ const weakMap = new WeakMap();
 weakMap.set(obj, 'data');
 
 obj = null;
-
-// Map still holds references
-// WeakMap allows garbage collection
+// map still holds the reference → no garbage collection
+// weakMap releases the reference → eligible for garbage collection
 ```
 
-> **_NOTE:_**: WeakMap only accepts object keys and is not iterable.
+```js
+// WeakSet — object is weakly held
+let user = { id: 1 };
+
+const weakSet = new WeakSet();
+weakSet.add(user);
+
+console.log(weakSet.has(user)); // true
+
+user = null;
+// user is now eligible for garbage collection
+// weakSet no longer holds it
+```
+
+> **_NOTE:_** WeakMap and WeakSet are not iterable and have no `size` property.
 
 ## 🧠 Question 29
 
@@ -1014,7 +1082,7 @@ var x = 10;
 
 function foo() {
   var y = 20;
-  console.log(x + y);
+  console.log(x + y); // 30
 }
 
 foo();
@@ -1083,7 +1151,7 @@ function outer() {
 
   function inner() {
     const c = 3;
-    console.log(a, b, c);
+    console.log(a, b, c); // 1 2 3
   }
 
   inner();
@@ -1196,6 +1264,22 @@ function createHandler() {
 }
 
 const handler = createHandler();
+// bigData stays in memory as long as handler exists
+```
+
+To avoid this, only keep what is actually needed inside the closure:
+
+```js
+function createHandler() {
+  const bigData = new Array(1000000).fill('data');
+  const length = bigData.length; // extract only what's needed
+
+  return function () {
+    console.log(length); // bigData is no longer referenced
+  };
+}
+
+const handler = createHandler();
 ```
 
 ## 🧠 Question 37
@@ -1219,7 +1303,7 @@ Example:
 
 ```js
 {
-  console.log(a); // ReferenceError
+  console.log(a); // ReferenceError: Cannot access 'a' before initialization
   let a = 10;
 }
 ```

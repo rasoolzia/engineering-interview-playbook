@@ -1401,3 +1401,151 @@ function first() {
 
 first(); // "first"
 ```
+
+## 🧠 Question 41
+
+**ID**: js-041
+**Title**: What is the difference between == and === in JavaScript?
+**Difficulty**: Easy
+**Category**: Fundamentals
+
+### Answer 📄
+
+`==` is the loose equality operator. It compares values after performing type coercion if the types differ.
+
+`===` is the strict equality operator. It compares both value and type without any coercion.
+
+In most cases, `===` is preferred because it produces more predictable results.
+
+Example:
+
+```js
+console.log(1 == '1');   // true  (type coercion applied)
+console.log(1 === '1');  // false (different types)
+
+console.log(null == undefined);  // true
+console.log(null === undefined); // false
+
+console.log(0 == false);  // true
+console.log(0 === false); // false
+```
+
+## 🧠 Question 42
+
+**ID**: js-042
+**Title**: How do call(), apply(), and bind() work?
+**Difficulty**: Medium
+**Category**: Functions
+
+### Answer 📄
+
+All three methods allow you to explicitly set the value of `this` for a function.
+
+- `call()` invokes the function immediately with arguments passed individually.
+- `apply()` invokes the function immediately with arguments passed as an array.
+- `bind()` returns a new function with `this` permanently bound, without invoking it immediately.
+
+Example:
+
+```js
+function greet(greeting, punctuation) {
+  return `${greeting}, ${this.name}${punctuation}`;
+}
+
+const user = { name: 'Rasool' };
+
+console.log(greet.call(user, 'Hello', '!'));   // Hello, Rasool!
+console.log(greet.apply(user, ['Hi', '.']));   // Hi, Rasool.
+
+const boundGreet = greet.bind(user, 'Hey');
+console.log(boundGreet('?'));                   // Hey, Rasool?
+```
+
+## 🧠 Question 43
+
+**ID**: js-043
+**Title**: What is an IIFE in JavaScript?
+**Difficulty**: Medium
+**Category**: Functions
+
+### Answer 📄
+
+An IIFE (Immediately Invoked Function Expression) is a function that is defined and executed immediately after its creation.
+
+It creates its own scope, preventing variables from leaking into the outer or global scope.
+
+IIFEs were widely used before block-scoped variables with `let` and `const` were available.
+
+Example:
+
+```js
+(function () {
+  const message = 'Hello from IIFE';
+  console.log(message); // Hello from IIFE
+})();
+
+// console.log(message); // ReferenceError — not accessible outside
+```
+
+## 🧠 Question 44
+
+**ID**: js-044
+**Title**: What is currying in JavaScript?
+**Difficulty**: Hard
+**Category**: Functions
+
+### Answer 📄
+
+Currying is a technique of transforming a function with multiple arguments into a sequence of functions, each accepting a single argument.
+
+It enables partial application, making functions more reusable and composable.
+
+Example:
+
+```js
+// Regular function
+function add(a, b) {
+  return a + b;
+}
+
+// Curried version
+function curriedAdd(a) {
+  return function (b) {
+    return a + b;
+  };
+}
+
+const add5 = curriedAdd(5);
+console.log(add5(3));  // 8
+console.log(add5(10)); // 15
+```
+
+## 🧠 Question 45
+
+**ID**: js-045
+**Title**: What is the difference between map(), filter(), and reduce()?
+**Difficulty**: Medium
+**Category**: Arrays
+
+### Answer 📄
+
+All three are higher-order array methods that return a new value without mutating the original array.
+
+- `map()` transforms each element and returns a new array of the same length.
+- `filter()` returns a new array containing only elements that pass a given condition.
+- `reduce()` accumulates all elements into a single value.
+
+Example:
+
+```js
+const numbers = [1, 2, 3, 4, 5];
+
+const doubled = numbers.map((n) => n * 2);
+console.log(doubled); // [2, 4, 6, 8, 10]
+
+const evens = numbers.filter((n) => n % 2 === 0);
+console.log(evens); // [2, 4]
+
+const sum = numbers.reduce((acc, n) => acc + n, 0);
+console.log(sum); // 15
+```

@@ -1,7 +1,7 @@
 ---
 topic: javascript
 language: en
-version: 1.8
+version: 1.7
 ---
 
 # JavaScript Interview Questions
@@ -1548,4 +1548,162 @@ console.log(evens); // [2, 4]
 
 const sum = numbers.reduce((acc, n) => acc + n, 0);
 console.log(sum); // 15
+```
+
+## 🧠 Question 46
+
+**ID**: js-046
+**Title**: What is destructuring in JavaScript?
+**Difficulty**: Easy
+**Category**: ES6+
+
+### Answer 📄
+
+Destructuring is a syntax that allows unpacking values from arrays or properties from objects into individual variables.
+
+It makes code more concise and readable when working with structured data.
+
+Example:
+
+```js
+// Object destructuring
+const user = { name: 'Rasool', age: 28 };
+const { name, age } = user;
+console.log(name); // Rasool
+console.log(age);  // 28
+
+// Array destructuring
+const colors = ['red', 'green', 'blue'];
+const [first, second] = colors;
+console.log(first);  // red
+console.log(second); // green
+```
+
+## 🧠 Question 47
+
+**ID**: js-047
+**Title**: What are the spread and rest operators in JavaScript?
+**Difficulty**: Easy
+**Category**: ES6+
+
+### Answer 📄
+
+Both use the `...` syntax but serve opposite purposes.
+
+The **spread** operator expands an iterable into individual elements.
+
+The **rest** operator collects multiple elements into a single array or object.
+
+Example:
+
+```js
+// Spread — expanding elements
+const arr1 = [1, 2, 3];
+const arr2 = [...arr1, 4, 5];
+console.log(arr2); // [1, 2, 3, 4, 5]
+
+const base = { a: 1 };
+const extended = { ...base, b: 2 };
+console.log(extended); // { a: 1, b: 2 }
+
+// Rest — collecting elements
+function sum(...numbers) {
+  return numbers.reduce((acc, n) => acc + n, 0);
+}
+console.log(sum(1, 2, 3, 4)); // 10
+```
+
+## 🧠 Question 48
+
+**ID**: js-048
+**Title**: What is the difference between Promise.all, Promise.race, Promise.allSettled, and Promise.any?
+**Difficulty**: Medium
+**Category**: Asynchronous & Event Loop
+
+### Answer 📄
+
+All four are Promise combinator methods used to handle multiple Promises simultaneously.
+
+- `Promise.all()` resolves when all Promises resolve. Rejects immediately if any one fails.
+- `Promise.race()` resolves or rejects as soon as the first Promise settles.
+- `Promise.allSettled()` waits for all Promises to settle and returns all results regardless of outcome.
+- `Promise.any()` resolves as soon as any one Promise fulfills. Rejects only if all fail.
+
+Example:
+
+```js
+const p1 = Promise.resolve(1);
+const p2 = Promise.resolve(2);
+const p3 = Promise.resolve(3);
+
+Promise.all([p1, p2, p3]).then(console.log);
+// [1, 2, 3]
+
+Promise.race([p1, p2, p3]).then(console.log);
+// 1
+
+Promise.allSettled([p1, p2, p3]).then(console.log);
+// [{ status: 'fulfilled', value: 1 }, ...]
+
+Promise.any([p1, p2, p3]).then(console.log);
+// 1
+```
+
+## 🧠 Question 49
+
+**ID**: js-049
+**Title**: What is event delegation in JavaScript?
+**Difficulty**: Medium
+**Category**: DOM & Events
+
+### Answer 📄
+
+Event delegation is a pattern where a single event listener is attached to a parent element to handle events triggered by its children.
+
+It relies on event bubbling, where events propagate up from the target element through its ancestors.
+
+This pattern improves performance by reducing the number of event listeners and works for dynamically added elements.
+
+Example:
+
+```js
+// Without delegation — one listener per item (inefficient)
+// document.querySelectorAll('li').forEach(li => li.addEventListener(...))
+
+// With delegation — one listener on the parent
+document.querySelector('#list').addEventListener('click', (event) => {
+  if (event.target.tagName === 'LI') {
+    console.log('Clicked:', event.target.textContent);
+  }
+});
+```
+
+## 🧠 Question 50
+
+**ID**: js-050
+**Title**: What is type coercion in JavaScript?
+**Difficulty**: Medium
+**Category**: Fundamentals
+
+### Answer 📄
+
+Type coercion is the automatic or implicit conversion of a value from one data type to another.
+
+JavaScript performs coercion in two ways:
+
+- **Implicit coercion**: happens automatically during operations involving mixed types.
+- **Explicit coercion**: done manually using conversion functions like `Number()`, `String()`, or `Boolean()`.
+
+Example:
+
+```js
+// Implicit coercion
+console.log(1 + '2');     // '12' (number coerced to string)
+console.log(true + 1);    // 2    (boolean coerced to number)
+console.log('' == false); // true (both coerce to 0)
+
+// Explicit coercion
+console.log(Number('42')); // 42
+console.log(String(100));  // '100'
+console.log(Boolean(0));   // false
 ```

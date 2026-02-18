@@ -1,7 +1,7 @@
 ---
 topic: javascript
 language: fa
-version: 1.8
+version: 1.7
 ---
 
 # سوالات مصاحبه JavaScript
@@ -1548,4 +1548,162 @@ console.log(evens); // [2, 4]
 
 const sum = numbers.reduce((acc, n) => acc + n, 0);
 console.log(sum); // 15
+```
+
+## 🧠 سوال ۴۶
+
+**آیدی**: js-046
+**عنوان**: destructuring در JavaScript چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+Destructuring سینتکسی است که اجازه میدهد مقادیر از آرایهها یا خصوصیات از اشیاء را در متغیرهای جداگانه باز کنید.
+
+کد را هنگام کار با دادههای ساختاریافته مختصرتر و خواناتر میکند.
+
+مثال:
+
+```js
+// Destructuring شیء
+const user = { name: 'رسول', age: 28 };
+const { name, age } = user;
+console.log(name); // رسول
+console.log(age); // 28
+
+// Destructuring آرایه
+const colors = ['قرمز', 'سبز', 'آبی'];
+const [first, second] = colors;
+console.log(first); // قرمز
+console.log(second); // سبز
+```
+
+## 🧠 سوال ۴۷
+
+**آیدی**: js-047
+**عنوان**: عملگرهای spread و rest در JavaScript چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+هر دو از سینتکس `...` استفاده میکنند اما اهداف مخالف دارند.
+
+عملگر **spread** یک iterable را به عناصر جداگانه گسترش میدهد.
+
+عملگر **rest** چندین عنصر را در یک آرایه یا شیء واحد جمعآوری میکند.
+
+مثال:
+
+```js
+// Spread — گسترش عناصر
+const arr1 = [1, 2, 3];
+const arr2 = [...arr1, 4, 5];
+console.log(arr2); // [1, 2, 3, 4, 5]
+
+const base = { a: 1 };
+const extended = { ...base, b: 2 };
+console.log(extended); // { a: 1, b: 2 }
+
+// Rest — جمعآوری عناصر
+function sum(...numbers) {
+  return numbers.reduce((acc, n) => acc + n, 0);
+}
+console.log(sum(1, 2, 3, 4)); // 10
+```
+
+## 🧠 سوال ۴۸
+
+**آیدی**: js-048
+**عنوان**: تفاوت بین Promise.all، Promise.race، Promise.allSettled و Promise.any چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: ناهمزمان و حلقه رویداد
+
+### پاسخ 📄
+
+هر چهار متد ترکیبکننده Promise هستند که برای مدیریت همزمان چندین Promise استفاده میشوند.
+
+- `Promise.all()` زمانی resolve میشود که همه Promiseها resolve شوند. اگر هر کدام fail شود بلافاصله reject میکند.
+- `Promise.race()` به محض اینکه اولین Promise settle شود، resolve یا reject میکند.
+- `Promise.allSettled()` منتظر settle شدن همه Promiseها میماند و همه نتایج را صرف نظر از نتیجه برمیگرداند.
+- `Promise.any()` به محض اینکه هر Promise fulfill شود resolve میکند. فقط اگر همه fail شوند reject میکند.
+
+مثال:
+
+```js
+const p1 = Promise.resolve(1);
+const p2 = Promise.resolve(2);
+const p3 = Promise.resolve(3);
+
+Promise.all([p1, p2, p3]).then(console.log);
+// [1, 2, 3]
+
+Promise.race([p1, p2, p3]).then(console.log);
+// 1
+
+Promise.allSettled([p1, p2, p3]).then(console.log);
+// [{ status: 'fulfilled', value: 1 }, ...]
+
+Promise.any([p1, p2, p3]).then(console.log);
+// 1
+```
+
+## 🧠 سوال ۴۹
+
+**آیدی**: js-049
+**عنوان**: event delegation در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: DOM و رویدادها
+
+### پاسخ 📄
+
+Event delegation الگویی است که در آن یک event listener واحد به عنصر والد متصل میشود تا رویدادهای ایجاد شده توسط فرزندانش را مدیریت کند.
+
+به event bubbling متکی است، جایی که رویدادها از عنصر هدف به سمت بالا منتشر میشوند.
+
+این الگو با کاهش تعداد event listenerها عملکرد را بهبود میبخشد و برای عناصر اضافه شده به صورت پویا هم کار میکند.
+
+مثال:
+
+```js
+// بدون delegation — یک listener برای هر آیتم (ناکارآمد)
+// document.querySelectorAll('li').forEach(li => li.addEventListener(...))
+
+// با delegation — یک listener روی والد
+document.querySelector('#list').addEventListener('click', (event) => {
+  if (event.target.tagName === 'LI') {
+    console.log('کلیک شد:', event.target.textContent);
+  }
+});
+```
+
+## 🧠 سوال ۵۰
+
+**آیدی**: js-050
+**عنوان**: type coercion در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: اصول اولیه
+
+### پاسخ 📄
+
+Type coercion تبدیل خودکار یا ضمنی یک مقدار از یک نوع داده به نوع دیگر است.
+
+JavaScript به دو روش coercion انجام میدهد:
+
+- **Coercion ضمنی**: به طور خودکار در حین عملیات با نوعهای مختلط اتفاق میافتد.
+- **Coercion صریح**: به صورت دستی با توابع تبدیل مانند `Number()`، `String()` یا `Boolean()` انجام میشود.
+
+مثال:
+
+```js
+// Coercion ضمنی
+console.log(1 + '2'); // '12' (عدد به رشته تبدیل شد)
+console.log(true + 1); // 2    (boolean به عدد تبدیل شد)
+console.log('' == false); // true (هر دو به 0 تبدیل میشوند)
+
+// Coercion صریح
+console.log(Number('42')); // 42
+console.log(String(100)); // '100'
+console.log(Boolean(0)); // false
 ```

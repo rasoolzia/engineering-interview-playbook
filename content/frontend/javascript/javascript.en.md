@@ -1707,3 +1707,173 @@ console.log(Number('42')); // 42
 console.log(String(100));  // '100'
 console.log(Boolean(0));   // false
 ```
+
+## 🧠 Question 51
+
+**ID**: js-051
+**Title**: What is optional chaining (?.) in JavaScript?
+**Difficulty**: Easy
+**Category**: ES6+
+
+### Answer 📄
+
+Optional chaining (`?.`) allows you to safely access deeply nested properties without checking if each reference in the chain is valid.
+
+If any part of the chain is `null` or `undefined`, the expression short-circuits and returns `undefined` instead of throwing an error.
+
+It works with property access, method calls, and array indexing.
+
+Example:
+
+```js
+const user = {
+  profile: {
+    address: {
+      city: 'Tehran',
+    },
+  },
+};
+
+console.log(user?.profile?.address?.city); // Tehran
+console.log(user?.contact?.phone);         // undefined (no error thrown)
+
+// With method calls
+console.log(user?.getName?.());            // undefined (no error thrown)
+```
+
+## 🧠 Question 52
+
+**ID**: js-052
+**Title**: What is the nullish coalescing operator (??) and how does it differ from ||?
+**Difficulty**: Easy
+**Category**: ES6+
+
+### Answer 📄
+
+The nullish coalescing operator (`??`) returns the right-hand side value only when the left-hand side is `null` or `undefined`.
+
+The logical OR operator (`||`) returns the right-hand side when the left-hand side is any falsy value, including `0`, `''`, and `false`.
+
+This distinction matters when `0` or an empty string are valid values.
+
+Example:
+
+```js
+console.log(null ?? 'default');      // 'default'
+console.log(undefined ?? 'default'); // 'default'
+
+console.log(0 ?? 'default');  // 0       (not replaced — 0 is not null/undefined)
+console.log(0 || 'default');  // 'default' (replaced — 0 is falsy)
+
+console.log('' ?? 'fallback'); // ''     (empty string is not null/undefined)
+console.log('' || 'fallback'); // 'fallback' (empty string is falsy)
+```
+
+## 🧠 Question 53
+
+**ID**: js-053
+**Title**: How does the typeof operator work and what are its quirks?
+**Difficulty**: Easy
+**Category**: Fundamentals
+
+### Answer 📄
+
+The `typeof` operator returns a string indicating the type of the given value.
+
+Common return values:
+
+- `'string'`, `'number'`, `'bigint'`, `'boolean'`, `'undefined'`, `'symbol'`
+- `'object'` for objects and arrays
+- `'function'` for functions
+
+Known quirk: `typeof null` returns `'object'`, which is a historical bug in JavaScript.
+
+Example:
+
+```js
+console.log(typeof 'hello');      // 'string'
+console.log(typeof 42);           // 'number'
+console.log(typeof true);         // 'boolean'
+console.log(typeof undefined);    // 'undefined'
+console.log(typeof Symbol());     // 'symbol'
+console.log(typeof function(){}); // 'function'
+console.log(typeof {});           // 'object'
+console.log(typeof []);           // 'object'
+console.log(typeof null);         // 'object' ← known quirk
+```
+
+## 🧠 Question 54
+
+**ID**: js-054
+**Title**: What is the instanceof operator and how does it differ from typeof?
+**Difficulty**: Easy
+**Category**: Fundamentals
+
+### Answer 📄
+
+`instanceof` checks whether an object was created from a specific constructor or class by walking the prototype chain. It returns a boolean.
+
+`typeof` returns a string type name and is best suited for primitives.
+
+`instanceof` is better suited for checking object instances and class inheritance.
+
+Example:
+
+```js
+class Animal {}
+class Dog extends Animal {}
+
+const dog = new Dog();
+
+console.log(dog instanceof Dog);    // true
+console.log(dog instanceof Animal); // true (walks prototype chain)
+console.log(dog instanceof Object); // true (everything inherits from Object)
+
+console.log(typeof dog);            // 'object'
+console.log(typeof 42);             // 'number'
+
+console.log([] instanceof Array);   // true
+console.log([] instanceof Object);  // true
+```
+
+## 🧠 Question 55
+
+**ID**: js-055
+**Title**: What are Symbols in JavaScript and when are they used?
+**Difficulty**: Medium
+**Category**: ES6+
+
+### Answer 📄
+
+A Symbol is a primitive value that is guaranteed to be unique. No two Symbols are ever equal, even if they have the same description.
+
+Symbols are used as unique object property keys to avoid naming collisions, especially in shared codebases or libraries.
+
+JavaScript also has built-in well-known Symbols such as `Symbol.iterator` that enable custom object behavior.
+
+Example:
+
+```js
+const id = Symbol('id');
+const id2 = Symbol('id');
+
+console.log(id === id2); // false — every Symbol is unique
+
+const user = {
+  name: 'Rasool',
+  [id]: 12345, // Symbol used as a property key
+};
+
+console.log(user[id]); // 12345
+console.log(user.id);  // undefined — not accessible by string key
+
+// Well-known Symbol
+const iterable = {
+  [Symbol.iterator]() {
+    let n = 0;
+    return { next: () => ({ value: n++, done: n > 3 }) };
+  },
+};
+
+console.log([...iterable]); // [0, 1, 2]
+```

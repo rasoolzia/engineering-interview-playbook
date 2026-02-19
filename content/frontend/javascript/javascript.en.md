@@ -1,7 +1,7 @@
 ---
 topic: javascript
 language: en
-version: 1.9
+version: 2.0
 ---
 
 # JavaScript Interview Questions
@@ -1420,13 +1420,13 @@ In most cases, `===` is preferred because it produces more predictable results.
 Example:
 
 ```js
-console.log(1 == '1');   // true  (type coercion applied)
-console.log(1 === '1');  // false (different types)
+console.log(1 == '1'); // true  (type coercion applied)
+console.log(1 === '1'); // false (different types)
 
-console.log(null == undefined);  // true
+console.log(null == undefined); // true
 console.log(null === undefined); // false
 
-console.log(0 == false);  // true
+console.log(0 == false); // true
 console.log(0 === false); // false
 ```
 
@@ -1454,11 +1454,11 @@ function greet(greeting, punctuation) {
 
 const user = { name: 'Rasool' };
 
-console.log(greet.call(user, 'Hello', '!'));   // Hello, Rasool!
-console.log(greet.apply(user, ['Hi', '.']));   // Hi, Rasool.
+console.log(greet.call(user, 'Hello', '!')); // Hello, Rasool!
+console.log(greet.apply(user, ['Hi', '.'])); // Hi, Rasool.
 
 const boundGreet = greet.bind(user, 'Hey');
-console.log(boundGreet('?'));                   // Hey, Rasool?
+console.log(boundGreet('?')); // Hey, Rasool?
 ```
 
 ## 🧠 Question 43
@@ -1516,7 +1516,7 @@ function curriedAdd(a) {
 }
 
 const add5 = curriedAdd(5);
-console.log(add5(3));  // 8
+console.log(add5(3)); // 8
 console.log(add5(10)); // 15
 ```
 
@@ -1570,12 +1570,12 @@ Example:
 const user = { name: 'Rasool', age: 28 };
 const { name, age } = user;
 console.log(name); // Rasool
-console.log(age);  // 28
+console.log(age); // 28
 
 // Array destructuring
 const colors = ['red', 'green', 'blue'];
 const [first, second] = colors;
-console.log(first);  // red
+console.log(first); // red
 console.log(second); // green
 ```
 
@@ -1698,14 +1698,14 @@ Example:
 
 ```js
 // Implicit coercion
-console.log(1 + '2');     // '12' (number coerced to string)
-console.log(true + 1);    // 2    (boolean coerced to number)
+console.log(1 + '2'); // '12' (number coerced to string)
+console.log(true + 1); // 2    (boolean coerced to number)
 console.log('' == false); // true (both coerce to 0)
 
 // Explicit coercion
 console.log(Number('42')); // 42
-console.log(String(100));  // '100'
-console.log(Boolean(0));   // false
+console.log(String(100)); // '100'
+console.log(Boolean(0)); // false
 ```
 
 ## 🧠 Question 51
@@ -1735,10 +1735,10 @@ const user = {
 };
 
 console.log(user?.profile?.address?.city); // Tehran
-console.log(user?.contact?.phone);         // undefined (no error thrown)
+console.log(user?.contact?.phone); // undefined (no error thrown)
 
 // With method calls
-console.log(user?.getName?.());            // undefined (no error thrown)
+console.log(user?.getName?.()); // undefined (no error thrown)
 ```
 
 ## 🧠 Question 52
@@ -1759,11 +1759,11 @@ This distinction matters when `0` or an empty string are valid values.
 Example:
 
 ```js
-console.log(null ?? 'default');      // 'default'
+console.log(null ?? 'default'); // 'default'
 console.log(undefined ?? 'default'); // 'default'
 
-console.log(0 ?? 'default');  // 0       (not replaced — 0 is not null/undefined)
-console.log(0 || 'default');  // 'default' (replaced — 0 is falsy)
+console.log(0 ?? 'default'); // 0       (not replaced — 0 is not null/undefined)
+console.log(0 || 'default'); // 'default' (replaced — 0 is falsy)
 
 console.log('' ?? 'fallback'); // ''     (empty string is not null/undefined)
 console.log('' || 'fallback'); // 'fallback' (empty string is falsy)
@@ -1791,15 +1791,15 @@ Known quirk: `typeof null` returns `'object'`, which is a historical bug in Java
 Example:
 
 ```js
-console.log(typeof 'hello');      // 'string'
-console.log(typeof 42);           // 'number'
-console.log(typeof true);         // 'boolean'
-console.log(typeof undefined);    // 'undefined'
-console.log(typeof Symbol());     // 'symbol'
-console.log(typeof function(){}); // 'function'
-console.log(typeof {});           // 'object'
-console.log(typeof []);           // 'object'
-console.log(typeof null);         // 'object' ← known quirk
+console.log(typeof 'hello'); // 'string'
+console.log(typeof 42); // 'number'
+console.log(typeof true); // 'boolean'
+console.log(typeof undefined); // 'undefined'
+console.log(typeof Symbol()); // 'symbol'
+console.log(typeof function () {}); // 'function'
+console.log(typeof {}); // 'object'
+console.log(typeof []); // 'object'
+console.log(typeof null); // 'object' ← known quirk
 ```
 
 ## 🧠 Question 54
@@ -1825,15 +1825,15 @@ class Dog extends Animal {}
 
 const dog = new Dog();
 
-console.log(dog instanceof Dog);    // true
+console.log(dog instanceof Dog); // true
 console.log(dog instanceof Animal); // true (walks prototype chain)
 console.log(dog instanceof Object); // true (everything inherits from Object)
 
-console.log(typeof dog);            // 'object'
-console.log(typeof 42);             // 'number'
+console.log(typeof dog); // 'object'
+console.log(typeof 42); // 'number'
 
-console.log([] instanceof Array);   // true
-console.log([] instanceof Object);  // true
+console.log([] instanceof Array); // true
+console.log([] instanceof Object); // true
 ```
 
 ## 🧠 Question 55
@@ -1865,7 +1865,7 @@ const user = {
 };
 
 console.log(user[id]); // 12345
-console.log(user.id);  // undefined — not accessible by string key
+console.log(user.id); // undefined — not accessible by string key
 
 // Well-known Symbol
 const iterable = {

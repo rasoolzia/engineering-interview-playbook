@@ -1707,3 +1707,173 @@ console.log(Number('42')); // 42
 console.log(String(100)); // '100'
 console.log(Boolean(0)); // false
 ```
+
+## 🧠 سوال ۵۱
+
+**آیدی**: js-051
+**عنوان**: optional chaining (?.) در JavaScript چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+Optional chaining (`?.`) اجازه میدهد خصوصیات تودرتو را بدون بررسی اینکه هر مرجع در زنجیره معتبر است یا نه، به صورت امن دسترسی پیدا کنید.
+
+اگر هر بخشی از زنجیره `null` یا `undefined` باشد، عبارت اتصال کوتاه (short-circuit) میشود و به جای پرتاب خطا `undefined` برمیگرداند.
+
+با دسترسی به خصوصیات، فراخوانی متدها و دسترسی به آرایه کار میکند.
+
+مثال:
+
+```js
+const user = {
+  profile: {
+    address: {
+      city: 'تهران',
+    },
+  },
+};
+
+console.log(user?.profile?.address?.city); // تهران
+console.log(user?.contact?.phone);         // undefined (خطایی پرتاب نمیشود)
+
+// با فراخوانی متد
+console.log(user?.getName?.());            // undefined (خطایی پرتاب نمیشود)
+```
+
+## 🧠 سوال ۵۲
+
+**آیدی**: js-052
+**عنوان**: عملگر nullish coalescing (??) چیست و چه تفاوتی با || دارد؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+عملگر nullish coalescing (`??`) فقط زمانی مقدار سمت راست را برمیگرداند که مقدار سمت چپ `null` یا `undefined` باشد.
+
+عملگر OR منطقی (`||`) زمانی مقدار سمت راست را برمیگرداند که مقدار سمت چپ هر مقدار falsy باشد، از جمله `0`، `''` و `false`.
+
+این تفاوت زمانی اهمیت دارد که `0` یا رشته خالی مقادیر معتبری هستند.
+
+مثال:
+
+```js
+console.log(null ?? 'پیش‌فرض');      // 'پیش‌فرض'
+console.log(undefined ?? 'پیش‌فرض'); // 'پیش‌فرض'
+
+console.log(0 ?? 'پیش‌فرض');  // 0          (جایگزین نشد — 0 null/undefined نیست)
+console.log(0 || 'پیش‌فرض');  // 'پیش‌فرض' (جایگزین شد — 0 falsy است)
+
+console.log('' ?? 'جایگزین'); // ''         (رشته خالی null/undefined نیست)
+console.log('' || 'جایگزین'); // 'جایگزین' (رشته خالی falsy است)
+```
+
+## 🧠 سوال ۵۳
+
+**آیدی**: js-053
+**عنوان**: عملگر typeof چگونه کار میکند و نکات غیرمعمول آن چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: اصول اولیه
+
+### پاسخ 📄
+
+عملگر `typeof` رشتهای را برمیگرداند که نوع مقدار داده شده را نشان میدهد.
+
+مقادیر رایج بازگشتی:
+
+- `'string'`، `'number'`، `'bigint'`، `'boolean'`، `'undefined'`، `'symbol'`
+- `'object'` برای اشیاء و آرایهها
+- `'function'` برای توابع
+
+نکته غیرمعمول شناخته‌شده: `typeof null` مقدار `'object'` برمیگرداند که یک باگ تاریخی در JavaScript است.
+
+مثال:
+
+```js
+console.log(typeof 'سلام');       // 'string'
+console.log(typeof 42);           // 'number'
+console.log(typeof true);         // 'boolean'
+console.log(typeof undefined);    // 'undefined'
+console.log(typeof Symbol());     // 'symbol'
+console.log(typeof function(){}); // 'function'
+console.log(typeof {});           // 'object'
+console.log(typeof []);           // 'object'
+console.log(typeof null);         // 'object' ← باگ تاریخی
+```
+
+## 🧠 سوال ۵۴
+
+**آیدی**: js-054
+**عنوان**: عملگر instanceof چیست و چه تفاوتی با typeof دارد؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: اصول اولیه
+
+### پاسخ 📄
+
+`instanceof` با طی کردن زنجیره prototype بررسی میکند که آیا یک شیء از constructor یا کلاس خاصی ساخته شده است. مقدار boolean برمیگرداند.
+
+`typeof` یک نام نوع به صورت رشته برمیگرداند و برای مقادیر اولیه مناسبتر است.
+
+`instanceof` برای بررسی نمونههای شیء و وراثت کلاس بهتر است.
+
+مثال:
+
+```js
+class Animal {}
+class Dog extends Animal {}
+
+const dog = new Dog();
+
+console.log(dog instanceof Dog);    // true
+console.log(dog instanceof Animal); // true (زنجیره prototype را طی میکند)
+console.log(dog instanceof Object); // true (همه از Object ارث میبرند)
+
+console.log(typeof dog);            // 'object'
+console.log(typeof 42);             // 'number'
+
+console.log([] instanceof Array);   // true
+console.log([] instanceof Object);  // true
+```
+
+## 🧠 سوال ۵۵
+
+**آیدی**: js-055
+**عنوان**: Symbol در JavaScript چیست و چه زمانی استفاده میشود؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+Symbol یک مقدار اولیه است که تضمین میشود منحصربه‌فرد باشد. هیچ دو Symbol‌ای برابر نیستند، حتی اگر توضیح یکسانی داشته باشند.
+
+از Symbol‌ها به عنوان کلیدهای منحصربه‌فرد خصوصیات شیء استفاده میشود تا از تداخل نام جلوگیری شود.
+
+JavaScript همچنین Symbol‌های شناخته‌شده داخلی مانند `Symbol.iterator` دارد که رفتار سفارشی شیء را فعال میکنند.
+
+مثال:
+
+```js
+const id = Symbol('id');
+const id2 = Symbol('id');
+
+console.log(id === id2); // false — هر Symbol منحصربه‌فرد است
+
+const user = {
+  name: 'رسول',
+  [id]: 12345,
+};
+
+console.log(user[id]); // 12345
+console.log(user.id);  // undefined — از طریق کلید رشته قابل دسترسی نیست
+
+// Symbol شناخته‌شده
+const iterable = {
+  [Symbol.iterator]() {
+    let n = 0;
+    return { next: () => ({ value: n++, done: n > 3 }) };
+  },
+};
+
+console.log([...iterable]); // [0, 1, 2]
+```

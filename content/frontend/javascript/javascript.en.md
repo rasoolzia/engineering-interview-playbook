@@ -1877,3 +1877,170 @@ const iterable = {
 
 console.log([...iterable]); // [0, 1, 2]
 ```
+
+## 🧠 Question 56
+
+**ID**: js-056
+**Title**: What are generator functions in JavaScript?
+**Difficulty**: Hard
+**Category**: Functions
+
+### Answer 📄
+
+A generator function is declared with `function*` and can pause its execution using the `yield` keyword, returning control to the caller.
+
+Each call to `.next()` on the generator resumes execution until the next `yield` or the function ends.
+
+Generators are useful for lazy evaluation, infinite sequences, and async flow control.
+
+Example:
+
+```js
+function* counter() {
+  yield 1;
+  yield 2;
+  yield 3;
+}
+
+const gen = counter();
+
+console.log(gen.next()); // { value: 1, done: false }
+console.log(gen.next()); // { value: 2, done: false }
+console.log(gen.next()); // { value: 3, done: false }
+console.log(gen.next()); // { value: undefined, done: true }
+```
+
+## 🧠 Question 57
+
+**ID**: js-057
+**Title**: What is the iterator protocol in JavaScript?
+**Difficulty**: Hard
+**Category**: ES6+
+
+### Answer 📄
+
+An object follows the iterator protocol when it implements a `next()` method that returns `{ value, done }`.
+
+An iterable is any object with a `[Symbol.iterator]()` method that returns an iterator. This enables `for...of` loops and spread syntax.
+
+Example:
+
+```js
+const range = {
+  from: 1,
+  to: 3,
+  [Symbol.iterator]() {
+    let current = this.from;
+    const last = this.to;
+    return {
+      next() {
+        return current <= last
+          ? { value: current++, done: false }
+          : { value: undefined, done: true };
+      },
+    };
+  },
+};
+
+for (const num of range) {
+  console.log(num); // 1, 2, 3
+}
+
+console.log([...range]); // [1, 2, 3]
+```
+
+## 🧠 Question 58
+
+**ID**: js-058
+**Title**: What is Proxy in JavaScript?
+**Difficulty**: Hard
+**Category**: ES6+
+
+### Answer 📄
+
+A `Proxy` wraps an object and intercepts fundamental operations on it using traps such as `get`, `set`, `has`, and `deleteProperty`.
+
+Proxies are used for validation, logging, access control, computed properties, and building reactive systems.
+
+Example:
+
+```js
+const user = { name: 'Rasool', age: 28 };
+
+const proxy = new Proxy(user, {
+  get(target, key) {
+    return key in target ? target[key] : `Property "${key}" not found`;
+  },
+  set(target, key, value) {
+    if (key === 'age' && typeof value !== 'number') {
+      throw new TypeError('Age must be a number');
+    }
+    target[key] = value;
+    return true;
+  },
+});
+
+console.log(proxy.name); // Rasool
+console.log(proxy.country); // Property "country" not found
+proxy.age = 30; // valid
+// proxy.age = 'thirty';   // TypeError: Age must be a number
+```
+
+## 🧠 Question 59
+
+**ID**: js-059
+**Title**: What is the Reflect API in JavaScript?
+**Difficulty**: Hard
+**Category**: ES6+
+
+### Answer 📄
+
+The `Reflect` object provides static methods that mirror the operations available as Proxy traps.
+
+It is commonly used inside Proxy traps to forward the original operation to the target object after applying custom logic.
+
+Using `Reflect` makes Proxy handlers more reliable and predictable.
+
+Example:
+
+```js
+const user = { name: 'Rasool' };
+
+const proxy = new Proxy(user, {
+  set(target, key, value) {
+    console.log(`Setting "${key}" to "${value}"`);
+    return Reflect.set(target, key, value); // forward to original object
+  },
+});
+
+proxy.name = 'Ali';
+// Setting "name" to "Ali"
+
+console.log(user.name); // Ali
+```
+
+## 🧠 Question 60
+
+**ID**: js-060
+**Title**: What are default parameters in JavaScript?
+**Difficulty**: Easy
+**Category**: Functions
+
+### Answer 📄
+
+Default parameters allow function parameters to have a fallback value when no argument is passed or when `undefined` is explicitly provided.
+
+Default values are evaluated at call time, not at function definition time.
+
+Example:
+
+```js
+function greet(name = 'Guest', greeting = 'Hello') {
+  return `${greeting}, ${name}!`;
+}
+
+console.log(greet()); // Hello, Guest!
+console.log(greet('Rasool')); // Hello, Rasool!
+console.log(greet('Sara', 'Hi')); // Hi, Sara!
+console.log(greet(undefined, 'Hey')); // Hey, Guest! (undefined triggers default)
+```

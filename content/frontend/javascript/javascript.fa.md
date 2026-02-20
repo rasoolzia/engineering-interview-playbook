@@ -1735,10 +1735,10 @@ const user = {
 };
 
 console.log(user?.profile?.address?.city); // تهران
-console.log(user?.contact?.phone); // undefined (خطایی پرتاب نمیشود)
+console.log(user?.contact?.phone);         // undefined (خطایی پرتاب نمیشود)
 
 // با فراخوانی متد
-console.log(user?.getName?.()); // undefined (خطایی پرتاب نمیشود)
+console.log(user?.getName?.());            // undefined (خطایی پرتاب نمیشود)
 ```
 
 ## 🧠 سوال ۵۲
@@ -1759,11 +1759,11 @@ console.log(user?.getName?.()); // undefined (خطایی پرتاب نمیشود
 مثال:
 
 ```js
-console.log(null ?? 'پیش‌فرض'); // 'پیش‌فرض'
+console.log(null ?? 'پیش‌فرض');      // 'پیش‌فرض'
 console.log(undefined ?? 'پیش‌فرض'); // 'پیش‌فرض'
 
-console.log(0 ?? 'پیش‌فرض'); // 0          (جایگزین نشد — 0 null/undefined نیست)
-console.log(0 || 'پیش‌فرض'); // 'پیش‌فرض' (جایگزین شد — 0 falsy است)
+console.log(0 ?? 'پیش‌فرض');  // 0          (جایگزین نشد — 0 null/undefined نیست)
+console.log(0 || 'پیش‌فرض');  // 'پیش‌فرض' (جایگزین شد — 0 falsy است)
 
 console.log('' ?? 'جایگزین'); // ''         (رشته خالی null/undefined نیست)
 console.log('' || 'جایگزین'); // 'جایگزین' (رشته خالی falsy است)
@@ -1791,15 +1791,15 @@ console.log('' || 'جایگزین'); // 'جایگزین' (رشته خالی fals
 مثال:
 
 ```js
-console.log(typeof 'سلام'); // 'string'
-console.log(typeof 42); // 'number'
-console.log(typeof true); // 'boolean'
-console.log(typeof undefined); // 'undefined'
-console.log(typeof Symbol()); // 'symbol'
-console.log(typeof function () {}); // 'function'
-console.log(typeof {}); // 'object'
-console.log(typeof []); // 'object'
-console.log(typeof null); // 'object' ← باگ تاریخی
+console.log(typeof 'سلام');       // 'string'
+console.log(typeof 42);           // 'number'
+console.log(typeof true);         // 'boolean'
+console.log(typeof undefined);    // 'undefined'
+console.log(typeof Symbol());     // 'symbol'
+console.log(typeof function(){}); // 'function'
+console.log(typeof {});           // 'object'
+console.log(typeof []);           // 'object'
+console.log(typeof null);         // 'object' ← باگ تاریخی
 ```
 
 ## 🧠 سوال ۵۴
@@ -1825,15 +1825,15 @@ class Dog extends Animal {}
 
 const dog = new Dog();
 
-console.log(dog instanceof Dog); // true
+console.log(dog instanceof Dog);    // true
 console.log(dog instanceof Animal); // true (زنجیره prototype را طی میکند)
 console.log(dog instanceof Object); // true (همه از Object ارث میبرند)
 
-console.log(typeof dog); // 'object'
-console.log(typeof 42); // 'number'
+console.log(typeof dog);            // 'object'
+console.log(typeof 42);             // 'number'
 
-console.log([] instanceof Array); // true
-console.log([] instanceof Object); // true
+console.log([] instanceof Array);   // true
+console.log([] instanceof Object);  // true
 ```
 
 ## 🧠 سوال ۵۵
@@ -1865,7 +1865,7 @@ const user = {
 };
 
 console.log(user[id]); // 12345
-console.log(user.id); // undefined — از طریق کلید رشته قابل دسترسی نیست
+console.log(user.id);  // undefined — از طریق کلید رشته قابل دسترسی نیست
 
 // Symbol شناخته‌شده
 const iterable = {
@@ -1876,4 +1876,171 @@ const iterable = {
 };
 
 console.log([...iterable]); // [0, 1, 2]
+```
+
+## 🧠 سوال ۵۶
+
+**آیدی**: js-056
+**عنوان**: توابع generator در JavaScript چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: توابع
+
+### پاسخ 📄
+
+تابع generator با `function*` تعریف میشود و میتواند با کلیدواژه `yield` اجرایش را متوقف کند و کنترل را به فراخوانیکننده برگرداند.
+
+هر بار که `.next()` فراخوانی شود، اجرا تا `yield` بعدی یا پایان تابع ادامه مییابد.
+
+Generatorها برای ارزیابی تنبل، دنبالههای بینهایت و کنترل جریان ناهمزمان مفیدند.
+
+مثال:
+
+```js
+function* counter() {
+  yield 1;
+  yield 2;
+  yield 3;
+}
+
+const gen = counter();
+
+console.log(gen.next()); // { value: 1, done: false }
+console.log(gen.next()); // { value: 2, done: false }
+console.log(gen.next()); // { value: 3, done: false }
+console.log(gen.next()); // { value: undefined, done: true }
+```
+
+## 🧠 سوال ۵۷
+
+**آیدی**: js-057
+**عنوان**: پروتکل iterator در JavaScript چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+یک شیء از پروتکل iterator پیروی میکند وقتی متد `next()` را پیادهسازی کند که `{ value, done }` برمیگرداند.
+
+یک iterable هر شیئی است که متد `[Symbol.iterator]()` داشته باشد. این حلقههای `for...of` و سینتکس spread را فعال میکند.
+
+مثال:
+
+```js
+const range = {
+  from: 1,
+  to: 3,
+  [Symbol.iterator]() {
+    let current = this.from;
+    const last = this.to;
+    return {
+      next() {
+        return current <= last
+          ? { value: current++, done: false }
+          : { value: undefined, done: true };
+      },
+    };
+  },
+};
+
+for (const num of range) {
+  console.log(num); // 1, 2, 3
+}
+
+console.log([...range]); // [1, 2, 3]
+```
+
+## 🧠 سوال ۵۸
+
+**آیدی**: js-058
+**عنوان**: Proxy در JavaScript چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+`Proxy` یک شیء را میپوشاند و عملیات اساسی روی آن مانند دسترسی به خصوصیت، انتساب و فراخوانی تابع را با استفاده از traps رهگیری میکند.
+
+Proxy‌ها برای اعتبارسنجی، لاگ گرفتن، کنترل دسترسی و ساختن سیستمهای reactive استفاده میشوند.
+
+مثال:
+
+```js
+const user = { name: 'رسول', age: 28 };
+
+const proxy = new Proxy(user, {
+  get(target, key) {
+    return key in target ? target[key] : `خصوصیت "${key}" پیدا نشد`;
+  },
+  set(target, key, value) {
+    if (key === 'age' && typeof value !== 'number') {
+      throw new TypeError('سن باید عدد باشد');
+    }
+    target[key] = value;
+    return true;
+  },
+});
+
+console.log(proxy.name);    // رسول
+console.log(proxy.country); // خصوصیت "country" پیدا نشد
+proxy.age = 30;             // معتبر
+// proxy.age = 'سی';       // TypeError: سن باید عدد باشد
+```
+
+## 🧠 سوال ۵۹
+
+**آیدی**: js-059
+**عنوان**: Reflect API در JavaScript چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: ES6+
+
+### پاسخ 📄
+
+شیء `Reflect` متدهای استاتیکی ارائه میدهد که عملیات موجود به عنوان Proxy trap را منعکس میکنند.
+
+معمولاً داخل Proxy trap‌ها برای انتقال عملیات اصلی به شیء هدف پس از اعمال منطق سفارشی استفاده میشود.
+
+استفاده از `Reflect` handler‌های Proxy را قابل اطمینانتر و قابل پیشبینیتر میکند.
+
+مثال:
+
+```js
+const user = { name: 'رسول' };
+
+const proxy = new Proxy(user, {
+  set(target, key, value) {
+    console.log(`مقدار "${key}" به "${value}" تنظیم شد`);
+    return Reflect.set(target, key, value); // به شیء اصلی انتقال میدهد
+  },
+});
+
+proxy.name = 'علی';
+// مقدار "name" به "علی" تنظیم شد
+
+console.log(user.name); // علی
+```
+
+## 🧠 سوال ۶۰
+
+**آیدی**: js-060
+**عنوان**: پارامترهای پیش‌فرض در JavaScript چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: توابع
+
+### پاسخ 📄
+
+پارامترهای پیشفرض به پارامترهای تابع اجازه میدهند مقدار پیشفرض داشته باشند اگر هیچ آرگومانی پاس داده نشود یا `undefined` صراحتاً ارسال شود.
+
+مقادیر پیشفرض در زمان فراخوانی ارزیابی میشوند، نه در زمان تعریف تابع.
+
+مثال:
+
+```js
+function greet(name = 'مهمان', greeting = 'سلام') {
+  return `${greeting}، ${name}!`;
+}
+
+console.log(greet());                   // سلام، مهمان!
+console.log(greet('رسول'));             // سلام، رسول!
+console.log(greet('سارا', 'درود'));     // درود، سارا!
+console.log(greet(undefined, 'هی'));    // هی، مهمان! (undefined پیش‌فرض را فعال میکند)
 ```

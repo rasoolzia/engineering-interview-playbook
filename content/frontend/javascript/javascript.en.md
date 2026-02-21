@@ -2044,3 +2044,150 @@ console.log(greet('Rasool')); // Hello, Rasool!
 console.log(greet('Sara', 'Hi')); // Hi, Sara!
 console.log(greet(undefined, 'Hey')); // Hey, Guest! (undefined triggers default)
 ```
+
+## 🧠 Question 61
+
+**ID**: js-061
+**Title**: What are Object.keys(), Object.values(), and Object.entries()?
+**Difficulty**: Easy
+**Category**: Objects
+
+### Answer 📄
+
+These static methods return arrays of an object's own enumerable properties.
+
+- `Object.keys()` returns an array of property names.
+- `Object.values()` returns an array of property values.
+- `Object.entries()` returns an array of `[key, value]` pairs.
+
+Example:
+
+```js
+const user = { name: 'Rasool', age: 28, city: 'Tehran' };
+
+console.log(Object.keys(user)); // ['name', 'age', 'city']
+console.log(Object.values(user)); // ['Rasool', 28, 'Tehran']
+console.log(Object.entries(user)); // [['name', 'Rasool'], ['age', 28], ['city', 'Tehran']]
+
+// Common use: iterating over entries
+Object.entries(user).forEach(([key, value]) => {
+  console.log(`${key}: ${value}`);
+});
+```
+
+## 🧠 Question 62
+
+**ID**: js-062
+**Title**: What is the difference between Object.assign() and the spread operator for merging objects?
+**Difficulty**: Easy
+**Category**: Objects
+
+### Answer 📄
+
+Both copy properties from source objects into a target, but differ in how they work.
+
+- `Object.assign()` mutates the first argument (target object).
+- The spread operator `{...obj}` always creates a new object without mutation.
+
+Both perform shallow copies — nested objects are copied by reference.
+
+Example:
+
+```js
+const defaults = { theme: 'light', lang: 'en' };
+const userPrefs = { lang: 'fa' };
+
+// Object.assign — mutates the target
+const config1 = Object.assign({}, defaults, userPrefs);
+console.log(config1); // { theme: 'light', lang: 'fa' }
+
+// Spread — creates a new object
+const config2 = { ...defaults, ...userPrefs };
+console.log(config2); // { theme: 'light', lang: 'fa' }
+```
+
+## 🧠 Question 63
+
+**ID**: js-063
+**Title**: What is the difference between Object.freeze() and Object.seal()?
+**Difficulty**: Medium
+**Category**: Objects
+
+### Answer 📄
+
+Both methods restrict how an object can be modified, but at different levels.
+
+- `Object.freeze()` prevents adding, removing, or modifying any properties.
+- `Object.seal()` prevents adding or removing properties, but allows modifying existing values.
+
+Both are shallow — nested objects are not affected.
+
+Example:
+
+```js
+// Object.freeze
+const frozen = Object.freeze({ name: 'Rasool', age: 28 });
+frozen.name = 'Ali'; // silently fails (throws in strict mode)
+frozen.city = 'Tehran'; // silently fails
+console.log(frozen); // { name: 'Rasool', age: 28 }
+
+// Object.seal
+const sealed = Object.seal({ name: 'Rasool', age: 28 });
+sealed.name = 'Ali'; // allowed — existing property
+sealed.city = 'Tehran'; // silently fails — new property
+console.log(sealed); // { name: 'Ali', age: 28 }
+```
+
+## 🧠 Question 64
+
+**ID**: js-064
+**Title**: What are Array.from() and Array.isArray()?
+**Difficulty**: Easy
+**Category**: Arrays
+
+### Answer 📄
+
+`Array.from()` creates a new array from an array-like or iterable object. It also accepts an optional mapping function.
+
+`Array.isArray()` checks whether a value is a true array, returning a boolean.
+
+Example:
+
+```js
+// Array.from
+console.log(Array.from('hello')); // ['h', 'e', 'l', 'l', 'o']
+console.log(Array.from(new Set([1, 2, 2, 3]))); // [1, 2, 3]
+console.log(Array.from({ length: 3 }, (_, i) => i + 1)); // [1, 2, 3]
+
+// Array.isArray
+console.log(Array.isArray([1, 2, 3])); // true
+console.log(Array.isArray('hello')); // false
+console.log(Array.isArray({ length: 3 })); // false
+```
+
+## 🧠 Question 65
+
+**ID**: js-065
+**Title**: What are flat() and flatMap() in JavaScript?
+**Difficulty**: Medium
+**Category**: Arrays
+
+### Answer 📄
+
+`flat()` creates a new array with sub-array elements flattened to a specified depth. The default depth is 1.
+
+`flatMap()` maps each element using a function and then flattens the result by one level. It is equivalent to calling `.map().flat(1)`.
+
+Example:
+
+```js
+const nested = [1, [2, 3], [4, [5, 6]]];
+
+console.log(nested.flat()); // [1, 2, 3, 4, [5, 6]]
+console.log(nested.flat(2)); // [1, 2, 3, 4, 5, 6]
+console.log(nested.flat(Infinity)); // [1, 2, 3, 4, 5, 6]
+
+const sentences = ['Hello world', 'Foo bar'];
+const words = sentences.flatMap((s) => s.split(' '));
+console.log(words); // ['Hello', 'world', 'Foo', 'bar']
+```

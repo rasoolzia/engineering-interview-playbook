@@ -2191,3 +2191,182 @@ const sentences = ['Hello world', 'Foo bar'];
 const words = sentences.flatMap((s) => s.split(' '));
 console.log(words); // ['Hello', 'world', 'Foo', 'bar']
 ```
+
+## 🧠 Question 66
+
+**ID**: js-066
+**Title**: What are find() and findIndex() in JavaScript?
+**Difficulty**: Easy
+**Category**: Arrays
+
+### Answer 📄
+
+`find()` returns the first element that satisfies a condition, or `undefined` if no match is found.
+
+`findIndex()` returns the index of the first matching element, or `-1` if no match is found.
+
+Both stop iteration as soon as the first match is found.
+
+Example:
+
+```js
+const users = [
+  { id: 1, name: 'Rasool' },
+  { id: 2, name: 'Sara' },
+  { id: 3, name: 'Ali' },
+];
+
+const user = users.find((u) => u.id === 2);
+console.log(user); // { id: 2, name: 'Sara' }
+
+const index = users.findIndex((u) => u.id === 2);
+console.log(index); // 1
+
+console.log(users.find((u) => u.id === 99)); // undefined
+console.log(users.findIndex((u) => u.id === 99)); // -1
+```
+
+## 🧠 Question 67
+
+**ID**: js-067
+**Title**: What are some() and every() in JavaScript?
+**Difficulty**: Easy
+**Category**: Arrays
+
+### Answer 📄
+
+`some()` returns `true` if at least one element satisfies the condition.
+
+`every()` returns `true` only if all elements satisfy the condition.
+
+Both short-circuit: `some()` stops at the first truthy result, `every()` stops at the first falsy result.
+
+Example:
+
+```js
+const numbers = [1, 2, 3, 4, 5];
+
+console.log(numbers.some((n) => n > 4)); // true  (5 passes)
+console.log(numbers.some((n) => n > 10)); // false (none passes)
+
+console.log(numbers.every((n) => n > 0)); // true  (all pass)
+console.log(numbers.every((n) => n > 3)); // false (not all pass)
+```
+
+## 🧠 Question 68
+
+**ID**: js-068
+**Title**: How does Array.sort() work and what are its common pitfalls?
+**Difficulty**: Medium
+**Category**: Arrays
+
+### Answer 📄
+
+By default, `sort()` converts elements to strings and sorts them lexicographically (alphabetically). This produces incorrect results for numbers.
+
+To sort numbers correctly, a comparator function must be provided.
+
+`sort()` mutates the original array and is not guaranteed to be stable in all environments, though modern engines implement stable sort.
+
+Example:
+
+```js
+const fruits = ['banana', 'apple', 'cherry'];
+console.log(fruits.sort()); // ['apple', 'banana', 'cherry']
+
+// Default sort — wrong for numbers
+const nums = [10, 1, 5, 2];
+console.log(nums.sort()); // [1, 10, 2, 5] ← lexicographic, incorrect
+
+// Correct numeric sort
+console.log([10, 1, 5, 2].sort((a, b) => a - b)); // [1, 2, 5, 10] — ascending
+console.log([10, 1, 5, 2].sort((a, b) => b - a)); // [10, 5, 2, 1] — descending
+```
+
+## 🧠 Question 69
+
+**ID**: js-069
+**Title**: What is memoization in JavaScript?
+**Difficulty**: Medium
+**Category**: Performance
+
+### Answer 📄
+
+Memoization is an optimization technique where the result of a function call is cached based on its inputs. If the same inputs are provided again, the cached result is returned instead of recomputing.
+
+It is useful for expensive or frequently called functions with the same arguments.
+
+Example:
+
+```js
+function memoize(fn) {
+  const cache = new Map();
+
+  return function (...args) {
+    const key = JSON.stringify(args);
+
+    if (cache.has(key)) {
+      console.log('From cache');
+      return cache.get(key);
+    }
+
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  };
+}
+
+const add = memoize((a, b) => a + b);
+
+console.log(add(2, 3)); // 5
+console.log(add(2, 3)); // From cache — 5
+console.log(add(4, 5)); // 9
+```
+
+## 🧠 Question 70
+
+**ID**: js-070
+**Title**: What are JavaScript error types and how do you create custom errors?
+**Difficulty**: Medium
+**Category**: Error Handling
+
+### Answer 📄
+
+JavaScript has several built-in error types:
+
+- `Error` — generic base error
+- `TypeError` — operation on a wrong type
+- `ReferenceError` — access to an undefined variable
+- `SyntaxError` — invalid syntax
+- `RangeError` — value outside an allowed range
+
+Custom errors can be created by extending the `Error` class.
+
+Example:
+
+```js
+// Built-in error types
+try {
+  null.property; // TypeError
+} catch (e) {
+  console.log(e instanceof TypeError); // true
+  console.log(e.name); // 'TypeError'
+}
+
+// Custom error
+class ValidationError extends Error {
+  constructor(message, field) {
+    super(message);
+    this.name = 'ValidationError';
+    this.field = field;
+  }
+}
+
+try {
+  throw new ValidationError('Invalid email', 'email');
+} catch (e) {
+  console.log(e.name); // ValidationError
+  console.log(e.message); // Invalid email
+  console.log(e.field); // email
+}
+```

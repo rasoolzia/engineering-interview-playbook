@@ -2191,3 +2191,182 @@ const sentences = ['سلام دنیا', 'foo bar'];
 const words = sentences.flatMap((s) => s.split(' '));
 console.log(words); // ['سلام', 'دنیا', 'foo', 'bar']
 ```
+
+## 🧠 سوال ۶۶
+
+**آیدی**: js-066
+**عنوان**: find() و findIndex() در JavaScript چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: آرایهها
+
+### پاسخ 📄
+
+`find()` اولین عنصری که شرط را برآورده میکند برمیگرداند، یا اگر موردی پیدا نشد `undefined`.
+
+`findIndex()` ایندکس اولین عنصر مطابق را برمیگرداند، یا اگر موردی پیدا نشد `-1`.
+
+هر دو به محض یافتن اولین مطابقت پیمایش را متوقف میکنند.
+
+مثال:
+
+```js
+const users = [
+  { id: 1, name: 'رسول' },
+  { id: 2, name: 'سارا' },
+  { id: 3, name: 'علی' },
+];
+
+const user = users.find((u) => u.id === 2);
+console.log(user); // { id: 2, name: 'سارا' }
+
+const index = users.findIndex((u) => u.id === 2);
+console.log(index); // 1
+
+console.log(users.find((u) => u.id === 99)); // undefined
+console.log(users.findIndex((u) => u.id === 99)); // -1
+```
+
+## 🧠 سوال ۶۷
+
+**آیدی**: js-067
+**عنوان**: some() و every() در JavaScript چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: آرایهها
+
+### پاسخ 📄
+
+`some()` اگر حداقل یک عنصر شرط را برآورده کند `true` برمیگرداند.
+
+`every()` فقط اگر همه عناصر شرط را برآورده کنند `true` برمیگرداند.
+
+هر دو اتصال کوتاه دارند: `some()` با اولین نتیجه درست متوقف میشود، `every()` با اولین نتیجه نادرست.
+
+مثال:
+
+```js
+const numbers = [1, 2, 3, 4, 5];
+
+console.log(numbers.some((n) => n > 4)); // true  (5 شرط را دارد)
+console.log(numbers.some((n) => n > 10)); // false (هیچکدام شرط را ندارند)
+
+console.log(numbers.every((n) => n > 0)); // true  (همه شرط را دارند)
+console.log(numbers.every((n) => n > 3)); // false (همه شرط را ندارند)
+```
+
+## 🧠 سوال ۶۸
+
+**آیدی**: js-068
+**عنوان**: Array.sort() چگونه کار میکند و مشکلات رایج آن چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: آرایهها
+
+### پاسخ 📄
+
+به صورت پیشفرض، `sort()` عناصر را به رشته تبدیل میکند و آنها را به صورت لغوی (الفبایی) مرتب میکند. این برای اعداد نتایج اشتباه تولید میکند.
+
+برای مرتب کردن صحیح اعداد، باید یک تابع مقایسه ارائه شود.
+
+`sort()` آرایه اصلی را تغییر میدهد.
+
+مثال:
+
+```js
+const fruits = ['موز', 'سیب', 'گیلاس'];
+console.log(fruits.sort()); // ['garlic', 'سیب', 'موز', 'گیلاس'] — الفبایی
+
+// مرتبسازی پیشفرض — برای اعداد اشتباه است
+const nums = [10, 1, 5, 2];
+console.log(nums.sort()); // [1, 10, 2, 5] ← لغوی، اشتباه
+
+// مرتبسازی صحیح اعداد
+console.log([10, 1, 5, 2].sort((a, b) => a - b)); // [1, 2, 5, 10] — صعودی
+console.log([10, 1, 5, 2].sort((a, b) => b - a)); // [10, 5, 2, 1] — نزولی
+```
+
+## 🧠 سوال ۶۹
+
+**آیدی**: js-069
+**عنوان**: memoization در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+Memoization تکنیک بهینهسازی است که نتیجه فراخوانی تابع را بر اساس ورودیهایش کش میکند. اگر همان ورودیها دوباره داده شوند، نتیجه کش شده برگردانده میشود.
+
+برای توابع پرهزینه یا توابعی که با آرگومانهای یکسان مکرراً فراخوانی میشوند مفید است.
+
+مثال:
+
+```js
+function memoize(fn) {
+  const cache = new Map();
+
+  return function (...args) {
+    const key = JSON.stringify(args);
+
+    if (cache.has(key)) {
+      console.log('از کش');
+      return cache.get(key);
+    }
+
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  };
+}
+
+const add = memoize((a, b) => a + b);
+
+console.log(add(2, 3)); // 5
+console.log(add(2, 3)); // از کش — 5
+console.log(add(4, 5)); // 9
+```
+
+## 🧠 سوال ۷۰
+
+**آیدی**: js-070
+**عنوان**: انواع خطا در JavaScript چیست و چگونه میتوان خطای سفارشی ساخت؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت خطا
+
+### پاسخ 📄
+
+JavaScript چندین نوع خطای داخلی دارد:
+
+- `Error` — خطای پایه عمومی
+- `TypeError` — عملیات روی نوع اشتباه
+- `ReferenceError` — دسترسی به متغیر تعریف نشده
+- `SyntaxError` — سینتکس نامعتبر
+- `RangeError` — مقدار خارج از محدوده مجاز
+
+خطاهای سفارشی میتوانند با گسترش کلاس `Error` ایجاد شوند.
+
+مثال:
+
+```js
+// انواع خطای داخلی
+try {
+  null.property; // TypeError
+} catch (e) {
+  console.log(e instanceof TypeError); // true
+  console.log(e.name); // 'TypeError'
+}
+
+// خطای سفارشی
+class ValidationError extends Error {
+  constructor(message, field) {
+    super(message);
+    this.name = 'ValidationError';
+    this.field = field;
+  }
+}
+
+try {
+  throw new ValidationError('ایمیل نامعتبر', 'email');
+} catch (e) {
+  console.log(e.name); // ValidationError
+  console.log(e.message); // ایمیل نامعتبر
+  console.log(e.field); // email
+}
+```

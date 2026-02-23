@@ -2370,3 +2370,198 @@ try {
   console.log(e.field); // email
 }
 ```
+
+## 🧠 Question 71
+
+**ID**: js-071
+**Title**: What is debounce in JavaScript?
+**Difficulty**: Medium
+**Category**: Performance
+
+### Answer 📄
+
+Debounce is a technique that delays the execution of a function until after a specified time has elapsed since the last time it was called.
+
+It is commonly used to optimize performance in scenarios like search inputs, window resize, and scroll events where a function should not run on every single event.
+
+Example:
+
+```js
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+const handleSearch = debounce((query) => {
+  console.log('Searching for:', query);
+}, 300);
+
+handleSearch('j');
+handleSearch('ja');
+handleSearch('jav');
+handleSearch('java'); // only this one actually triggers the search
+```
+
+## 🧠 Question 72
+
+**ID**: js-072
+**Title**: What is throttle in JavaScript?
+**Difficulty**: Medium
+**Category**: Performance
+
+### Answer 📄
+
+Throttle limits how often a function can execute over time, ensuring it runs at most once per specified interval regardless of how many times it is called.
+
+Unlike debounce which waits for calls to stop, throttle guarantees execution at regular intervals.
+
+Example:
+
+```js
+function throttle(fn, limit) {
+  let lastCall = 0;
+  return function (...args) {
+    const now = Date.now();
+    if (now - lastCall >= limit) {
+      lastCall = now;
+      fn(...args);
+    }
+  };
+}
+
+const handleScroll = throttle(() => {
+  console.log('Scroll handled');
+}, 200);
+
+// Even if scroll fires 100 times/second, function runs at most every 200ms
+window.addEventListener('scroll', handleScroll);
+```
+
+## 🧠 Question 73
+
+**ID**: js-073
+**Title**: What is the difference between event bubbling and event capturing?
+**Difficulty**: Medium
+**Category**: DOM & Events
+
+### Answer 📄
+
+When a DOM event fires, it travels through two phases:
+
+- **Capturing phase**: the event travels from the root down to the target element.
+- **Bubbling phase**: the event travels from the target back up to the root.
+
+By default, event listeners use the bubbling phase. Pass `true` as the third argument to `addEventListener` to use capturing.
+
+`event.stopPropagation()` halts further propagation through the chain.
+
+Example:
+
+```js
+document.querySelector('#parent').addEventListener('click', () => {
+  console.log('Parent — bubbling');
+});
+
+document.querySelector('#child').addEventListener('click', () => {
+  console.log('Child clicked');
+});
+
+// Clicking child logs:
+// Child clicked
+// Parent — bubbling
+
+// Capturing — fires before bubbling
+document.querySelector('#parent').addEventListener(
+  'click',
+  () => {
+    console.log('Parent — capturing');
+  },
+  true,
+);
+```
+
+## 🧠 Question 74
+
+**ID**: js-074
+**Title**: What is the difference between localStorage, sessionStorage, and cookies?
+**Difficulty**: Medium
+**Category**: Browser Behavior
+
+### Answer 📄
+
+These mechanisms store data on the client side but differ in behavior, lifetime, and security.
+
+**localStorage**
+
+- Persists even after the browser is closed and reopened
+- Around 5MB storage limit
+- Accessible only via JavaScript
+- Not automatically sent with HTTP requests
+
+**sessionStorage**
+
+- Persists only within a single browser tab
+- Cleared when the tab is closed
+- Same API as localStorage
+
+**Cookies**
+
+- Limited to about 4KB
+- Automatically sent with every HTTP request to the server
+- Support expiration dates
+- Can be marked `HttpOnly` and `Secure`
+
+**Security**
+
+- `localStorage` is vulnerable to XSS attacks
+- `HttpOnly` cookies cannot be accessed via JavaScript, making them safer for tokens
+
+Example:
+
+```js
+// localStorage
+localStorage.setItem('theme', 'dark');
+console.log(localStorage.getItem('theme')); // 'dark'
+
+// sessionStorage
+sessionStorage.setItem('step', '2');
+console.log(sessionStorage.getItem('step')); // '2'
+
+// Cookie
+document.cookie = 'token=abc123; Secure; SameSite=Strict';
+```
+
+## 🧠 Question 75
+
+**ID**: js-075
+**Title**: What is the difference between setTimeout and setInterval?
+**Difficulty**: Easy
+**Category**: Asynchronous & Event Loop
+
+### Answer 📄
+
+- `setTimeout(fn, delay)` executes a function once after the specified delay in milliseconds.
+- `setInterval(fn, interval)` executes a function repeatedly at the specified interval.
+
+Both return an ID that can be used to cancel execution with `clearTimeout` or `clearInterval`.
+
+Example:
+
+```js
+// setTimeout — runs once after 1 second
+const timeoutId = setTimeout(() => {
+  console.log('Runs once');
+}, 1000);
+
+// setInterval — runs every second
+const intervalId = setInterval(() => {
+  console.log('Runs every second');
+}, 1000);
+
+// Cancel both
+clearTimeout(timeoutId);
+clearInterval(intervalId);
+```

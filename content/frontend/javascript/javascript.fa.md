@@ -2370,3 +2370,198 @@ try {
   console.log(e.field); // email
 }
 ```
+
+## 🧠 سوال ۷۱
+
+**آیدی**: js-071
+**عنوان**: debounce در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+Debounce تکنیکی است که اجرای تابع را تا بعد از زمان مشخصی که از آخرین فراخوانی گذشته به تأخیر میاندازد.
+
+برای بهینهسازی عملکرد در سناریوهایی مثل ورودی جستجو، تغییر اندازه پنجره و رویدادهای scroll مفید است.
+
+مثال:
+
+```js
+function debounce(fn, delay) {
+  let timer;
+  return function (...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
+const handleSearch = debounce((query) => {
+  console.log('جستجو برای:', query);
+}, 300);
+
+handleSearch('j');
+handleSearch('ja');
+handleSearch('jav');
+handleSearch('java'); // فقط این یکی جستجوی واقعی را فعال میکند
+```
+
+## 🧠 سوال ۷۲
+
+**آیدی**: js-072
+**عنوان**: throttle در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+Throttle محدود میکند که یک تابع در طول زمان چند بار اجرا شود، و تضمین میکند که حداکثر یکبار در هر بازه زمانی مشخص اجرا شود.
+
+برخلاف debounce که منتظر توقف فراخوانیها میماند، throttle اجرا را در بازههای منظم تضمین میکند.
+
+مثال:
+
+```js
+function throttle(fn, limit) {
+  let lastCall = 0;
+  return function (...args) {
+    const now = Date.now();
+    if (now - lastCall >= limit) {
+      lastCall = now;
+      fn(...args);
+    }
+  };
+}
+
+const handleScroll = throttle(() => {
+  console.log('scroll مدیریت شد');
+}, 200);
+
+// حتی اگر scroll صد بار در ثانیه فعال شود، تابع حداکثر هر ۲۰۰ms اجرا میشود
+window.addEventListener('scroll', handleScroll);
+```
+
+## 🧠 سوال ۷۳
+
+**آیدی**: js-073
+**عنوان**: تفاوت بین event bubbling و event capturing چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: DOM و رویدادها
+
+### پاسخ 📄
+
+وقتی یک رویداد DOM فعال میشود، دو مرحله طی میکند:
+
+- **مرحله Capturing**: رویداد از root به سمت عنصر هدف میرود.
+- **مرحله Bubbling**: رویداد از عنصر هدف به سمت root برمیگردد.
+
+به صورت پیشفرض، event listenerها از مرحله bubbling استفاده میکنند. برای استفاده از capturing، `true` را به عنوان آرگومان سوم به `addEventListener` بدهید.
+
+`event.stopPropagation()` انتشار بیشتر رویداد را متوقف میکند.
+
+مثال:
+
+```js
+document.querySelector('#parent').addEventListener('click', () => {
+  console.log('والد — bubbling');
+});
+
+document.querySelector('#child').addEventListener('click', () => {
+  console.log('فرزند کلیک شد');
+});
+
+// کلیک روی فرزند لاگ میکند:
+// فرزند کلیک شد
+// والد — bubbling
+
+// Capturing — قبل از bubbling فعال میشود
+document.querySelector('#parent').addEventListener(
+  'click',
+  () => {
+    console.log('والد — capturing');
+  },
+  true,
+);
+```
+
+## 🧠 سوال ۷۴
+
+**آیدی**: js-074
+**عنوان**: تفاوت بین localStorage، sessionStorage و کوکیها چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: رفتار مرورگر
+
+### پاسخ 📄
+
+این مکانیزمها داده را در سمت کلاینت ذخیره میکنند اما در رفتار، طول عمر و امنیت تفاوت دارند.
+
+**localStorage**
+
+- حتی پس از بسته و باز شدن مرورگر باقی میماند
+- محدودیت ذخیره‌سازی حدود ۵MB
+- فقط از طریق JavaScript قابل دسترسی است
+- به طور خودکار با درخواستهای HTTP ارسال نمیشود
+
+**sessionStorage**
+
+- فقط در یک تب مرورگر باقی میماند
+- هنگام بسته شدن تب پاک میشود
+- همان API localStorage را دارد
+
+**کوکیها**
+
+- محدود به حدود ۴KB
+- به طور خودکار با هر درخواست HTTP به سرور ارسال میشوند
+- از تاریخ انقضا پشتیبانی میکنند
+- میتوانند `HttpOnly` و `Secure` علامتگذاری شوند
+
+**امنیت**
+
+- `localStorage` در برابر حملات XSS آسیبپذیر است
+- کوکیهای `HttpOnly` از طریق JavaScript قابل دسترسی نیستند
+
+مثال:
+
+```js
+// localStorage
+localStorage.setItem('theme', 'dark');
+console.log(localStorage.getItem('theme')); // 'dark'
+
+// sessionStorage
+sessionStorage.setItem('step', '2');
+console.log(sessionStorage.getItem('step')); // '2'
+
+// کوکی
+document.cookie = 'token=abc123; Secure; SameSite=Strict';
+```
+
+## 🧠 سوال ۷۵
+
+**آیدی**: js-075
+**عنوان**: تفاوت بین setTimeout و setInterval چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: ناهمزمان و حلقه رویداد
+
+### پاسخ 📄
+
+- `setTimeout(fn, delay)` تابع را یکبار بعد از تأخیر مشخص شده به میلیثانیه اجرا میکند.
+- `setInterval(fn, interval)` تابع را به طور مکرر در بازه زمانی مشخص اجرا میکند.
+
+هر دو یک ID برمیگردانند که میتوان با `clearTimeout` یا `clearInterval` اجرا را لغو کرد.
+
+مثال:
+
+```js
+// setTimeout — یکبار بعد از ۱ ثانیه اجرا میشود
+const timeoutId = setTimeout(() => {
+  console.log('یکبار اجرا میشود');
+}, 1000);
+
+// setInterval — هر ثانیه اجرا میشود
+const intervalId = setInterval(() => {
+  console.log('هر ثانیه اجرا میشود');
+}, 1000);
+
+// لغو هر دو
+clearTimeout(timeoutId);
+clearInterval(intervalId);
+```

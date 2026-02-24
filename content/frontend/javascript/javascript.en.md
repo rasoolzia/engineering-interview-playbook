@@ -2565,3 +2565,180 @@ const intervalId = setInterval(() => {
 clearTimeout(timeoutId);
 clearInterval(intervalId);
 ```
+
+## 🧠 Question 76
+
+**ID**: js-076
+**Title**: What is requestAnimationFrame in JavaScript?
+**Difficulty**: Medium
+**Category**: Performance
+
+### Answer 📄
+
+`requestAnimationFrame()` schedules a callback to run before the next browser repaint, typically at 60 frames per second.
+
+It is more efficient than `setTimeout` for animations because it synchronizes with the display refresh rate and automatically pauses when the tab is not visible, saving resources.
+
+Example:
+
+```js
+let position = 0;
+
+function animate() {
+  position += 2;
+  document.querySelector('#box').style.left = position + 'px';
+
+  if (position < 300) {
+    requestAnimationFrame(animate); // schedule next frame
+  }
+}
+
+requestAnimationFrame(animate);
+```
+
+## 🧠 Question 77
+
+**ID**: js-077
+**Title**: What are pure functions and immutability in JavaScript?
+**Difficulty**: Medium
+**Category**: Functional Programming
+
+### Answer 📄
+
+A pure function always returns the same output for the same inputs and has no side effects — it does not modify any external state.
+
+Immutability means not modifying existing data, but creating new copies instead.
+
+Together they make code more predictable, testable, and easier to reason about.
+
+Example:
+
+```js
+// Impure — modifies external state
+let count = 0;
+function increment() {
+  count++; // side effect
+}
+
+// Pure — no side effects, same input → same output
+function add(a, b) {
+  return a + b;
+}
+
+// Impure — mutates the original array
+function addItem(arr, item) {
+  arr.push(item);
+  return arr;
+}
+
+// Pure — returns a new array
+function addItemPure(arr, item) {
+  return [...arr, item];
+}
+```
+
+## 🧠 Question 78
+
+**ID**: js-078
+**Title**: What is function composition in JavaScript?
+**Difficulty**: Medium
+**Category**: Functional Programming
+
+### Answer 📄
+
+Function composition is the process of combining multiple functions so that the output of one becomes the input of the next.
+
+It enables building complex operations from smaller, reusable, and testable functions.
+
+Example:
+
+```js
+const double = (x) => x * 2;
+const addTen = (x) => x + 10;
+const square = (x) => x * x;
+
+// Manual composition (right to left)
+const result = square(addTen(double(3)));
+console.log(result); // double(3)=6 → addTen(6)=16 → square(16)=256
+
+// Compose utility
+const compose =
+  (...fns) =>
+  (x) =>
+    fns.reduceRight((acc, fn) => fn(acc), x);
+
+const transform = compose(square, addTen, double);
+console.log(transform(3)); // 256
+```
+
+## 🧠 Question 79
+
+**ID**: js-079
+**Title**: What are Web Workers in JavaScript?
+**Difficulty**: Medium
+**Category**: Performance
+
+### Answer 📄
+
+Web Workers allow JavaScript to run in a background thread, separate from the main thread.
+
+This enables heavy computations to execute without blocking the UI or freezing the browser.
+
+Workers do not have access to the DOM. Communication between the main thread and a worker happens via `postMessage` and `onmessage`.
+
+Example:
+
+```js
+// main.js
+const worker = new Worker('worker.js');
+
+worker.postMessage({ numbers: [1, 2, 3, 4, 5] });
+
+worker.onmessage = (event) => {
+  console.log('Sum from worker:', event.data); // 15
+};
+
+// worker.js
+self.onmessage = (event) => {
+  const sum = event.data.numbers.reduce((acc, n) => acc + n, 0);
+  self.postMessage(sum);
+};
+```
+
+## 🧠 Question 80
+
+**ID**: js-080
+**Title**: How does error handling work with async/await?
+**Difficulty**: Medium
+**Category**: Error Handling
+
+### Answer 📄
+
+In async/await, errors from rejected Promises must be caught using `try/catch`.
+
+Without error handling, unhandled rejections can cause silent failures or crash the program.
+
+As an alternative, `.catch()` can be chained directly on the returned Promise.
+
+Example:
+
+```js
+async function fetchUser(id) {
+  try {
+    const response = await fetch(`/api/users/${id}`);
+
+    if (!response.ok) throw new Error('User not found');
+
+    const user = await response.json();
+    return user;
+  } catch (error) {
+    console.log('Error:', error.message);
+    return null;
+  }
+}
+
+// Alternative: .catch() on the Promise
+fetchUser(1)
+  .then((user) => console.log(user))
+  .catch((err) => console.log(err));
+```

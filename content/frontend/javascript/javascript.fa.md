@@ -1,7 +1,7 @@
 ---
 topic: javascript
 language: fa
-version: 2.4
+version: 2.5
 ---
 
 # سوالات مصاحبه JavaScript

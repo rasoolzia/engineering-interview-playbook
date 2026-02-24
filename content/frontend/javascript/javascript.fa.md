@@ -2565,3 +2565,180 @@ const intervalId = setInterval(() => {
 clearTimeout(timeoutId);
 clearInterval(intervalId);
 ```
+
+## 🧠 سوال ۷۶
+
+**آیدی**: js-076
+**عنوان**: requestAnimationFrame در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+`requestAnimationFrame()` یک callback را زمانبندی میکند تا قبل از رنگآمیزی مجدد مرورگر، معمولاً در ۶۰ فریم در ثانیه، اجرا شود.
+
+برای انیمیشنها کارآمدتر از `setTimeout` است چون با نرخ refresh نمایش همگامسازی میشود و به طور خودکار هنگامی که تب قابل مشاهده نیست متوقف میشود.
+
+مثال:
+
+```js
+let position = 0;
+
+function animate() {
+  position += 2;
+  document.querySelector('#box').style.left = position + 'px';
+
+  if (position < 300) {
+    requestAnimationFrame(animate); // فریم بعدی را زمانبندی میکند
+  }
+}
+
+requestAnimationFrame(animate);
+```
+
+## 🧠 سوال ۷۷
+
+**آیدی**: js-077
+**عنوان**: توابع pure و immutability در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: برنامهنویسی تابعی
+
+### پاسخ 📄
+
+یک تابع pure همیشه برای همان ورودیها همان خروجی را برمیگرداند و هیچ اثر جانبی ندارد.
+
+Immutability یعنی داده موجود را تغییر ندادن و به جای آن نسخههای جدید ایجاد کردن.
+
+با هم کد را قابل پیشبینیتر، قابل تست و آسانتر برای درک میکنند.
+
+مثال:
+
+```js
+// Impure — حالت خارجی را تغییر میدهد
+let count = 0;
+function increment() {
+  count++; // اثر جانبی
+}
+
+// Pure — بدون اثر جانبی
+function add(a, b) {
+  return a + b;
+}
+
+// Impure — آرایه اصلی را تغییر میدهد
+function addItem(arr, item) {
+  arr.push(item);
+  return arr;
+}
+
+// Pure — آرایه جدید برمیگرداند
+function addItemPure(arr, item) {
+  return [...arr, item];
+}
+```
+
+## 🧠 سوال ۷۸
+
+**آیدی**: js-078
+**عنوان**: ترکیب توابع (function composition) در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: برنامهنویسی تابعی
+
+### پاسخ 📄
+
+ترکیب توابع فرآیند ترکیب چندین تابع است به طوری که خروجی یکی ورودی بعدی میشود.
+
+ساختن عملیات پیچیده از توابع کوچکتر، قابل استفاده مجدد و قابل تست را ممکن میکند.
+
+مثال:
+
+```js
+const double = (x) => x * 2;
+const addTen = (x) => x + 10;
+const square = (x) => x * x;
+
+// ترکیب دستی (راست به چپ)
+const result = square(addTen(double(3)));
+console.log(result); // double(3)=6 → addTen(6)=16 → square(16)=256
+
+// تابع کمکی compose
+const compose =
+  (...fns) =>
+  (x) =>
+    fns.reduceRight((acc, fn) => fn(acc), x);
+
+const transform = compose(square, addTen, double);
+console.log(transform(3)); // 256
+```
+
+## 🧠 سوال ۷۹
+
+**آیدی**: js-079
+**عنوان**: Web Workers در JavaScript چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+Web Workers اجازه میدهند JavaScript در یک thread پسزمینه جداگانه از thread اصلی اجرا شود.
+
+این کار محاسبات سنگین را بدون مسدود کردن UI یا فریز کردن مرورگر ممکن میکند.
+
+Workerها به DOM دسترسی ندارند. ارتباط بین thread اصلی و worker از طریق `postMessage` و `onmessage` انجام میشود.
+
+مثال:
+
+```js
+// main.js
+const worker = new Worker('worker.js');
+
+worker.postMessage({ numbers: [1, 2, 3, 4, 5] });
+
+worker.onmessage = (event) => {
+  console.log('جمع از worker:', event.data); // 15
+};
+
+// worker.js
+self.onmessage = (event) => {
+  const sum = event.data.numbers.reduce((acc, n) => acc + n, 0);
+  self.postMessage(sum);
+};
+```
+
+## 🧠 سوال ۸۰
+
+**آیدی**: js-080
+**عنوان**: مدیریت خطا با async/await چگونه کار میکند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت خطا
+
+### پاسخ 📄
+
+در async/await، خطاها از Promiseهای rejected باید با `try/catch` گرفته شوند.
+
+بدون مدیریت خطا، rejectionهای مدیریت نشده میتوانند باعث خرابیهای بیصدا یا crash برنامه شوند.
+
+به عنوان جایگزین، `.catch()` میتواند مستقیماً روی Promise برگشتی زنجیر شود.
+
+مثال:
+
+```js
+async function fetchUser(id) {
+  try {
+    const response = await fetch(`/api/users/${id}`);
+
+    if (!response.ok) throw new Error('کاربر پیدا نشد');
+
+    const user = await response.json();
+    return user;
+  } catch (error) {
+    console.log('خطا:', error.message);
+    return null;
+  }
+}
+
+// جایگزین: .catch() روی Promise
+fetchUser(1)
+  .then((user) => console.log(user))
+  .catch((err) => console.log(err));
+```

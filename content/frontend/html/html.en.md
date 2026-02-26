@@ -192,6 +192,27 @@ Benefits over `<div>`:
 - Improved SEO (search engines understand structure)
 - More maintainable code
 
+Example:
+
+```html
+<article>
+  <h2>How JavaScript Works</h2>
+  <p>A self-contained post about JS internals...</p>
+</article>
+
+<section>
+  <h2>Our Services</h2>
+  <p>Thematic content grouped together...</p>
+</section>
+
+<aside>
+  <h3>Related Articles</h3>
+  <ul>
+    <li><a href="#">Deep dive into closures</a></li>
+  </ul>
+</aside>
+```
+
 ## 🧠 Question 8
 
 **ID**: html-008  
@@ -218,6 +239,16 @@ Both input types are used for numeric-like input, but they behave differently.
 - Allows flexible formatting (e.g., +1-800-123-4567)
 
 Use `type="tel"` for phone numbers and `type="number"` for actual numeric data.
+
+Example:
+
+```html
+<!-- Accepts only numbers, shows increment arrows -->
+<input type="number" min="1" max="100" value="10" />
+
+<!-- Triggers numeric keypad on mobile, allows flexible format -->
+<input type="tel" placeholder="+1-800-123-4567" />
+```
 
 ## 🧠 Question 9
 
@@ -305,8 +336,6 @@ Example:
 <script src="analytics.js" async></script>
 <script src="app.js" defer></script>
 ```
-
-Best for application scripts that rely on DOM structure.
 
 ## 🧠 Question 12
 
@@ -499,8 +528,23 @@ Key differences:
 - It signals structure to assistive technologies and search engines
 - `<div>` is purely structural with no semantic value
 
-Use `<section>` when the content represents a logical section of the document.  
+Use `<section>` when the content represents a logical section of the document.
 Use `<div>` only when no semantic element is appropriate.
+
+Example:
+
+```html
+<!-- div: pure layout container, no semantic role -->
+<div class="card-wrapper">
+  <div class="card">...</div>
+</div>
+
+<!-- section: thematic document section, should have a heading -->
+<section>
+  <h2>Our Services</h2>
+  <p>We offer web development, design, and consulting.</p>
+</section>
+```
 
 ## 🧠 Question 17
 
@@ -569,7 +613,7 @@ Common values (space-separated):
 
 - (empty) → full restrictions (very safe)
 - `allow-scripts` → allows JS execution
-- `allow-same`-origin → treats iframe as same-origin (dangerous!)
+- `allow-same-origin` → treats iframe as same-origin (dangerous!)
 - `allow-popups` → allows new windows
 - `allow-forms` → allows form submission
 
@@ -584,8 +628,6 @@ Default (sandbox=""): Disables:
 Use case: Embedding third-party content (ads, user-generated HTML, previews).
 
 Example (safe embed):
-
-HTML
 
 ```html
 <iframe

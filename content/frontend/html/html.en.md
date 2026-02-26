@@ -348,8 +348,6 @@ Example:
 
 Both `<meta>` tags and HTTP headers provide metadata about a document, but they operate at different levels.
 
----
-
 ### `<meta>` Tags
 
 - Defined inside the `<head>` section of an HTML document
@@ -369,8 +367,6 @@ Use cases:
 - Page description for SEO
 - Character encoding
 - Viewport configuration
-
----
 
 ### HTTP Headers
 
@@ -476,8 +472,6 @@ Understanding CRP is essential for performance optimization.
 ### Answer 📄
 
 Both `id` and `data-*` attributes attach information to elements, but they serve different purposes.
-
----
 
 ### `id`
 
@@ -648,8 +642,6 @@ Without sandbox → potential XSS or clickjacking risk.
 ### Answer 📄
 
 Both create relationships, but they serve different purposes.
-
----
 
 ### `<a>` (Anchor)
 
@@ -947,3 +939,125 @@ Example:
 ```
 
 Use preload for above-the-fold; prefetch for navigation flows.
+
+## 🧠 Question 26
+
+**ID**: html-026
+**Title**: Why should you use `rel="noopener noreferrer"` on links with `target="_blank"`?
+**Difficulty**: Medium
+**Category**: Browser Behavior & Security
+
+### Answer 📄
+
+When a link opens in a new tab using `target="_blank"`, the new page can access the opener via `window.opener`.
+
+This creates two risks:
+
+- **Tabnapping**: The new page can redirect the original tab to a phishing page via `window.opener.location`
+- **Referrer leakage**: The `Referer` HTTP header exposes the source URL to the destination site
+
+`rel="noopener"` — severs the `window.opener` reference, preventing tabnapping
+
+`rel="noreferrer"` — also prevents the `Referer` header from being sent (implies `noopener`)
+
+Modern browsers apply `noopener` automatically for `target="_blank"`, but explicit declaration is still best practice for clarity and compatibility.
+
+Example:
+
+```html
+<!-- Risky: opens opener access + leaks referrer -->
+<a href="https://external.com" target="_blank">Visit</a>
+
+<!-- Safe: no opener access, no referrer leak -->
+<a href="https://external.com" target="_blank" rel="noopener noreferrer"
+  >Visit</a
+>
+```
+
+## 🧠 Question 27
+
+**ID**: html-027
+**Title**: What is the difference between `<canvas>` and `<svg>`?
+**Difficulty**: Medium
+**Category**: Browser Behavior
+
+### Answer 📄
+
+Both are used for graphics, but they operate differently.
+
+**`<canvas>`**
+
+- Raster-based (pixel drawing)
+- Rendered via JavaScript (imperative API)
+- No DOM nodes for drawn shapes
+- Better for real-time rendering, games, image manipulation
+- Not accessible by default
+
+**`<svg>`**
+
+- Vector-based (mathematical shapes)
+- Declarative markup (XML-based)
+- Each shape is a DOM node (scriptable and styleable)
+- Better for icons, charts, illustrations that need to scale
+- Accessible and indexable by search engines
+
+Example:
+
+```html
+<!-- Canvas: draw imperatively -->
+<canvas id="c" width="200" height="200"></canvas>
+<script>
+  const ctx = document.getElementById('c').getContext('2d');
+  ctx.fillStyle = 'blue';
+  ctx.fillRect(10, 10, 100, 100);
+</script>
+
+<!-- SVG: declarative vector shapes -->
+<svg width="200" height="200">
+  <rect x="10" y="10" width="100" height="100" fill="blue" />
+</svg>
+```
+
+Use `<canvas>` for dynamic pixel rendering; use `<svg>` for scalable, interactive, or accessible graphics.
+
+## 🧠 Question 28
+
+**ID**: html-028
+**Title**: What are Open Graph meta tags and why are they important?
+**Difficulty**: Medium
+**Category**: SEO & Meta
+
+### Answer 📄
+
+Open Graph (OG) tags are meta tags that control how a page appears when shared on social media platforms like Facebook, Twitter/X, LinkedIn, and WhatsApp.
+
+They define properties like title, description, image, and URL for the link preview card.
+
+Without OG tags, platforms guess content from the page, often producing poor previews.
+
+Key OG properties:
+
+- `og:title` — title shown in the preview
+- `og:description` — summary shown in the preview
+- `og:image` — thumbnail image URL
+- `og:url` — canonical URL of the page
+- `og:type` — content type (website, article, video, etc.)
+
+Example:
+
+```html
+<meta property="og:title" content="HTML Interview Questions" />
+<meta
+  property="og:description"
+  content="A complete guide to HTML interview preparation."
+/>
+<meta property="og:image" content="https://example.com/preview.jpg" />
+<meta property="og:url" content="https://example.com/html-questions" />
+<meta property="og:type" content="website" />
+
+<!-- Twitter-specific (now X) -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="HTML Interview Questions" />
+```
+
+OG tags directly improve click-through rates on social media by providing rich, controlled previews.

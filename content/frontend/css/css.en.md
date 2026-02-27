@@ -84,6 +84,20 @@ Examples: `span`, `a`, `strong`
 
 Used when elements need inline positioning but block behavior.
 
+Example:
+
+```css
+.block-el {
+  display: block;
+} /* full width, new line */
+.inline-el {
+  display: inline;
+} /* width from content, no w/h */
+.inblock-el {
+  display: inline-block;
+} /* inline flow + w/h settable */
+```
+
 ## 🧠 Question 3
 
 **ID**: css-003  
@@ -149,6 +163,33 @@ Higher value wins. If equal, the later rule in the stylesheet applies.
 
 Positioning controls element layering and layout behavior.
 
+Example:
+
+```css
+.parent {
+  position: relative;
+}
+
+.rel {
+  position: relative;
+  top: 10px;
+} /* shifts from normal pos */
+.abs {
+  position: absolute;
+  top: 0;
+  right: 0;
+} /* anchors to .parent */
+.fix {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+} /* anchors to viewport */
+.stic {
+  position: sticky;
+  top: 0;
+} /* sticks on scroll */
+```
+
 ## 🧠 Question 5
 
 **ID**: css-005  
@@ -184,8 +225,26 @@ Used for:
 - Responsive grids
 - Layout systems
 
-**Flexbox is content-first.**  
+**Flexbox is content-first.**
 **Grid is layout-first.**
+
+Example:
+
+```css
+/* Flexbox: one axis */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Grid: two axes */
+.page {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: auto 1fr auto;
+}
+```
 
 ## 🧠 Question 6
 
@@ -228,6 +287,26 @@ A new stacking context is created when:
 Elements inside a stacking context are layered independently of elements outside it.
 
 Understanding stacking context is crucial for solving z-index issues.
+
+Example:
+
+```css
+/* Creates a new stacking context */
+.modal {
+  position: fixed;
+  z-index: 100;
+  opacity: 0.99; /* also triggers stacking context */
+}
+
+/* Children are layered WITHIN .modal's context */
+.modal .overlay {
+  z-index: 1;
+}
+.modal .content {
+  z-index: 2;
+}
+/* .content appears above .overlay, but both are contained within .modal */
+```
 
 ## 🧠 Question 8
 
@@ -292,6 +371,31 @@ The resulting margin equals the larger of the two, not their sum.
 
 Margin collapsing between adjacent siblings does not occur inside flex or grid containers (they establish new formatting contexts).
 
+Example:
+
+```css
+/* Sibling collapse: result is 30px, not 50px */
+.box-a {
+  margin-bottom: 30px;
+}
+.box-b {
+  margin-top: 20px;
+}
+
+/* Parent-child collapse: child margin bleeds out */
+.parent {
+  /* no padding, no border, no BFC */
+}
+.child {
+  margin-top: 40px;
+} /* shifts .parent, not .child */
+
+/* Fix: establish BFC to prevent collapse */
+.parent {
+  overflow: hidden;
+}
+```
+
 ## 🧠 Question 11
 
 **ID**: css-011  
@@ -309,10 +413,8 @@ CSS provides multiple relative units.
 - `vh` → 1% of viewport height
 - `vw` → 1% of viewport width
 
-Use `rem` for consistent scaling across components.  
+Use `rem` for consistent scaling across components.
 Use viewport units for responsive layouts.
-
----
 
 ## 🧠 Question 12
 
@@ -853,27 +955,55 @@ Support: Chrome/Edge 85+, Firefox 128+, Safari 16.4+.
 
 ## 🧠 Question 31
 
-**ID**: css-031  
-**Title**: How does `accent-color` work on form elements, and what are its limitations in cross-browser consistency?  
-**Difficulty**: Hard  
-**Category**: Fundamentals & Accessibility
+**ID**: css-031
+**Title**: What is the difference between CSS transitions and CSS animations?
+**Difficulty**: Medium
+**Category**: Performance
 
 ### Answer 📄
 
-`accent-color` changes the accent color of native form controls (checkbox checkmark, radio dot, range thumb/track, progress bar).
+Both transitions and animations change CSS property values over time, but they serve different purposes.
+
+**Transitions**
+
+- Triggered by a state change (e.g., `:hover`, class toggle)
+- Run once, from a start state to an end state
+- Defined with `transition` shorthand
+
+**Animations (`@keyframes`)**
+
+- Run independently (no trigger required)
+- Can loop, alternate, and define multiple intermediate steps
+- More control over timing and sequence
+
+Example:
 
 ```css
-accent-color: #6200ea;
+/* Transition: hover triggers the change */
+.button {
+  background: blue;
+  transition: background 0.3s ease;
+}
+.button:hover {
+  background: darkblue;
+}
+
+/* Animation: runs automatically */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
 ```
 
-Limitations:
-
-- Only affects "accent" parts (not full override)
-- Browser inconsistencies (Safari may ignore on some controls pre-2025)
-- Contrast must meet WCAG (pair with color-scheme)
-- Does not work on custom-styled controls
-
-Best for light theming without heavy ::-webkit-appearance resets.
+Use transitions for simple interactive state changes; use animations for complex sequences or looping effects.
 
 ## 🧠 Question 32
 

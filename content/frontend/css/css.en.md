@@ -731,7 +731,8 @@ Full-page carousel example:
 }
 ```
 
-Benefits: Smooth, native-feeling carousels without JavaScript. Pitfalls: User can still scroll freely unless combined with overscroll-behavior.
+Benefits: Smooth, native-feeling carousels without JavaScript.  
+Pitfalls: User can still scroll freely unless combined with overscroll-behavior.
 
 ## 🧠 Question 23
 
@@ -1129,3 +1130,97 @@ Gap prevents double-margin issues and simplifies layouts.
 ```
 
 This difference is important when working with precise layouts.
+
+## 🧠 Question 36
+
+**ID**: css-036
+**Title**: What are CSS pseudo-elements and how do `::before` and `::after` work?
+**Difficulty**: Medium
+**Category**: Selectors & Specificity
+
+### Answer 📄
+
+Pseudo-elements are keywords that let you style a specific part of an element or inject virtual content without adding markup.
+
+`::before` and `::after` insert generated content before or after an element's actual content.
+
+They require the `content` property to render (even if empty: `content: ""`).
+
+Common uses:
+
+- Decorative icons or symbols
+- Clearfix for floats
+- Visual separators
+- Tooltip arrows
+
+Example:
+
+```css
+.badge::before {
+  content: '★ ';
+  color: gold;
+}
+
+.required-field::after {
+  content: ' *';
+  color: red;
+}
+
+/* Clearfix using ::after */
+.clearfix::after {
+  content: '';
+  display: block;
+  clear: both;
+}
+```
+
+Pseudo-elements are not part of the DOM — they cannot be selected with JavaScript.
+
+## 🧠 Question 37
+
+**ID**: css-037
+**Title**: What are `prefers-color-scheme` and `prefers-reduced-motion` media features and why do they matter?
+**Difficulty**: Medium
+**Category**: Responsive Design & Accessibility
+
+### Answer 📄
+
+These are CSS media features that respect user system-level preferences.
+
+**`prefers-color-scheme`**
+
+- Detects whether the user prefers a light or dark UI
+- Values: `light`, `dark`
+- Enables native dark mode support without JavaScript
+
+**`prefers-reduced-motion`**
+
+- Detects whether the user has requested reduced animation/motion (e.g., for vestibular disorders)
+- Values: `reduce`, `no-preference`
+- Should disable or minimize transitions and animations
+
+Both are essential for accessible, user-respectful design.
+
+Example:
+
+```css
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #121212;
+    color: #e0e0e0;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+Ignoring these preferences can cause accessibility issues and negative user experience.

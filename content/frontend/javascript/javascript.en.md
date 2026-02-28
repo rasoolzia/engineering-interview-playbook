@@ -1,7 +1,7 @@
 ---
 topic: javascript
 language: en
-version: 2.5
+version: 2.6
 ---
 
 # JavaScript Interview Questions

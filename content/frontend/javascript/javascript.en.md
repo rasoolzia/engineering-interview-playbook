@@ -2742,3 +2742,188 @@ fetchUser(1)
   .then((user) => console.log(user))
   .catch((err) => console.log(err));
 ```
+
+## 🧠 Question 81
+
+**ID**: js-081  
+**Title**: What are hidden classes in JavaScript engines and how do they affect performance?  
+**Difficulty**: Hard  
+**Category**: Engine & Runtime
+
+### Answer 📄
+
+Hidden classes are internal structures used by JavaScript engines (such as V8) to optimize object property access.
+
+When objects are created with the same property structure and order, the engine assigns them the same hidden class. This allows fast property access through inline caching.
+
+If object shapes change dynamically (e.g., adding properties later or in different orders), the engine may create new hidden classes, which can cause de-optimization.
+
+Consistent object structure improves performance.
+
+---
+
+Example:
+
+```js
+function createUser(name, age) {
+  return { name, age };
+}
+
+const u1 = createUser('A', 20);
+const u2 = createUser('B', 25);
+// Same hidden class → optimized
+
+const user = {};
+user.name = 'C';
+user.age = 30;
+// Different shape transitions → may de-optimize
+```
+
+---
+
+## 🧠 Question 82
+
+**ID**: js-082  
+**Title**: What is inline caching and how does it optimize property access?  
+**Difficulty**: Hard  
+**Category**: Engine & Runtime
+
+### Answer 📄
+
+Inline caching is an optimization technique used by JavaScript engines to speed up property access.
+
+When a property is accessed repeatedly on objects with the same hidden class, the engine caches the location of that property.
+
+Future accesses skip full lookup and use the cached reference directly, improving performance.
+
+If object shapes vary, inline caches may become invalidated.
+
+---
+
+Example:
+
+```js
+function getName(user) {
+  return user.name;
+}
+
+const u1 = { name: 'A' };
+const u2 = { name: 'B' };
+
+getName(u1);
+getName(u2);
+// Engine can optimize repeated access to `.name`
+```
+
+---
+
+## 🧠 Question 83
+
+**ID**: js-083  
+**Title**: How does generational garbage collection work in modern JavaScript engines?  
+**Difficulty**: Hard  
+**Category**: Memory & Performance
+
+### Answer 📄
+
+Modern JavaScript engines use generational garbage collection.
+
+Memory is divided into generations:
+
+- Young generation (short-lived objects)
+- Old generation (long-lived objects)
+
+Most objects die young, so the engine frequently cleans the young generation.
+
+Objects that survive multiple collections are promoted to the old generation, which is collected less frequently.
+
+This improves overall performance and memory efficiency.
+
+---
+
+Example:
+
+```js
+function createTemp() {
+  return { value: Math.random() };
+}
+
+for (let i = 0; i < 100000; i++) {
+  createTemp();
+}
+// Most objects are short-lived → collected in young generation
+```
+
+---
+
+## 🧠 Question 84
+
+**ID**: js-084  
+**Title**: What is partial application and how does it differ from currying?  
+**Difficulty**: Medium  
+**Category**: Functional Programming
+
+### Answer 📄
+
+Partial application is a technique where a function is invoked with some of its arguments fixed, returning a new function with fewer parameters.
+
+Currying transforms a function with multiple arguments into a sequence of functions each taking a single argument.
+
+Partial application fixes arguments at once.
+Currying transforms the function structure.
+
+---
+
+Example:
+
+```js
+function multiply(a, b, c) {
+  return a * b * c;
+}
+
+function partialMultiply(a) {
+  return (b, c) => multiply(a, b, c);
+}
+
+const double = partialMultiply(2);
+console.log(double(3, 4)); // 24
+```
+
+---
+
+## 🧠 Question 85
+
+**ID**: js-085  
+**Title**: What are higher-order functions and why are they important?  
+**Difficulty**: Medium  
+**Category**: Functional Programming
+
+### Answer 📄
+
+A higher-order function is a function that either:
+
+- Takes another function as an argument
+- Returns a function
+- Or both
+
+They enable abstraction, composition, and functional programming patterns.
+
+Common examples include map, filter, and reduce.
+
+---
+
+Example:
+
+```js
+function greet(name) {
+  return `Hello ${name}`;
+}
+
+function processUser(name, callback) {
+  return callback(name);
+}
+
+console.log(processUser('Rasool', greet));
+```
+
+---

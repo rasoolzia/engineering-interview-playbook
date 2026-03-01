@@ -1073,8 +1073,6 @@ Each execution context consists of:
 
 The engine creates a new execution context whenever a function is invoked.
 
----
-
 Example:
 
 ```js
@@ -1109,8 +1107,6 @@ During the execution phase:
 - Variables receive assigned values.
 - Functions are executed.
 
----
-
 Example:
 
 ```js
@@ -1138,8 +1134,6 @@ When a variable is referenced:
 4. If not found, a ReferenceError is thrown.
 
 This structure enables lexical scoping.
-
----
 
 Example:
 
@@ -1177,8 +1171,6 @@ JavaScript uses Lexical Scope.
 
 The scope of a function is fixed at definition time, not call time.
 
----
-
 Example:
 
 ```js
@@ -1210,8 +1202,6 @@ A closure is created when a function remembers variables from its lexical scope 
 Closures are possible because JavaScript uses lexical scoping.
 
 They allow functions to retain access to variables from their defining environment.
-
----
 
 Example:
 
@@ -1249,8 +1239,6 @@ Common causes include:
 - Unremoved event listeners
 - Long-running timers
 - Cached data in closures
-
----
 
 Example:
 
@@ -1297,8 +1285,6 @@ During this period, accessing the variable results in a ReferenceError.
 
 Unlike `var`, `let` and `const` are hoisted but not initialized.
 
----
-
 Example:
 
 ```js
@@ -1322,8 +1308,6 @@ Function scope means variables declared with `var` are scoped to the entire func
 Block scope means variables declared with `let` and `const` are scoped to the nearest block `{}`.
 
 Block scope prevents accidental variable leakage outside conditional or loop blocks.
-
----
 
 Example:
 
@@ -1351,8 +1335,6 @@ When a function is returned, its lexical environment is preserved if it referenc
 The engine keeps those variables in memory so the returned function can access them later.
 
 This is the foundation of closures.
-
----
 
 Example:
 
@@ -2760,8 +2742,6 @@ If object shapes change dynamically (e.g., adding properties later or in differe
 
 Consistent object structure improves performance.
 
----
-
 Example:
 
 ```js
@@ -2778,8 +2758,6 @@ user.name = 'C';
 user.age = 30;
 // Different shape transitions → may de-optimize
 ```
-
----
 
 ## 🧠 Question 82
 
@@ -2798,8 +2776,6 @@ Future accesses skip full lookup and use the cached reference directly, improvin
 
 If object shapes vary, inline caches may become invalidated.
 
----
-
 Example:
 
 ```js
@@ -2814,8 +2790,6 @@ getName(u1);
 getName(u2);
 // Engine can optimize repeated access to `.name`
 ```
-
----
 
 ## 🧠 Question 83
 
@@ -2839,8 +2813,6 @@ Objects that survive multiple collections are promoted to the old generation, wh
 
 This improves overall performance and memory efficiency.
 
----
-
 Example:
 
 ```js
@@ -2853,8 +2825,6 @@ for (let i = 0; i < 100000; i++) {
 }
 // Most objects are short-lived → collected in young generation
 ```
-
----
 
 ## 🧠 Question 84
 
@@ -2872,8 +2842,6 @@ Currying transforms a function with multiple arguments into a sequence of functi
 Partial application fixes arguments at once.
 Currying transforms the function structure.
 
----
-
 Example:
 
 ```js
@@ -2888,8 +2856,6 @@ function partialMultiply(a) {
 const double = partialMultiply(2);
 console.log(double(3, 4)); // 24
 ```
-
----
 
 ## 🧠 Question 85
 
@@ -2910,8 +2876,6 @@ They enable abstraction, composition, and functional programming patterns.
 
 Common examples include map, filter, and reduce.
 
----
-
 Example:
 
 ```js
@@ -2926,4 +2890,135 @@ function processUser(name, callback) {
 console.log(processUser('Rasool', greet));
 ```
 
----
+## 🧠 Question 86
+
+**ID**: js-086  
+**Title**: What is referential transparency in JavaScript?  
+**Difficulty**: Hard  
+**Category**: Functional Programming
+
+### Answer 📄
+
+Referential transparency means that a function can be replaced with its output value without changing program behavior.
+
+A function is referentially transparent if:
+
+- It always returns the same output for the same input
+- It has no side effects
+
+This property enables predictable and testable code.
+
+Example:
+
+```js
+function add(a, b) {
+  return a + b;
+}
+
+const result = add(2, 3);
+// add(2, 3) can be replaced with 5 safely
+```
+
+## 🧠 Question 87
+
+**ID**: js-087  
+**Title**: What is starvation in the JavaScript event loop?  
+**Difficulty**: Hard  
+**Category**: Event Loop
+
+### Answer 📄
+
+Starvation occurs when certain tasks in the event loop never get executed because other tasks continuously occupy the queue.
+
+For example, continuously scheduling microtasks can prevent macrotasks or rendering from running.
+
+This can block UI updates and degrade responsiveness.
+
+Example:
+
+```js
+function loop() {
+  Promise.resolve().then(loop);
+}
+
+loop();
+// Macrotasks may never execute
+```
+
+## 🧠 Question 88
+
+**ID**: js-088  
+**Title**: Why is `typeof null` equal to "object"?  
+**Difficulty**: Medium  
+**Category**: Language Behavior
+
+### Answer 📄
+
+`typeof null` returns `"object"` due to a historical bug in early JavaScript implementations.
+
+In the original implementation, values were tagged, and null was represented as a null pointer, which matched the object type tag.
+
+This behavior has been preserved for backward compatibility.
+
+Example:
+
+```js
+console.log(typeof null); // "object"
+```
+
+## 🧠 Question 89
+
+**ID**: js-089  
+**Title**: What is NaN and why is `NaN !== NaN`?  
+**Difficulty**: Medium  
+**Category**: Language Behavior
+
+### Answer 📄
+
+NaN stands for "Not a Number" and represents an invalid numeric result.
+
+According to the IEEE 754 standard, NaN is not equal to any value, including itself.
+
+To check for NaN, use Number.isNaN().
+
+Example:
+
+```js
+console.log(NaN === NaN); // false
+console.log(Number.isNaN(NaN)); // true
+```
+
+## 🧠 Question 90
+
+**ID**: js-090  
+**Title**: What is structuredClone and when should it be used?  
+**Difficulty**: Medium  
+**Category**: Objects & Internals
+
+### Answer 📄
+
+structuredClone is a built-in method that creates a deep clone of structured data.
+
+Unlike JSON-based cloning, it supports:
+
+- Dates
+- Maps
+- Sets
+- Typed arrays
+- Circular references
+
+It should be used when a reliable deep copy is needed.
+
+Example:
+
+```js
+const obj = {
+  date: new Date(),
+  nested: { value: 1 },
+};
+
+const clone = structuredClone(obj);
+
+console.log(clone !== obj); // true
+console.log(clone.nested !== obj.nested); // true
+```

@@ -3022,3 +3022,207 @@ const clone = structuredClone(obj);
 console.log(clone !== obj); // true
 console.log(clone.nested !== obj.nested); // true
 ```
+
+## 🧠 سوال ۹۱
+
+**ID**: js-091
+**عنوان**: الگوی Observer چیست و چگونه در جاوااسکریپت پیاده‌سازی می‌شود؟
+**سختی**: سخت
+**دسته‌بندی**: الگوهای طراحی
+
+### پاسخ 📄
+
+الگوی Observer (که به نام Pub/Sub نیز شناخته می‌شود) به آبجکت‌ها اجازه می‌دهد به رویدادها subscribe کنند و هنگام وقوع آنها مطلع شوند.
+
+این الگو منبع رویداد (publisher) را از شنوندگان (subscribers) جدا می‌کند.
+
+اجزای کلیدی:
+
+- `on(event, listener)` — subscribe به یک رویداد
+- `emit(event, data)` — فعال کردن تمام listener‌های یک رویداد
+- `off(event, listener)` — unsubscribe از یک رویداد
+
+این الگو به طور گسترده در سیستم‌های event-driven، فریم‌ورک‌های UI و EventEmitter نودجی‌اس استفاده می‌شود.
+
+مثال:
+
+```js
+class EventEmitter {
+  constructor() {
+    this.events = {};
+  }
+
+  on(event, listener) {
+    if (!this.events[event]) this.events[event] = [];
+    this.events[event].push(listener);
+  }
+
+  off(event, listener) {
+    if (this.events[event]) {
+      this.events[event] = this.events[event].filter((l) => l !== listener);
+    }
+  }
+
+  emit(event, data) {
+    if (this.events[event]) {
+      this.events[event].forEach((listener) => listener(data));
+    }
+  }
+}
+
+const emitter = new EventEmitter();
+
+const onLogin = (user) => console.log(`${user} وارد شد`);
+
+emitter.on('login', onLogin);
+emitter.emit('login', 'Rasool'); // Rasool وارد شد
+
+emitter.off('login', onLogin);
+emitter.emit('login', 'Ali'); // (خروجی ندارد)
+```
+
+## 🧠 سوال ۹۲
+
+**ID**: js-092
+**عنوان**: تفاوت بین deep equality و reference equality چیست؟
+**سختی**: متوسط
+**دسته‌بندی**: آبجکت‌ها و داخلی
+
+### پاسخ 📄
+
+Reference equality بررسی می‌کند که آیا دو متغیر به همان مرجع در حافظه اشاره می‌کنند.
+
+Deep equality بررسی می‌کند که آیا دو مقدار ساختار و محتوای یکسانی دارند.
+
+در جاوااسکریپت، `===` برای آبجکت‌ها مرجع را مقایسه می‌کند، نه ساختار.
+
+مقایسه عمیق نیاز به بررسی بازگشتی ویژگی‌ها دارد.
+
+مثال:
+
+```js
+const a = { value: 1 };
+const b = { value: 1 };
+
+console.log(a === b); // false (مرجع‌های متفاوت)
+
+function deepEqual(obj1, obj2) {
+  return JSON.stringify(obj1) === JSON.stringify(obj2);
+}
+
+console.log(deepEqual(a, b)); // true (ساختار یکسان)
+```
+
+## 🧠 سوال ۹۳
+
+**ID**: js-093
+**عنوان**: getter و setter چیستند و چگونه به صورت داخلی کار می‌کنند؟
+**سختی**: سخت
+**دسته‌بندی**: آبجکت‌ها و داخلی
+
+### پاسخ 📄
+
+getter و setter متدهای خاصی هستند که رفتار سفارشی هنگام دسترسی یا تغییر ویژگی‌های آبجکت تعریف می‌کنند.
+
+با استفاده از property descriptor تعریف می‌شوند.
+
+به صورت داخلی، دسترسی مستقیم به ویژگی را با اجرای تابع جایگزین می‌کنند.
+
+این کار اعتبارسنجی، مقادیر محاسباتی یا اثرات جانبی را ممکن می‌سازد.
+
+مثال:
+
+```js
+const user = {
+  firstName: 'Rasool',
+  lastName: 'Zia',
+
+  get fullName() {
+    return `${this.firstName} ${this.lastName}`;
+  },
+
+  set fullName(value) {
+    const [first, last] = value.split(' ');
+    this.firstName = first;
+    this.lastName = last;
+  },
+};
+
+console.log(user.fullName);
+user.fullName = 'Ali Reza';
+console.log(user.firstName);
+```
+
+## 🧠 سوال ۹۴
+
+**ID**: js-094
+**عنوان**: Symbol‌های well-known در جاوااسکریپت چیستند؟
+**سختی**: سخت
+**دسته‌بندی**: ویژگی‌های پیشرفته زبان
+
+### پاسخ 📄
+
+Symbol‌های well-known ویژگی‌های Symbol توکاری هستند که رفتارهای خاص آبجکت را تعریف می‌کنند.
+
+مثال‌ها شامل:
+
+- Symbol.iterator
+- Symbol.toStringTag
+- Symbol.toPrimitive
+- Symbol.asyncIterator
+
+آنها به آبجکت‌ها اجازه می‌دهند رفتار سطح زبانی مانند iteration و تبدیل نوع را سفارشی کنند.
+
+مثال:
+
+```js
+const obj = {
+  *[Symbol.iterator]() {
+    yield 1;
+    yield 2;
+  },
+};
+
+for (const value of obj) {
+  console.log(value);
+}
+```
+
+## 🧠 سوال ۹۵
+
+**ID**: js-095
+**عنوان**: async iteration چیست و `for await...of` چگونه کار می‌کند؟
+**سختی**: سخت
+**دسته‌بندی**: Async و Concurrency
+
+### پاسخ 📄
+
+async iteration امکان مصرف متوالی منابع داده ناهمزمان با استفاده از `for await...of` را فراهم می‌کند.
+
+یک async iterable باید `Symbol.asyncIterator` را پیاده‌سازی کند که یک async iterator برمی‌گرداند و متد `next()` آن یک Promise برمی‌گرداند.
+
+Async generator‌ها با استفاده از `async function*` تولید دنباله‌های async را آسان می‌کنند.
+
+این برای API‌های صفحه‌بندی شده، stream‌ها یا هر داده‌ای که به صورت ناهمزمان می‌رسد مفید است.
+
+مثال:
+
+```js
+async function* asyncRange(start, end) {
+  for (let i = start; i <= end; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    yield i;
+  }
+}
+
+async function main() {
+  for await (const num of asyncRange(1, 3)) {
+    console.log(num);
+    // 1
+    // 2
+    // 3
+  }
+}
+
+main();
+```

@@ -3022,3 +3022,207 @@ const clone = structuredClone(obj);
 console.log(clone !== obj); // true
 console.log(clone.nested !== obj.nested); // true
 ```
+
+## 🧠 Question 91
+
+**ID**: js-091
+**Title**: What is the Observer pattern and how can it be implemented in JavaScript?
+**Difficulty**: Hard
+**Category**: Design Patterns
+
+### Answer 📄
+
+The Observer pattern (also known as Pub/Sub) allows objects to subscribe to events and be notified when those events occur.
+
+It decouples the event source (publisher) from the listeners (subscribers).
+
+Key components:
+
+- `on(event, listener)` — subscribe to an event
+- `emit(event, data)` — trigger all listeners for an event
+- `off(event, listener)` — unsubscribe from an event
+
+This pattern is widely used in event-driven systems, UI frameworks, and Node.js EventEmitter.
+
+Example:
+
+```js
+class EventEmitter {
+  constructor() {
+    this.events = {};
+  }
+
+  on(event, listener) {
+    if (!this.events[event]) this.events[event] = [];
+    this.events[event].push(listener);
+  }
+
+  off(event, listener) {
+    if (this.events[event]) {
+      this.events[event] = this.events[event].filter((l) => l !== listener);
+    }
+  }
+
+  emit(event, data) {
+    if (this.events[event]) {
+      this.events[event].forEach((listener) => listener(data));
+    }
+  }
+}
+
+const emitter = new EventEmitter();
+
+const onLogin = (user) => console.log(`${user} logged in`);
+
+emitter.on('login', onLogin);
+emitter.emit('login', 'Rasool'); // Rasool logged in
+
+emitter.off('login', onLogin);
+emitter.emit('login', 'Ali'); // (no output)
+```
+
+## 🧠 Question 92
+
+**ID**: js-092  
+**Title**: What is the difference between deep equality and reference equality?  
+**Difficulty**: Medium  
+**Category**: Objects & Internals
+
+### Answer 📄
+
+Reference equality checks whether two variables point to the same memory reference.
+
+Deep equality checks whether two values have the same structure and content.
+
+In JavaScript, `===` compares references for objects, not structure.
+
+Deep comparison requires recursive property checks.
+
+Example:
+
+```js
+const a = { value: 1 };
+const b = { value: 1 };
+
+console.log(a === b); // false (different references)
+
+function deepEqual(obj1, obj2) {
+  return JSON.stringify(obj1) === JSON.stringify(obj2);
+}
+
+console.log(deepEqual(a, b)); // true (structure match)
+```
+
+## 🧠 Question 93
+
+**ID**: js-093  
+**Title**: What are getters and setters and how do they work internally?  
+**Difficulty**: Hard  
+**Category**: Objects & Internals
+
+### Answer 📄
+
+Getters and setters are special methods that define custom behavior when accessing or modifying object properties.
+
+They are defined using property descriptors.
+
+Internally, they replace direct property access with function execution.
+
+This enables validation, computed values, or side effects.
+
+Example:
+
+```js
+const user = {
+  firstName: 'Rasool',
+  lastName: 'Zia',
+
+  get fullName() {
+    return `${this.firstName} ${this.lastName}`;
+  },
+
+  set fullName(value) {
+    const [first, last] = value.split(' ');
+    this.firstName = first;
+    this.lastName = last;
+  },
+};
+
+console.log(user.fullName);
+user.fullName = 'Ali Reza';
+console.log(user.firstName);
+```
+
+## 🧠 Question 94
+
+**ID**: js-094  
+**Title**: What are well-known Symbols in JavaScript?  
+**Difficulty**: Hard  
+**Category**: Advanced Language Features
+
+### Answer 📄
+
+Well-known Symbols are built-in Symbol properties that define special object behaviors.
+
+Examples include:
+
+- Symbol.iterator
+- Symbol.toStringTag
+- Symbol.toPrimitive
+- Symbol.asyncIterator
+
+They allow objects to customize language-level behavior such as iteration and type conversion.
+
+Example:
+
+```js
+const obj = {
+  *[Symbol.iterator]() {
+    yield 1;
+    yield 2;
+  },
+};
+
+for (const value of obj) {
+  console.log(value);
+}
+```
+
+## 🧠 Question 95
+
+**ID**: js-095
+**Title**: What is async iteration and how does `for await...of` work?
+**Difficulty**: Hard
+**Category**: Async & Concurrency
+
+### Answer 📄
+
+Async iteration allows consuming asynchronous data sources sequentially using `for await...of`.
+
+An async iterable implements `Symbol.asyncIterator`, which returns an async iterator whose `next()` method returns a Promise.
+
+Async generators using `async function*` make it easy to produce async sequences.
+
+This is useful for paginated APIs, streams, or any data that arrives asynchronously.
+
+Example:
+
+```js
+async function* asyncRange(start, end) {
+  for (let i = start; i <= end; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    yield i;
+  }
+}
+
+async function main() {
+  for await (const num of asyncRange(1, 3)) {
+    console.log(num);
+    // 1
+    // 2
+    // 3
+  }
+}
+
+main();
+```

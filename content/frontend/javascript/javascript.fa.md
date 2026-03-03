@@ -3226,3 +3226,161 @@ async function main() {
 
 main();
 ```
+
+## 🧠 سوال ۹۶
+
+**ID**: js-096
+**عنوان**: تفاوت بین Object.create() و نمونه‌سازی مبتنی بر class چیست؟
+**سختی**: متوسط
+**دسته‌بندی**: آبجکت‌ها و Prototype
+
+### پاسخ 📄
+
+Object.create() یک آبجکت جدید با prototype مشخص‌شده ایجاد می‌کند.
+
+نمونه‌سازی مبتنی بر class از syntax `class` و `new` برای ایجاد نمونه‌ها استفاده می‌کند.
+
+در زیر پوسته، class‌ها syntactic sugar روی prototype‌ها هستند.
+
+Object.create کنترل مستقیم بیشتری بر زنجیره prototype فراهم می‌کند.
+
+مثال:
+
+```js
+const animal = {
+  speak() {
+    return 'sound';
+  },
+};
+
+const dog = Object.create(animal);
+console.log(dog.speak());
+```
+
+## 🧠 سوال ۹۷
+
+**ID**: js-097
+**عنوان**: دام‌های Automatic Semicolon Insertion (ASI) چیستند؟
+**سختی**: متوسط
+**دسته‌بندی**: رفتار زبان
+
+### پاسخ 📄
+
+Automatic Semicolon Insertion مکانیزمی است که جاوااسکریپت در موارد خاص به طور خودکار سمی‌کالن اضافه می‌کند.
+
+این می‌تواند هنگام وجود شکست خط بعد از `return`، `break` یا قبل از عباراتی که با `(` یا `[` شروع می‌شوند، باعث رفتار غیرمنتظره شود.
+
+سمی‌کالن‌های صریح از ابهام جلوگیری می‌کنند.
+
+مثال:
+
+```js
+function test() {
+  return;
+  {
+    value: 1;
+  }
+}
+
+console.log(test()); // undefined
+```
+
+## 🧠 سوال ۹۸
+
+**ID**: js-098
+**عنوان**: مرورگر چگونه رندر را بین task‌ها در event loop مدیریت می‌کند؟
+**سختی**: سخت
+**دسته‌بندی**: Event Loop
+
+### پاسخ 📄
+
+مرورگر رندر را بین macrotask‌ها انجام می‌دهد.
+
+پس از اجرای یک task و پردازش microtask‌ها، مرورگر ممکن است مراحل layout، paint و compositing را انجام دهد.
+
+اگر جاوااسکریپت به طور مداوم thread اصلی را مسدود کند، رندر نمی‌تواند رخ دهد که باعث freeze شدن UI می‌شود.
+
+درک این تعامل به جلوگیری از مشکلات کارایی کمک می‌کند.
+
+مثال:
+
+```js
+while (true) {
+  // حلقه مسدودکننده
+}
+```
+
+مرورگر نمی‌تواند به‌روزرسانی‌های رندر را در حالی که thread اصلی مسدود است انجام دهد.
+
+## 🧠 سوال ۹۹
+
+**ID**: js-099
+**عنوان**: تفاوت بین `for...in` و `for...of` چیست؟
+**سختی**: متوسط
+**دسته‌بندی**: Iteration
+
+### پاسخ 📄
+
+`for...in` روی **کلیدهای** قابل شمارش یک آبجکت پیمایش می‌کند (شامل ویژگی‌های ارث‌بری شده).
+
+`for...of` روی **مقادیر** یک iterable پیمایش می‌کند (آرایه‌ها، رشته‌ها، Map، Set، generator و غیره).
+
+تفاوت‌های کلیدی:
+
+- `for...in` روی هر آبجکتی کار می‌کند؛ `for...of` به یک iterable نیاز دارد
+- `for...in` ممکن است به طور غیرمنتظره‌ای ویژگی‌های ارث‌بری شده را شامل شود
+- `for...of` به طور مستقیم روی آبجکت‌های ساده کار نمی‌کند (به طور پیش‌فرض iterable نیستند)
+
+مثال:
+
+```js
+const arr = ['a', 'b', 'c'];
+
+for (const key in arr) {
+  console.log(key); // 0, 1, 2 (اندیس‌ها به صورت رشته)
+}
+
+for (const value of arr) {
+  console.log(value); // a, b, c
+}
+
+const obj = { x: 1, y: 2 };
+
+for (const key in obj) {
+  console.log(key); // x, y
+}
+
+// for...of روی آبجکت ساده خطا می‌دهد
+// for (const val of obj) {} // TypeError: obj is not iterable
+```
+
+## 🧠 سوال ۱۰۰
+
+**ID**: js-100
+**عنوان**: Tagged template literals چیستند و چگونه کار می‌کنند؟
+**سختی**: متوسط
+**دسته‌بندی**: ویژگی‌های ES6+
+
+### پاسخ 📄
+
+Tagged template literals به یک تابع (tag) اجازه می‌دهند یک template literal را قبل از ارزیابی پردازش کند.
+
+تابع tag قسمت‌های رشته را به صورت آرایه و مقادیر interpolate شده را به عنوان آرگومان‌های جداگانه دریافت می‌کند.
+
+این کار پردازش سفارشی رشته مانند sanitization، localization یا ساخت DSL را ممکن می‌سازد.
+
+مثال:
+
+```js
+function highlight(strings, ...values) {
+  return strings.reduce((result, str, i) => {
+    return result + str + (values[i] !== undefined ? `[${values[i]}]` : '');
+  }, '');
+}
+
+const name = 'Rasool';
+const score = 95;
+
+console.log(highlight`Player ${name} scored ${score} points.`);
+// Player [Rasool] scored [95] points.
+```

@@ -3226,3 +3226,161 @@ async function main() {
 
 main();
 ```
+
+## 🧠 Question 96
+
+**ID**: js-096  
+**Title**: What is the difference between Object.create() and class-based instantiation?  
+**Difficulty**: Medium  
+**Category**: Objects & Prototypes
+
+### Answer 📄
+
+Object.create() creates a new object with a specified prototype.
+
+Class-based instantiation uses the `class` and `new` syntax to create instances.
+
+Under the hood, classes are syntactic sugar over prototypes.
+
+Object.create provides more direct control over prototype chaining.
+
+Example:
+
+```js
+const animal = {
+  speak() {
+    return 'sound';
+  },
+};
+
+const dog = Object.create(animal);
+console.log(dog.speak());
+```
+
+## 🧠 Question 97
+
+**ID**: js-097  
+**Title**: What are the pitfalls of Automatic Semicolon Insertion (ASI)?  
+**Difficulty**: Medium  
+**Category**: Language Behavior
+
+### Answer 📄
+
+Automatic Semicolon Insertion is a mechanism where JavaScript inserts semicolons automatically in certain cases.
+
+This can lead to unexpected behavior when line breaks occur after `return`, `break`, or before expressions starting with `(` or `[`.
+
+Explicit semicolons prevent ambiguity.
+
+Example:
+
+```js
+function test() {
+  return;
+  {
+    value: 1;
+  }
+}
+
+console.log(test()); // undefined
+```
+
+## 🧠 Question 98
+
+**ID**: js-098  
+**Title**: How does the browser handle rendering between tasks in the event loop?  
+**Difficulty**: Hard  
+**Category**: Event Loop
+
+### Answer 📄
+
+The browser performs rendering between macrotasks.
+
+After executing a task and processing microtasks, the browser may perform layout, paint, and compositing steps.
+
+If JavaScript blocks the main thread continuously, rendering cannot occur, causing UI freezes.
+
+Understanding this interaction helps prevent performance issues.
+
+Example:
+
+```js
+while (true) {
+  // Blocking loop
+}
+```
+
+The browser cannot render updates while the main thread is blocked.
+
+## 🧠 Question 99
+
+**ID**: js-099
+**Title**: What is the difference between `for...in` and `for...of`?
+**Difficulty**: Medium
+**Category**: Iteration
+
+### Answer 📄
+
+`for...in` iterates over the enumerable **property keys** of an object (including inherited ones).
+
+`for...of` iterates over the **values** of an iterable (arrays, strings, Maps, Sets, generators, etc.).
+
+Key differences:
+
+- `for...in` works on any object; `for...of` requires an iterable
+- `for...in` can unexpectedly include inherited properties
+- `for...of` cannot be used directly on plain objects (they are not iterable by default)
+
+Example:
+
+```js
+const arr = ['a', 'b', 'c'];
+
+for (const key in arr) {
+  console.log(key); // 0, 1, 2 (indices as strings)
+}
+
+for (const value of arr) {
+  console.log(value); // a, b, c
+}
+
+const obj = { x: 1, y: 2 };
+
+for (const key in obj) {
+  console.log(key); // x, y
+}
+
+// for...of on plain object throws TypeError
+// for (const val of obj) {} // TypeError: obj is not iterable
+```
+
+## 🧠 Question 100
+
+**ID**: js-100
+**Title**: What are tagged template literals and how do they work?
+**Difficulty**: Medium
+**Category**: ES6+ Features
+
+### Answer 📄
+
+Tagged template literals allow a function (the tag) to process a template literal before it is evaluated.
+
+The tag function receives the string parts as an array and the interpolated values as separate arguments.
+
+This enables custom string processing such as sanitization, localization, or DSLs.
+
+Example:
+
+```js
+function highlight(strings, ...values) {
+  return strings.reduce((result, str, i) => {
+    return result + str + (values[i] !== undefined ? `[${values[i]}]` : '');
+  }, '');
+}
+
+const name = 'Rasool';
+const score = 95;
+
+console.log(highlight`Player ${name} scored ${score} points.`);
+// Player [Rasool] scored [95] points.
+```

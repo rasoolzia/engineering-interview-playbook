@@ -3384,3 +3384,72 @@ const score = 95;
 console.log(highlight`Player ${name} scored ${score} points.`);
 // Player [Rasool] scored [95] points.
 ```
+
+## 🧠 سوال ۱۰۱
+
+**ID**: js-101
+**عنوان**: `import()` داینامیک چیست و چه تفاوتی با import استاتیک دارد؟
+**سختی**: متوسط
+**دسته‌بندی**: ماژول‌ها
+
+### پاسخ 📄
+
+`import` استاتیک در زمان parse حل می‌شود و نمی‌تواند شرطی یا به تأخیر افتاده باشد.
+
+`import()` داینامیک یک عبارت تابع‌مانند است که یک ماژول را به صورت on-demand در زمان اجرا بارگذاری می‌کند و یک Promise برمی‌گرداند.
+
+این code splitting را ممکن می‌سازد — بارگذاری ماژول‌ها فقط زمانی که نیاز است، که حجم bundle اولیه را کاهش می‌دهد.
+
+مثال:
+
+```js
+// import استاتیک (همیشه بارگذاری می‌شود)
+import { add } from './math.js';
+
+// import داینامیک (بارگذاری on-demand)
+async function loadMath() {
+  const { add } = await import('./math.js');
+  console.log(add(2, 3)); // 5
+}
+
+// بارگذاری شرطی
+if (userNeedsChart) {
+  const { renderChart } = await import('./chart.js');
+  renderChart(data);
+}
+```
+
+## 🧠 سوال ۱۰۲
+
+**ID**: js-102
+**عنوان**: عملگرهای logical assignment در جاوااسکریپت چیستند؟
+**سختی**: متوسط
+**دسته‌بندی**: ویژگی‌های ES2021
+
+### پاسخ 📄
+
+عملگرهای logical assignment عملیات منطقی را با انتساب ترکیب می‌کنند.
+
+سه نوع وجود دارد:
+
+- `&&=` مقدار سمت راست را فقط اگر مقدار سمت چپ truthy باشد اختصاص می‌دهد
+- `||=` مقدار سمت راست را فقط اگر مقدار سمت چپ falsy باشد اختصاص می‌دهد
+- `??=` مقدار سمت راست را فقط اگر مقدار سمت چپ null یا undefined باشد اختصاص می‌دهد
+
+آنها shorthand الگوهای رایج مانند انتساب مقدار پیش‌فرض یا به‌روزرسانی شرطی هستند.
+
+مثال:
+
+```js
+let a = 1;
+let b = 0;
+let c = null;
+
+a &&= 99; // a truthy است → a = 99
+b ||= 42; // b falsy است  → b = 42
+c ??= 'default'; // c null است → c = 'default'
+
+console.log(a); // 99
+console.log(b); // 42
+console.log(c); // 'default'
+```

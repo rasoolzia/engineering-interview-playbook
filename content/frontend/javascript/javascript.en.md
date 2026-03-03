@@ -3384,3 +3384,72 @@ const score = 95;
 console.log(highlight`Player ${name} scored ${score} points.`);
 // Player [Rasool] scored [95] points.
 ```
+
+## 🧠 Question 101
+
+**ID**: js-101
+**Title**: What is dynamic `import()` and how does it differ from static import?
+**Difficulty**: Medium
+**Category**: Modules
+
+### Answer 📄
+
+Static `import` is resolved at parse time and cannot be conditional or deferred.
+
+Dynamic `import()` is a function-like expression that loads a module on demand at runtime and returns a Promise.
+
+It enables code splitting — loading modules only when needed, reducing initial bundle size.
+
+Example:
+
+```js
+// Static import (always loaded)
+import { add } from './math.js';
+
+// Dynamic import (loaded on demand)
+async function loadMath() {
+  const { add } = await import('./math.js');
+  console.log(add(2, 3)); // 5
+}
+
+// Conditional loading
+if (userNeedsChart) {
+  const { renderChart } = await import('./chart.js');
+  renderChart(data);
+}
+```
+
+## 🧠 Question 102
+
+**ID**: js-102
+**Title**: What are logical assignment operators in JavaScript?
+**Difficulty**: Medium
+**Category**: ES2021 Features
+
+### Answer 📄
+
+Logical assignment operators combine logical operations with assignment.
+
+There are three:
+
+- `&&=` assigns the right value only if the left value is truthy
+- `||=` assigns the right value only if the left value is falsy
+- `??=` assigns the right value only if the left value is null or undefined
+
+They are shorthand for common patterns like default value assignment or conditional updates.
+
+Example:
+
+```js
+let a = 1;
+let b = 0;
+let c = null;
+
+a &&= 99; // a is truthy → a = 99
+b ||= 42; // b is falsy  → b = 42
+c ??= 'default'; // c is null → c = 'default'
+
+console.log(a); // 99
+console.log(b); // 42
+console.log(c); // 'default'
+```

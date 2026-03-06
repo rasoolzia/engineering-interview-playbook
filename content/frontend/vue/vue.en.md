@@ -282,3 +282,129 @@ const tax = computed(() => {
   return price.value * 0.2;
 });
 ```
+
+## 🧠 Question 11
+
+**ID**: vue-011  
+**Title**: What are Vue components and why are they important?  
+**Difficulty**: Easy  
+**Category**: Components
+
+### Answer 📄
+
+Components are reusable building blocks in Vue applications.
+
+Each component encapsulates its own:
+
+- Template
+- Logic
+- Styles
+- State
+
+This modular architecture allows large applications to be broken into smaller, manageable pieces.
+
+Components improve code reusability, maintainability, and scalability.
+
+## 🧠 Question 12
+
+**ID**: vue-012  
+**Title**: How do props work in Vue?  
+**Difficulty**: Easy  
+**Category**: Components
+
+### Answer 📄
+
+Props are used to pass data from a parent component to a child component.
+
+They allow components to receive external data while remaining reusable and independent.
+
+Props are declared in the child component and passed via HTML attributes in the parent component.
+
+Vue enforces **one-way data flow**, meaning props flow from parent to child only.
+
+Example:
+
+```vue
+<!-- Parent -->
+<UserCard name="Rasool" />
+```
+
+```vue
+<!-- Child -->
+<script setup>
+defineProps({
+  name: String,
+});
+</script>
+```
+
+## 🧠 Question 13
+
+**ID**: vue-013  
+**Title**: What is prop validation in Vue?  
+**Difficulty**: Medium  
+**Category**: Components
+
+### Answer 📄
+
+Prop validation allows developers to specify the expected type and constraints for props.
+
+Vue can check whether the passed value matches the declared type.
+
+Validation options include:
+
+- Type checking
+- Required props
+- Default values
+- Custom validation functions
+
+This improves reliability and prevents incorrect data from being passed into components.
+
+## 🧠 Question 14
+
+**ID**: vue-014  
+**Title**: What are slots in Vue and why are they useful?  
+**Difficulty**: Medium  
+**Category**: Components
+
+### Answer 📄
+
+Slots allow parent components to pass template content into child components.
+
+They make components more flexible by allowing dynamic content insertion.
+
+Slots are commonly used for building reusable layout components such as modals, cards, or layout wrappers.
+
+Vue supports default slots, named slots, and scoped slots.
+
+Example:
+
+```vue
+<Card>
+  <p>This content is passed from the parent.</p>
+</Card>
+```
+
+```vue
+<!-- Card.vue -->
+<template>
+  <div class="card">
+    <slot></slot>
+  </div>
+</template>
+```
+
+## 🧠 Question 15
+
+**ID**: vue-015  
+**Title**: What are scoped slots and how do they differ from regular slots?  
+**Difficulty**: Medium  
+**Category**: Components
+
+### Answer 📄
+
+Scoped slots allow child components to pass data back to the slot content defined by the parent.
+
+This allows the parent to control rendering while still accessing data from the child component.
+
+They are useful when building reusable components that expose internal state to the slot template.

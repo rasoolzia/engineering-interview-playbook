@@ -408,3 +408,173 @@ Scoped slots allow child components to pass data back to the slot content define
 This allows the parent to control rendering while still accessing data from the child component.
 
 They are useful when building reusable components that expose internal state to the slot template.
+
+## 🧠 Question 16
+
+**ID**: vue-016  
+**Title**: What is the Composition API in Vue and why was it introduced?  
+**Difficulty**: Medium  
+**Category**: Composition API
+
+### Answer 📄
+
+The Composition API is a set of APIs introduced in Vue 3 that allows developers to organize component logic by feature rather than by option type.
+
+In the Options API, logic is split across options such as data, methods, computed, and watch. This can make large components difficult to maintain.
+
+The Composition API solves this problem by allowing related logic to be grouped together inside the `setup()` function.
+
+Benefits include:
+
+- Better logic reuse
+- Improved code organization
+- Easier TypeScript integration
+- More scalable architecture for large applications
+
+## 🧠 Question 17
+
+**ID**: vue-017  
+**Title**: What is the `setup()` function in Vue?  
+**Difficulty**: Medium  
+**Category**: Composition API
+
+### Answer 📄
+
+The `setup()` function is the entry point for using the Composition API inside a Vue component.
+
+It runs before the component is created and is responsible for initializing reactive state, computed values, and functions used by the component.
+
+Everything returned from `setup()` becomes available inside the component's template.
+
+The `setup()` function receives two arguments:
+
+- `props`
+- `context`
+
+It is commonly used to define component logic in Vue 3 applications.
+
+Example (Q16–Q17):
+
+```js
+//Composition API with setup()
+
+import { ref } from 'vue';
+
+export default {
+  setup() {
+    const count = ref(0);
+
+    const increment = () => {
+      count.value++;
+    };
+
+    return { count, increment };
+  },
+};
+```
+
+## 🧠 Question 18
+
+**ID**: vue-018  
+**Title**: What is a composable in Vue?  
+**Difficulty**: Medium  
+**Category**: Composition API
+
+### Answer 📄
+
+A composable is a reusable function that encapsulates stateful logic using the Composition API.
+
+Composable functions allow developers to extract logic from components and reuse it across multiple components.
+
+They typically follow the naming convention `useSomething`.
+
+Examples include:
+
+- `useMouse`
+- `useFetch`
+- `useAuth`
+
+Composable functions improve modularity and code reuse in Vue applications.
+
+Example:
+
+```js
+import { ref } from 'vue';
+
+export function useCounter() {
+  const count = ref(0);
+
+  const increment = () => {
+    count.value++;
+  };
+
+  return { count, increment };
+}
+```
+
+## 🧠 Question 19
+
+**ID**: vue-019  
+**Title**: What is the difference between `watch` and `watchEffect`?  
+**Difficulty**: Medium  
+**Category**: Reactivity System
+
+### Answer 📄
+
+Both `watch` and `watchEffect` are used to react to reactive state changes.
+
+`watch` tracks specific reactive sources and only runs when those sources change.
+
+`watchEffect` automatically tracks all reactive dependencies used inside its callback.
+
+Key differences:
+
+- `watch` requires explicit dependency declaration
+- `watchEffect` automatically tracks dependencies
+- `watch` provides more control over when updates occur
+
+`watchEffect` is often used for simple reactive side effects.
+
+Example:
+
+```js
+//watch vs watchEffect
+
+import { ref, watch, watchEffect } from 'vue';
+
+const count = ref(0);
+
+watch(count, (newValue) => {
+  console.log('watch:', newValue);
+});
+
+watchEffect(() => {
+  console.log('watchEffect:', count.value);
+});
+```
+
+## 🧠 Question 20
+
+**ID**: vue-020  
+**Title**: What are lifecycle hooks in Vue?  
+**Difficulty**: Easy  
+**Category**: Lifecycle
+
+### Answer 📄
+
+Lifecycle hooks are functions that allow developers to run code at specific stages of a component's lifecycle.
+
+Common lifecycle stages include:
+
+- Component creation
+- DOM mounting
+- Updates
+- Component destruction
+
+Vue provides lifecycle hooks such as:
+
+- `onMounted`
+- `onUpdated`
+- `onUnmounted`
+
+These hooks allow developers to perform tasks such as data fetching, DOM interaction, or cleanup.

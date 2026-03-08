@@ -578,3 +578,121 @@ Vue provides lifecycle hooks such as:
 - `onUnmounted`
 
 These hooks allow developers to perform tasks such as data fetching, DOM interaction, or cleanup.
+
+## 🧠 Question 21
+
+**ID**: vue-021  
+**Title**: What are the most common lifecycle hooks in Vue 3?  
+**Difficulty**: Easy  
+**Category**: Lifecycle
+
+### Answer 📄
+
+Vue 3 provides several lifecycle hooks that allow developers to respond to component lifecycle events.
+
+Common hooks include:
+
+- `onBeforeMount`
+- `onMounted`
+- `onBeforeUpdate`
+- `onUpdated`
+- `onBeforeUnmount`
+- `onUnmounted`
+
+These hooks help manage side effects such as API requests, DOM manipulation, and cleanup operations.
+
+## 🧠 Question 22
+
+**ID**: vue-022  
+**Title**: What is `v-if` and how does it differ from `v-show`?  
+**Difficulty**: Easy  
+**Category**: Directives
+
+### Answer 📄
+
+Both `v-if` and `v-show` are directives used for conditional rendering.
+
+`v-if` conditionally renders elements in the DOM. If the condition is false, the element is not rendered.
+
+`v-show` always renders the element but toggles its visibility using CSS.
+
+In general:
+
+- `v-if` is better for rarely changing conditions
+- `v-show` is better for frequently toggled elements
+
+Example:
+
+```js
+// v-if vs v-show
+
+<p v-if="isVisible">Visible with v-if</p>
+
+<p v-show="isVisible">Visible with v-show</p>
+```
+
+## 🧠 Question 23
+
+**ID**: vue-023  
+**Title**: What is `v-for` and how does Vue track list updates?  
+**Difficulty**: Medium  
+**Category**: Directives
+
+### Answer 📄
+
+`v-for` is a directive used to render lists of items.
+
+Vue requires a `key` attribute when rendering lists so it can efficiently track changes.
+
+The `key` helps Vue identify which items have been added, removed, or reordered.
+
+This allows Vue to update the DOM efficiently using the virtual DOM diffing algorithm.
+
+## 🧠 Question 24
+
+**ID**: vue-024  
+**Title**: What is `v-model` and how does it work internally?  
+**Difficulty**: Medium  
+**Category**: Forms
+
+### Answer 📄
+
+`v-model` is a directive used to create two-way data binding between form inputs and reactive state.
+
+Internally, `v-model` combines:
+
+- `v-bind:value`
+- `v-on:input`
+
+When the input changes, Vue updates the bound state. When the state changes, the input value updates automatically.
+
+In Vue 3, `v-model` also supports custom arguments and multiple bindings.
+
+Example:
+
+```js
+<input v-model="username" />
+```
+
+```js
+const username = ref('');
+```
+
+## 🧠 Question 25
+
+**ID**: vue-025  
+**Title**: What are custom directives in Vue?  
+**Difficulty**: Medium  
+**Category**: Directives
+
+### Answer 📄
+
+Custom directives allow developers to create reusable DOM manipulation logic.
+
+They are useful for low-level DOM operations such as:
+
+- Focus management
+- Lazy loading images
+- Detecting element visibility
+
+Custom directives provide lifecycle hooks similar to components and can be registered globally or locally.

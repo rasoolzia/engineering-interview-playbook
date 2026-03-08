@@ -1,7 +1,7 @@
 ---
 topic: vue
 language: fa
-version: 1.4
+version: 1.5
 ---
 
 # سوالات مصاحبه Vue.js

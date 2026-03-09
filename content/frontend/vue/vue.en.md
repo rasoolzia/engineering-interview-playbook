@@ -696,3 +696,120 @@ They are useful for low-level DOM operations such as:
 - Detecting element visibility
 
 Custom directives provide lifecycle hooks similar to components and can be registered globally or locally.
+
+## 🧠 Question 26
+
+**ID**: vue-026  
+**Title**: What is `provide` and `inject` in Vue?  
+**Difficulty**: Medium  
+**Category**: Dependency Injection
+
+### Answer 📄
+
+`provide` and `inject` allow components to share data across the component tree without passing props through every intermediate component.
+
+A parent component can provide values, and any descendant component can inject those values.
+
+This pattern is commonly used for dependency injection and shared services.
+
+Example:
+
+```js
+// Parent
+import { provide } from 'vue';
+
+provide('theme', 'dark');
+```
+
+```js
+// Child
+import { inject } from 'vue';
+
+const theme = inject('theme');
+```
+
+## 🧠 Question 27
+
+**ID**: vue-027  
+**Title**: What are dynamic components in Vue?  
+**Difficulty**: Medium  
+**Category**: Components
+
+### Answer 📄
+
+Dynamic components allow Vue applications to switch between different components at runtime.
+
+This is achieved using the `<component>` element with the `:is` attribute.
+
+Dynamic components are useful for building tab interfaces, dashboards, or conditional component rendering.
+
+Example:
+
+```js
+<component :is="currentComponent"></component>
+```
+
+## 🧠 Question 28
+
+**ID**: vue-028  
+**Title**: What is the `<KeepAlive>` component in Vue?  
+**Difficulty**: Medium  
+**Category**: Components
+
+### Answer 📄
+
+`<KeepAlive>` is a built-in component that caches inactive components instead of destroying them.
+
+When a cached component is reactivated, its state is preserved.
+
+This improves performance and user experience when switching between dynamic components.
+
+Example:
+
+```vue
+<KeepAlive>
+  <component :is="currentComponent" />
+</KeepAlive>
+```
+
+## 🧠 Question 29
+
+**ID**: vue-029  
+**Title**: What is Teleport in Vue?  
+**Difficulty**: Medium  
+**Category**: Advanced Components
+
+### Answer 📄
+
+Teleport is a Vue feature that allows a component to render part of its template outside of its normal DOM hierarchy.
+
+It is useful for UI elements such as:
+
+- Modals
+- Tooltips
+- Notifications
+
+Teleport ensures these elements are rendered in the correct place in the DOM while still being managed by Vue.
+
+Example:
+
+```vue
+<Teleport to="body">
+  <div class="modal">Modal Content</div>
+</Teleport>
+```
+
+## 🧠 Question 30
+
+**ID**: vue-030  
+**Title**: What is Suspense in Vue?  
+**Difficulty**: Hard  
+**Category**: Advanced Components
+
+### Answer 📄
+
+Suspense is a Vue component used to handle asynchronous components or data dependencies.
+
+It allows developers to define a fallback UI that is displayed while async operations are pending.
+
+Suspense improves user experience by handling loading states in a structured way.

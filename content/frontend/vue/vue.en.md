@@ -324,12 +324,12 @@ Vue enforces **one-way data flow**, meaning props flow from parent to child only
 
 Example:
 
-```vue
+```js
 <!-- Parent -->
 <UserCard name="Rasool" />
 ```
 
-```vue
+```js
 <!-- Child -->
 <script setup>
 defineProps({
@@ -379,13 +379,13 @@ Vue supports default slots, named slots, and scoped slots.
 
 Example:
 
-```vue
+```js
 <Card>
   <p>This content is passed from the parent.</p>
 </Card>
 ```
 
-```vue
+```js
 <!-- Card.vue -->
 <template>
   <div class="card">
@@ -766,7 +766,7 @@ This improves performance and user experience when switching between dynamic com
 
 Example:
 
-```vue
+```js
 <KeepAlive>
   <component :is="currentComponent" />
 </KeepAlive>
@@ -793,7 +793,7 @@ Teleport ensures these elements are rendered in the correct place in the DOM whi
 
 Example:
 
-```vue
+```js
 <Teleport to="body">
   <div class="modal">Modal Content</div>
 </Teleport>
@@ -813,3 +813,144 @@ Suspense is a Vue component used to handle asynchronous components or data depen
 It allows developers to define a fallback UI that is displayed while async operations are pending.
 
 Suspense improves user experience by handling loading states in a structured way.
+
+## 🧠 Question 31
+
+**ID**: vue-031  
+**Title**: What is `<script setup>` in Vue 3?  
+**Difficulty**: Medium  
+**Category**: Composition API
+
+### Answer 📄
+
+`<script setup>` is a compile-time syntax introduced in Vue 3 that simplifies the use of the Composition API.
+
+It removes the need to explicitly return values from the `setup()` function.
+
+All variables declared inside `<script setup>` are automatically exposed to the template.
+
+Benefits include:
+
+- Less boilerplate
+- Better TypeScript support
+- Improved readability
+- Faster compilation
+
+Example:
+
+```js
+<script setup>
+import { ref } from 'vue';
+
+const count = ref(0);
+
+function increment() {
+  count.value++;
+}
+</script>
+
+<template>
+  <button @click="increment">{{ count }}</button>
+</template>
+```
+
+## 🧠 Question 32
+
+**ID**: vue-032  
+**Title**: What is the difference between `ref()` and `reactive()` in Vue?  
+**Difficulty**: Medium  
+**Category**: Reactivity System
+
+### Answer 📄
+
+Both `ref()` and `reactive()` are used to create reactive state in Vue.
+
+`ref()` is typically used for primitive values such as numbers, strings, and booleans.
+
+`reactive()` is used for creating reactive objects.
+
+Key differences:
+
+- `ref()` wraps a value inside an object with a `.value` property
+- `reactive()` returns a proxy of the original object
+- `reactive()` does not work well with primitives
+
+Developers often use `ref()` for most cases in modern Vue code.
+
+Example:
+
+```js
+//ref vs reactive
+
+import { ref, reactive } from 'vue';
+
+const count = ref(0);
+
+const user = reactive({
+  name: 'Rasool',
+  age: 27,
+});
+```
+
+## 🧠 Question 33
+
+**ID**: vue-033  
+**Title**: What is the purpose of `computed()` in Vue?  
+**Difficulty**: Easy  
+**Category**: Reactivity System
+
+### Answer 📄
+
+`computed()` creates a reactive value that is derived from other reactive state.
+
+Computed properties are cached and only recomputed when their dependencies change.
+
+This improves performance and keeps templates clean.
+
+Computed values are commonly used for derived state such as filtered lists or formatted values.
+
+Example:
+
+```js
+import { ref, computed } from 'vue';
+
+const price = ref(100);
+
+const discountedPrice = computed(() => price.value * 0.9);
+```
+
+## 🧠 Question 34
+
+**ID**: vue-034  
+**Title**: What is the difference between `computed` and `methods` in Vue?  
+**Difficulty**: Medium  
+**Category**: Reactivity System
+
+### Answer 📄
+
+Both `computed` and `methods` can be used to derive values.
+
+However, computed properties are cached based on their dependencies.
+
+Methods execute every time the component re-renders.
+
+Because of caching, computed properties are usually preferred for expensive calculations.
+
+## 🧠 Question 35
+
+**ID**: vue-035  
+**Title**: What is the Virtual DOM and how does Vue use it?  
+**Difficulty**: Medium  
+**Category**: Rendering
+
+### Answer 📄
+
+The Virtual DOM is an in-memory representation of the real DOM.
+
+Vue updates the Virtual DOM first when state changes.
+
+It then compares the new Virtual DOM with the previous one using a diffing algorithm.
+
+Finally, Vue applies the minimal set of changes to the real DOM.
+
+This process improves performance by avoiding unnecessary DOM updates.

@@ -954,3 +954,119 @@ It then compares the new Virtual DOM with the previous one using a diffing algor
 Finally, Vue applies the minimal set of changes to the real DOM.
 
 This process improves performance by avoiding unnecessary DOM updates.
+
+## 🧠 Question 36
+
+**ID**: vue-036  
+**Title**: How does Vue efficiently update the DOM?  
+**Difficulty**: Medium  
+**Category**: Rendering
+
+### Answer 📄
+
+Vue uses a Virtual DOM diffing algorithm to determine what changes are needed.
+
+When reactive state changes:
+
+1. Vue re-renders the component's virtual DOM
+2. It compares the new virtual DOM with the previous version
+3. It calculates the minimal DOM operations required
+4. It applies only those updates to the real DOM
+
+This approach improves rendering performance.
+
+## 🧠 Question 37
+
+**ID**: vue-037  
+**Title**: What are render functions in Vue?  
+**Difficulty**: Hard  
+**Category**: Rendering
+
+### Answer 📄
+
+Render functions allow developers to define how a component renders using JavaScript instead of templates.
+
+They provide full programmatic control over the rendering process.
+
+Render functions are rarely used in typical applications but are useful when building:
+
+- UI libraries
+- highly dynamic components
+- advanced rendering logic
+
+## 🧠 Question 38
+
+**ID**: vue-038  
+**Title**: What are slots in Vue?  
+**Difficulty**: Easy  
+**Category**: Components
+
+### Answer 📄
+
+Slots allow parent components to pass content into child components.
+
+They make components more flexible and reusable.
+
+Vue supports several slot types:
+
+- default slots
+- named slots
+- scoped slots
+
+Slots are commonly used in layout components and UI libraries.
+
+Example:
+
+```js
+<!-- Parent -->
+<Card>
+  <p>Hello World</p>
+</Card>
+```
+
+```js
+<!-- Child -->
+<div class="card">
+  <slot></slot>
+</div>
+```
+
+## 🧠 Question 39
+
+**ID**: vue-039  
+**Title**: What are scoped slots in Vue?  
+**Difficulty**: Medium  
+**Category**: Components
+
+### Answer 📄
+
+Scoped slots allow a child component to pass data to the slot content defined by the parent.
+
+This allows the parent component to control rendering while still accessing data from the child.
+
+Scoped slots are useful for building flexible UI components such as tables or lists.
+
+Example:
+
+```js
+<List :items="users">
+  <template #default="{ item }">
+    <p>{{ item.name }}</p>
+  </template>
+</List>
+```
+
+## 🧠 Question 40
+
+**ID**: vue-040  
+**Title**: What is the purpose of the `key` attribute in Vue lists?  
+**Difficulty**: Easy  
+**Category**: Rendering
+
+### Answer 📄
+
+The `key` attribute helps Vue track elements when rendering lists.
+
+It allows the virtual DOM diffing algorithm to correctly identify which items have changed.
+
+Using unique keys improves performance and prevents unexpected UI behavior.

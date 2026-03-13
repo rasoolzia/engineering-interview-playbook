@@ -1070,3 +1070,116 @@ The `key` attribute helps Vue track elements when rendering lists.
 It allows the virtual DOM diffing algorithm to correctly identify which items have changed.
 
 Using unique keys improves performance and prevents unexpected UI behavior.
+
+## 🧠 Question 41
+
+**ID**: vue-041  
+**Title**: What are async components in Vue?  
+**Difficulty**: Medium  
+**Category**: Performance
+
+### Answer 📄
+
+Async components allow components to be loaded lazily.
+
+Instead of loading all components during the initial bundle, Vue loads them only when needed.
+
+This improves application performance and reduces bundle size.
+
+Example:
+
+```js
+import { defineAsyncComponent } from 'vue';
+
+const AsyncComponent = defineAsyncComponent(
+  () => import('./HeavyComponent.vue'),
+);
+```
+
+## 🧠 Question 42
+
+**ID**: vue-042  
+**Title**: What is code splitting in Vue applications?  
+**Difficulty**: Medium  
+**Category**: Performance
+
+### Answer 📄
+
+Code splitting is a technique that divides the application bundle into smaller chunks.
+
+These chunks are loaded on demand when users navigate through the application.
+
+Vue applications commonly use dynamic imports to achieve code splitting.
+
+This improves load time and performance.
+
+## 🧠 Question 43
+
+**ID**: vue-043  
+**Title**: What is Pinia and why is it used in Vue applications?  
+**Difficulty**: Medium  
+**Category**: State Management
+
+### Answer 📄
+
+Pinia is the official state management library for Vue.
+
+It replaces Vuex in modern Vue applications.
+
+Pinia provides:
+
+- a simpler API
+- better TypeScript support
+- modular store architecture
+- improved developer experience
+
+### Example (Q43): Pinia Store
+
+```js
+import { defineStore } from 'pinia';
+
+export const useCounterStore = defineStore('counter', {
+  state: () => ({
+    count: 0,
+  }),
+  actions: {
+    increment() {
+      this.count++;
+    },
+  },
+});
+```
+
+## 🧠 Question 44
+
+**ID**: vue-044  
+**Title**: What is server-side rendering (SSR) in Vue?  
+**Difficulty**: Hard  
+**Category**: Rendering
+
+### Answer 📄
+
+Server-side rendering means rendering Vue components on the server instead of the browser.
+
+The server sends a fully rendered HTML page to the client.
+
+Benefits include:
+
+- improved SEO
+- faster initial load time
+- better performance for slow devices
+
+## 🧠 Question 45
+
+**ID**: vue-045  
+**Title**: What is hydration in Vue SSR?  
+**Difficulty**: Hard  
+**Category**: Rendering
+
+### Answer 📄
+
+Hydration is the process where Vue attaches event listeners and reactive behavior to server-rendered HTML.
+
+After the browser receives the HTML from the server, Vue reuses that markup instead of recreating it.
+
+This allows the application to become fully interactive while avoiding unnecessary DOM rendering.

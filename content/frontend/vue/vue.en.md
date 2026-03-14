@@ -123,17 +123,15 @@ A Vue instance typically:
 Example:
 
 ```js
-import { ref, reactive } from 'vue';
+import { createApp } from 'vue';
+import App from './App.vue';
 
-const count = ref(0);
+const app = createApp(App);
 
-const user = reactive({
-  name: 'Rasool',
-  age: 27,
-});
+app.use(router);
+app.use(pinia);
 
-count.value++;
-user.age++;
+app.mount('#app');
 ```
 
 ## 🧠 Question 5
@@ -254,6 +252,23 @@ In general:
 
 Both integrate with Vue's dependency tracking system.
 
+Example:
+
+```js
+import { ref, reactive } from 'vue';
+
+// ref — access via .value
+const count = ref(0);
+count.value++;
+
+// reactive — no .value needed
+const user = reactive({ name: 'Rasool', age: 27 });
+user.age++;
+
+// Warning: destructuring reactive loses reactivity
+const { age } = user; // NOT reactive
+```
+
 ## 🧠 Question 10
 
 **ID**: vue-010  
@@ -304,6 +319,22 @@ Each component encapsulates its own:
 This modular architecture allows large applications to be broken into smaller, manageable pieces.
 
 Components improve code reusability, maintainability, and scalability.
+
+Example:
+
+```js
+<!-- UserCard.vue -->
+<script setup>
+defineProps({ name: String, role: String });
+</script>
+
+<template>
+  <div class="card">
+    <h2>{{ name }}</h2>
+    <p>{{ role }}</p>
+  </div>
+</template>
+```
 
 ## 🧠 Question 12
 
@@ -360,6 +391,22 @@ Validation options include:
 
 This improves reliability and prevents incorrect data from being passed into components.
 
+Example:
+
+```js
+defineProps({
+  title: {
+    type: String,
+    required: true,
+  },
+  count: {
+    type: Number,
+    default: 0,
+    validator: (value) => value >= 0,
+  },
+});
+```
+
 ## 🧠 Question 14
 
 **ID**: vue-014  
@@ -380,6 +427,7 @@ Vue supports default slots, named slots, and scoped slots.
 Example:
 
 ```js
+<!-- Parent -->
 <Card>
   <p>This content is passed from the parent.</p>
 </Card>
@@ -624,7 +672,7 @@ In general:
 Example:
 
 ```js
-// v-if vs v-show
+<!-- v-if vs v-show -->
 
 <p v-if="isVisible">Visible with v-if</p>
 
@@ -647,6 +695,16 @@ Vue requires a `key` attribute when rendering lists so it can efficiently track 
 The `key` helps Vue identify which items have been added, removed, or reordered.
 
 This allows Vue to update the DOM efficiently using the virtual DOM diffing algorithm.
+
+Example:
+
+```js
+<ul>
+  <li v-for="user in users" :key="user.id">
+    {{ user.name }}
+  </li>
+</ul>
+```
 
 ## 🧠 Question 24
 
@@ -696,6 +754,22 @@ They are useful for low-level DOM operations such as:
 - Detecting element visibility
 
 Custom directives provide lifecycle hooks similar to components and can be registered globally or locally.
+
+Example:
+
+```js
+// Register globally
+app.directive('focus', {
+  mounted(el) {
+    el.focus();
+  },
+});
+```
+
+```js
+<!-- Usage in template -->
+<input v-focus />
+```
 
 ## 🧠 Question 26
 
@@ -856,40 +930,41 @@ function increment() {
 
 ## 🧠 Question 32
 
-**ID**: vue-032  
-**Title**: What is the difference between `ref()` and `reactive()` in Vue?  
-**Difficulty**: Medium  
+**ID**: vue-032
+**Title**: What are `toRef()` and `toRefs()` and when should you use them?
+**Difficulty**: Medium
 **Category**: Reactivity System
 
 ### Answer 📄
 
-Both `ref()` and `reactive()` are used to create reactive state in Vue.
+`toRef()` creates a ref that is linked to a specific property of a reactive object.
 
-`ref()` is typically used for primitive values such as numbers, strings, and booleans.
+`toRefs()` converts all properties of a reactive object into individual refs.
 
-`reactive()` is used for creating reactive objects.
+Both utilities are useful when you need to destructure a reactive object while preserving reactivity.
+
+Without `toRefs()`, destructuring a `reactive` object breaks the reactive connection.
 
 Key differences:
 
-- `ref()` wraps a value inside an object with a `.value` property
-- `reactive()` returns a proxy of the original object
-- `reactive()` does not work well with primitives
-
-Developers often use `ref()` for most cases in modern Vue code.
+- `toRef()` targets a single property
+- `toRefs()` converts all properties at once
+- Both keep the link to the original reactive object
 
 Example:
 
 ```js
-//ref vs reactive
+import { reactive, toRef, toRefs } from 'vue';
 
-import { ref, reactive } from 'vue';
+const state = reactive({ name: 'Rasool', age: 27 });
 
-const count = ref(0);
+// toRef — single property stays reactive
+const age = toRef(state, 'age');
+age.value++; // updates state.age
 
-const user = reactive({
-  name: 'Rasool',
-  age: 27,
-});
+// toRefs — destructure without losing reactivity
+const { name, age: ageRef } = toRefs(state);
+name.value = 'Ali'; // updates state.name
 ```
 
 ## 🧠 Question 33
@@ -921,20 +996,40 @@ const discountedPrice = computed(() => price.value * 0.9);
 
 ## 🧠 Question 34
 
-**ID**: vue-034  
-**Title**: What is the difference between `computed` and `methods` in Vue?  
-**Difficulty**: Medium  
-**Category**: Reactivity System
+**ID**: vue-034
+**Title**: What is `defineEmits()` and how do you emit custom events in Vue 3?
+**Difficulty**: Medium
+**Category**: Components
 
 ### Answer 📄
 
-Both `computed` and `methods` can be used to derive values.
+`defineEmits()` is a compiler macro used in `<script setup>` to declare the events a component can emit.
 
-However, computed properties are cached based on their dependencies.
+It makes the component's event API explicit and enables type-safe event emission.
 
-Methods execute every time the component re-renders.
+Without `defineEmits()`, emitting events still works but loses type-checking and IDE support.
 
-Because of caching, computed properties are usually preferred for expensive calculations.
+Key benefits:
+
+- Documents which events a component emits
+- Enables TypeScript validation of event names and payloads
+- Required in `<script setup>` since the `$emit` instance method is not available
+
+Example:
+
+```js
+<script setup>
+const emit = defineEmits(['update:count', 'submit']);
+
+function handleClick() {
+  emit('update:count', 42);
+}
+</script>
+
+<template>
+  <button @click="handleClick">Click me</button>
+</template>
+```
 
 ## 🧠 Question 35
 
@@ -957,23 +1052,51 @@ This process improves performance by avoiding unnecessary DOM updates.
 
 ## 🧠 Question 36
 
-**ID**: vue-036  
-**Title**: How does Vue efficiently update the DOM?  
-**Difficulty**: Medium  
-**Category**: Rendering
+**ID**: vue-036
+**Title**: What is Vue Router and how do you set up routing in a Vue application?
+**Difficulty**: Medium
+**Category**: Routing
 
 ### Answer 📄
 
-Vue uses a Virtual DOM diffing algorithm to determine what changes are needed.
+Vue Router is the official routing library for Vue applications.
 
-When reactive state changes:
+It enables navigation between views without full page reloads, which is essential for single-page applications.
 
-1. Vue re-renders the component's virtual DOM
-2. It compares the new virtual DOM with the previous version
-3. It calculates the minimal DOM operations required
-4. It applies only those updates to the real DOM
+Core concepts include:
 
-This approach improves rendering performance.
+- **Routes** map URL paths to components
+- **`<RouterView>`** renders the matched component for the current URL
+- **`<RouterLink>`** creates declarative navigation links
+
+Example:
+
+```js
+import { createRouter, createWebHistory } from 'vue-router';
+import Home from './views/Home.vue';
+import About from './views/About.vue';
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', component: Home },
+    { path: '/about', component: About },
+  ],
+});
+
+export default router;
+```
+
+```js
+<!-- App.vue -->
+<template>
+  <nav>
+    <RouterLink to="/">Home</RouterLink>
+    <RouterLink to="/about">About</RouterLink>
+  </nav>
+  <RouterView />
+</template>
+```
 
 ## 🧠 Question 37
 
@@ -994,66 +1117,92 @@ Render functions are rarely used in typical applications but are useful when bui
 - highly dynamic components
 - advanced rendering logic
 
+Example:
+
+```js
+import { h } from 'vue';
+
+export default {
+  render() {
+    return h('div', { class: 'container' }, [
+      h('h1', 'Hello from render function'),
+      h('p', 'This is rendered without a template.'),
+    ]);
+  },
+};
+```
+
 ## 🧠 Question 38
 
-**ID**: vue-038  
-**Title**: What are slots in Vue?  
-**Difficulty**: Easy  
+**ID**: vue-038
+**Title**: What are navigation guards in Vue Router?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Navigation guards are hooks that allow you to control or cancel route navigation in Vue Router.
+
+They are commonly used for:
+
+- Authentication checks before accessing protected routes
+- Redirecting unauthenticated users to a login page
+- Preventing navigation when there are unsaved changes
+
+Vue Router provides three types of guards:
+
+- **Global guards** — `router.beforeEach`, `router.afterEach`
+- **Per-route guards** — defined in the route config
+- **In-component guards** — `onBeforeRouteLeave`, `onBeforeRouteUpdate`
+
+Example:
+
+```js
+// Global navigation guard
+router.beforeEach((to, from) => {
+  const isAuthenticated = !!localStorage.getItem('token');
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return { path: '/login' };
+  }
+});
+```
+
+## 🧠 Question 39
+
+**ID**: vue-039
+**Title**: How does `v-model` work on custom components in Vue 3?
+**Difficulty**: Medium
 **Category**: Components
 
 ### Answer 📄
 
-Slots allow parent components to pass content into child components.
+In Vue 3, using `v-model` on a custom component expands to a `modelValue` prop and an `update:modelValue` emit.
 
-They make components more flexible and reusable.
+This allows custom components to support two-way data binding with a clean, readable API.
 
-Vue supports several slot types:
-
-- default slots
-- named slots
-- scoped slots
-
-Slots are commonly used in layout components and UI libraries.
+Vue 3 also supports multiple `v-model` bindings on a single component using named arguments such as `v-model:title` or `v-model:count`.
 
 Example:
 
 ```js
 <!-- Parent -->
-<Card>
-  <p>Hello World</p>
-</Card>
+<CustomInput v-model="username" />
 ```
 
 ```js
-<!-- Child -->
-<div class="card">
-  <slot></slot>
-</div>
-```
+<!-- CustomInput.vue -->
+<script setup>
+defineProps({ modelValue: String });
+const emit = defineEmits(['update:modelValue']);
+</script>
 
-## 🧠 Question 39
-
-**ID**: vue-039  
-**Title**: What are scoped slots in Vue?  
-**Difficulty**: Medium  
-**Category**: Components
-
-### Answer 📄
-
-Scoped slots allow a child component to pass data to the slot content defined by the parent.
-
-This allows the parent component to control rendering while still accessing data from the child.
-
-Scoped slots are useful for building flexible UI components such as tables or lists.
-
-Example:
-
-```js
-<List :items="users">
-  <template #default="{ item }">
-    <p>{{ item.name }}</p>
-  </template>
-</List>
+<template>
+  <input
+    :value="modelValue"
+    @input="emit('update:modelValue', $event.target.value)"
+  />
+</template>
 ```
 
 ## 🧠 Question 40
@@ -1070,6 +1219,16 @@ The `key` attribute helps Vue track elements when rendering lists.
 It allows the virtual DOM diffing algorithm to correctly identify which items have changed.
 
 Using unique keys improves performance and prevents unexpected UI behavior.
+
+Example:
+
+```js
+<ul>
+  <li v-for="item in items" :key="item.id">
+    {{ item.name }}
+  </li>
+</ul>
+```
 
 ## 🧠 Question 41
 

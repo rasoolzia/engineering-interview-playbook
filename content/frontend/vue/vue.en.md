@@ -322,7 +322,7 @@ Components improve code reusability, maintainability, and scalability.
 
 Example:
 
-```js
+```vue
 <!-- UserCard.vue -->
 <script setup>
 defineProps({ name: String, role: String });
@@ -355,12 +355,12 @@ Vue enforces **one-way data flow**, meaning props flow from parent to child only
 
 Example:
 
-```js
+```vue
 <!-- Parent -->
 <UserCard name="Rasool" />
 ```
 
-```js
+```vue
 <!-- Child -->
 <script setup>
 defineProps({
@@ -426,14 +426,14 @@ Vue supports default slots, named slots, and scoped slots.
 
 Example:
 
-```js
+```vue
 <!-- Parent -->
 <Card>
   <p>This content is passed from the parent.</p>
 </Card>
 ```
 
-```js
+```vue
 <!-- Card.vue -->
 <template>
   <div class="card">
@@ -671,7 +671,7 @@ In general:
 
 Example:
 
-```js
+```vue
 <!-- v-if vs v-show -->
 
 <p v-if="isVisible">Visible with v-if</p>
@@ -698,7 +698,7 @@ This allows Vue to update the DOM efficiently using the virtual DOM diffing algo
 
 Example:
 
-```js
+```vue
 <ul>
   <li v-for="user in users" :key="user.id">
     {{ user.name }}
@@ -728,7 +728,7 @@ In Vue 3, `v-model` also supports custom arguments and multiple bindings.
 
 Example:
 
-```js
+```vue
 <input v-model="username" />
 ```
 
@@ -766,7 +766,7 @@ app.directive('focus', {
 });
 ```
 
-```js
+```vue
 <!-- Usage in template -->
 <input v-focus />
 ```
@@ -819,7 +819,7 @@ Dynamic components are useful for building tab interfaces, dashboards, or condit
 
 Example:
 
-```js
+```vue
 <component :is="currentComponent"></component>
 ```
 
@@ -840,7 +840,7 @@ This improves performance and user experience when switching between dynamic com
 
 Example:
 
-```js
+```vue
 <KeepAlive>
   <component :is="currentComponent" />
 </KeepAlive>
@@ -867,7 +867,7 @@ Teleport ensures these elements are rendered in the correct place in the DOM whi
 
 Example:
 
-```js
+```vue
 <Teleport to="body">
   <div class="modal">Modal Content</div>
 </Teleport>
@@ -912,7 +912,7 @@ Benefits include:
 
 Example:
 
-```js
+```vue
 <script setup>
 import { ref } from 'vue';
 
@@ -1017,7 +1017,7 @@ Key benefits:
 
 Example:
 
-```js
+```vue
 <script setup>
 const emit = defineEmits(['update:count', 'submit']);
 
@@ -1087,7 +1087,7 @@ const router = createRouter({
 export default router;
 ```
 
-```js
+```vue
 <!-- App.vue -->
 <template>
   <nav>
@@ -1185,12 +1185,12 @@ Vue 3 also supports multiple `v-model` bindings on a single component using name
 
 Example:
 
-```js
+```vue
 <!-- Parent -->
 <CustomInput v-model="username" />
 ```
 
-```js
+```vue
 <!-- CustomInput.vue -->
 <script setup>
 defineProps({ modelValue: String });
@@ -1222,7 +1222,7 @@ Using unique keys improves performance and prevents unexpected UI behavior.
 
 Example:
 
-```js
+```vue
 <ul>
   <li v-for="item in items" :key="item.id">
     {{ item.name }}
@@ -1342,3 +1342,209 @@ Hydration is the process where Vue attaches event listeners and reactive behavio
 After the browser receives the HTML from the server, Vue reuses that markup instead of recreating it.
 
 This allows the application to become fully interactive while avoiding unnecessary DOM rendering.
+
+## 🧠 Question 46
+
+**ID**: vue-046
+**Title**: What is the `<Transition>` component and how does it work in Vue?
+**Difficulty**: Medium
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+The `<Transition>` component applies CSS transitions or JavaScript animations when an element is inserted into or removed from the DOM.
+
+Vue automatically adds and removes CSS classes at specific stages of the transition lifecycle.
+
+The six transition classes are:
+
+- `v-enter-from`, `v-enter-active`, `v-enter-to` — for entering
+- `v-leave-from`, `v-leave-active`, `v-leave-to` — for leaving
+
+`<TransitionGroup>` handles transitions for lists rendered with `v-for`.
+
+Example:
+
+```vue
+<Transition name="fade">
+  <p v-if="isVisible">Hello</p>
+</Transition>
+```
+
+```css
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+```
+
+## 🧠 Question 47
+
+**ID**: vue-047
+**Title**: How does Vue handle errors and what is `onErrorCaptured`?
+**Difficulty**: Hard
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+Vue provides several mechanisms for handling errors in components.
+
+`onErrorCaptured` is a lifecycle hook that catches errors thrown by descendant components.
+
+It allows you to implement component-level error boundaries and display fallback UI.
+
+For global error handling, Vue provides `app.config.errorHandler`, which catches any unhandled error in the entire application.
+
+Example:
+
+```js
+import { onErrorCaptured, ref } from 'vue';
+
+const hasError = ref(false);
+const errorMessage = ref('');
+
+onErrorCaptured((err) => {
+  hasError.value = true;
+  errorMessage.value = err.message;
+  return false; // prevent the error from propagating further
+});
+```
+
+```js
+// Global error handler
+app.config.errorHandler = (err, instance, info) => {
+  console.error('Global error:', err);
+};
+```
+
+## 🧠 Question 48
+
+**ID**: vue-048
+**Title**: What are `shallowRef()` and `shallowReactive()` in Vue?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+`shallowRef()` and `shallowReactive()` are performance-focused alternatives to `ref()` and `reactive()`.
+
+`shallowRef()` only makes the top-level `.value` reactive. Nested objects inside are not tracked.
+
+`shallowReactive()` only makes the direct properties of an object reactive. Nested properties are not tracked.
+
+These are useful when working with large data structures or external libraries where deep reactivity would cause unnecessary overhead.
+
+Example:
+
+```js
+import { shallowRef, shallowReactive } from 'vue';
+
+const state = shallowRef({ nested: { count: 0 } });
+
+// Triggers reactivity (replaces top-level value)
+state.value = { nested: { count: 1 } };
+
+// Does NOT trigger reactivity (mutates nested property)
+state.value.nested.count = 2;
+
+// shallowReactive
+const form = shallowReactive({ user: { name: 'Rasool' } });
+form.user = { name: 'Ali' }; // triggers reactivity
+form.user.name = 'Ali'; // does NOT trigger reactivity
+```
+
+## 🧠 Question 49
+
+**ID**: vue-049
+**Title**: What is `defineExpose()` in Vue 3 and why is it needed?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+By default, components using `<script setup>` do not expose any internal state or methods to their parent components.
+
+`defineExpose()` explicitly declares what a child component exposes to parent components through template refs.
+
+This follows the principle of encapsulation — only the intended parts of the component API are accessible from outside.
+
+Example:
+
+```vue
+<!-- Child.vue -->
+<script setup>
+import { ref } from 'vue';
+
+const count = ref(0);
+
+function reset() {
+  count.value = 0;
+}
+
+defineExpose({ count, reset });
+</script>
+```
+
+```vue
+<!-- Parent.vue -->
+<script setup>
+import { ref } from 'vue';
+import Child from './Child.vue';
+
+const childRef = ref(null);
+
+function resetChild() {
+  childRef.value.reset();
+}
+</script>
+
+<template>
+  <Child ref="childRef" />
+  <button @click="resetChild">Reset</button>
+</template>
+```
+
+## 🧠 Question 50
+
+**ID**: vue-050
+**Title**: What is programmatic navigation in Vue Router?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Programmatic navigation allows you to change routes using JavaScript instead of `<RouterLink>`.
+
+This is useful for redirecting after form submission, login, or any conditional navigation logic.
+
+Vue Router provides two main methods:
+
+- `router.push()` — navigates to a new route and adds an entry to the browser history
+- `router.replace()` — navigates to a new route but replaces the current history entry
+
+You can pass a path string or a route location object with a name, params, or query.
+
+Example:
+
+```js
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+// Navigate by path
+router.push('/dashboard');
+
+// Navigate by named route with params
+router.push({ name: 'Profile', params: { id: 42 } });
+
+// Navigate with query string
+router.push({ path: '/search', query: { q: 'vue' } });
+
+// Replace current route (no new history entry)
+router.replace('/login');
+```

@@ -1548,3 +1548,190 @@ router.push({ path: '/search', query: { q: 'vue' } });
 // جایگزین کردن route فعلی (بدون entry history جدید)
 router.replace('/login');
 ```
+
+## 🧠 سوال 51
+
+**شناسه**: vue-051
+**عنوان**: `nextTick()` چیست و چرا در Vue به آن نیاز است؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+`nextTick()` یک promise برمی‌گرداند که بعد از اینکه Vue تمام به‌روزرسانی‌های DOM معلق را flush کرد، resolve می‌شود.
+
+Vue به‌روزرسانی‌های DOM را به صورت async برای بهبود عملکرد batch می‌کند. وقتی state واکنش‌پذیر را تغییر می‌دهید، DOM بلافاصله به‌روزرسانی نمی‌شود — در microtask بعدی زمان‌بندی می‌شود.
+
+`nextTick()` به شما اجازه می‌دهد تا DOM آخرین state را منعکس کند صبر کنید، سپس آن را بخوانید یا با آن تعامل داشته باشید.
+
+موارد استفاده رایج:
+
+- خواندن اندازه‌گیری‌های DOM به‌روزرسانی شده بعد از تغییر state
+- دسترسی به یک المان جدید از طریق template ref
+- اجرای assertion در unit test بعد از trigger کردن تغییرات state واکنش‌پذیر
+
+مثال:
+
+```js
+import { nextTick, ref } from 'vue';
+
+const message = ref('');
+
+async function updateMessage() {
+  message.value = 'Updated';
+
+  // DOM هنوز به‌روزرسانی نشده است
+  await nextTick();
+  // حالا DOM به‌روزرسانی شده است
+  console.log(document.getElementById('msg').textContent); // 'Updated'
+}
+```
+
+## 🧠 سوال 52
+
+**شناسه**: vue-052
+**عنوان**: گزینه‌های `deep`، `immediate` و `flush` در `watch` چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+تابع `watch` یک object options می‌پذیرد که نحوه رفتار watcher را کنترل می‌کند.
+
+- **`deep: true`** — property‌های تو در تو داخل object‌ها یا آرایه‌ها را watch می‌کند. بدون آن، فقط reference سطح بالا ردیابی می‌شود و mutation‌های تو در تو نادیده گرفته می‌شوند.
+- **`immediate: true`** — callback را بلافاصله هنگام ایجاد watcher اجرا می‌کند، به جای اینکه منتظر اولین تغییر باشد.
+- **`flush: 'post'`** — اجرای callback را تا بعد از به‌روزرسانی DOM توسط Vue به تعویق می‌اندازد. مقدار پیش‌فرض `'pre'` است.
+
+مثال:
+
+```js
+import { ref, watch } from 'vue';
+
+const user = ref({ name: 'Rasool', age: 27 });
+
+watch(
+  user,
+  (newValue) => {
+    console.log('user changed:', newValue.name);
+  },
+  {
+    deep: true, // تغییرات property تو در تو را تشخیص می‌دهد
+    immediate: true, // هنگام mount کامپوننت اجرا می‌شود
+    flush: 'post', // بعد از به‌روزرسانی DOM اجرا می‌شود
+  },
+);
+```
+
+## 🧠 سوال 53
+
+**شناسه**: vue-053
+**عنوان**: `markRaw()` و `toRaw()` چیست و چه زمانی باید از آن‌ها استفاده کرد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+`markRaw()` یک object را علامت‌گذاری می‌کند تا هرگز به یک reactive proxy تبدیل نشود، حتی اگر داخل یک container reactive قرار گیرد.
+
+`toRaw()` plain JavaScript object اصلی را از یک reactive proxy برمی‌گرداند.
+
+هر دو برای عملکرد و compatibility با کتابخانه‌های third-party که هنگام wrap شدن در یک Proxy کار نمی‌کنند مهم هستند.
+
+چه زمانی استفاده کنیم:
+
+- `markRaw()` — برای object‌هایی که هرگز نباید reactive باشند، مانند instance‌های chart، context‌های WebGL یا ساختارهای داده بزرگ.
+- `toRaw()` — وقتی به object اصلی برای API‌های خارجی، مقایسه یا serialization نیاز دارید.
+
+مثال:
+
+```js
+import { reactive, markRaw, toRaw } from 'vue';
+
+class ChartInstance {}
+
+// markRaw — جلوگیری از reactivity روی یک instance third-party
+const chart = markRaw(new ChartInstance());
+const state = reactive({ chart }); // chart ذخیره می‌شود اما هرگز proxy نمی‌شود
+
+// toRaw — استخراج object اصلی از یک reactive proxy
+const user = reactive({ name: 'Rasool' });
+const raw = toRaw(user); // plain JS object
+console.log(raw === user); // false — proxy !== اصلی
+```
+
+## 🧠 سوال 54
+
+**شناسه**: vue-054
+**عنوان**: `readonly()` در Vue چیست و چه زمانی باید از آن استفاده کرد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+`readonly()` یک نسخه read-only از یک object reactive ایجاد می‌کند.
+
+تلاش برای تغییر یک object readonly در حالت development یک warning ثبت می‌کند و در production بی‌صدا نادیده گرفته می‌شود.
+
+معمولاً برای موارد زیر استفاده می‌شود:
+
+- نمایش state مشترک به کامپوننت‌های فرزند بدون اجازه mutation
+- اعمال immutability هنگام استفاده از `provide` / `inject`
+- محافظت از state store که فقط باید از طریق action‌های تعریف شده تغییر کند
+
+مثال:
+
+```js
+import { reactive, readonly, provide } from 'vue';
+
+const state = reactive({ count: 0 });
+
+// نمایش نسخه readonly به فرزندان
+provide('appState', readonly(state));
+
+// در یک کامپوننت فرزند:
+// appState.count++ // هشدار: Set operation on key "count" failed — target is readonly
+```
+
+## 🧠 سوال 55
+
+**شناسه**: vue-055
+**عنوان**: سیستم plugin در Vue چیست و چگونه یک plugin می‌سازید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+Plugin‌های Vue برنامه را با قابلیت‌های قابل استفاده مجدد در سطح application گسترش می‌دهند.
+
+یک plugin یک object با متد `install(app, options)` است، یا صرفاً یک تابع با همان signature.
+
+Plugin‌ها می‌توانند:
+
+- کامپوننت‌ها و directive‌های global ثبت کنند
+- property‌هایی به `app.config.globalProperties` اضافه کنند
+- مقادیر سطح application از طریق `app.provide()` ارائه دهند
+- کتابخانه‌های third-party نصب کنند
+
+مثال:
+
+```js
+// myPlugin.js
+export const myPlugin = {
+  install(app, options) {
+    // property global که در Options API به عنوان this.$translate قابل دسترسی است
+    app.config.globalProperties.$translate = (key) =>
+      options.translations[key] ?? key;
+
+    // provide global برای Composition API
+    app.provide('translations', options.translations);
+
+    // ثبت یک کامپوننت global
+    app.component('AppIcon', AppIcon);
+  },
+};
+
+// main.js
+app.use(myPlugin, {
+  translations: { welcome: 'خوش آمدید' },
+});
+```

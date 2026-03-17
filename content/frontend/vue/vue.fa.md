@@ -1735,3 +1735,191 @@ app.use(myPlugin, {
   translations: { welcome: 'خوش آمدید' },
 });
 ```
+
+## 🧠 سوال 56
+
+**شناسه**: vue-056
+**عنوان**: `effectScope()` چیست و چه زمانی مفید است؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+`effectScope()` یک scope ایجاد می‌کند که تمام reactive effect‌های ایجاد شده در داخل آن را capture می‌کند — computed property‌ها، watcher‌ها و watchEffect call‌ها.
+
+تمام effect‌های داخل scope می‌توانند با یک فراخوانی `scope.stop()` همزمان متوقف شوند.
+
+این برای موارد زیر مفید است:
+
+- نویسندگان کتابخانه‌های Vue که composable‌هایی می‌سازند که چندین effect ایجاد می‌کنند
+- ایجاد و cleanup پویا گروه‌هایی از reactive effect‌ها
+- جایگزینی cleanup دستی چندین `watch` call مستقل
+
+مثال:
+
+```js
+import { effectScope, ref, watch, computed } from 'vue';
+
+const scope = effectScope();
+
+scope.run(() => {
+  const count = ref(0);
+  const doubled = computed(() => count.value * 2);
+
+  watch(count, (val) => {
+    console.log('count:', val);
+  });
+});
+
+// همه effect‌های داخل scope را یکجا متوقف کنید
+scope.stop();
+```
+
+## 🧠 سوال 57
+
+**شناسه**: vue-057
+**عنوان**: `:deep()`، `:slotted()` و `:global()` در scoped styles چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+هنگام استفاده از `<style scoped>`، Vue یک data attribute یکتا به تمام المان‌ها اضافه می‌کند تا style‌ها فقط در کامپوننت فعلی اعمال شوند.
+
+این چالش‌هایی هنگام style دادن به کامپوننت‌های فرزند یا محتوای slot ایجاد می‌کند.
+
+- **`:deep(selector)`** — مرز scope را برای style دادن به المان‌های داخل کامپوننت‌های فرزند نقض می‌کند.
+- **`:slotted(selector)`** — المان‌های ارسال شده به کامپوننت از طریق slot‌ها را هدف قرار می‌دهد.
+- **`:global(selector)`** — یک style را به صورت global بدون هیچ scope attribute ای اعمال می‌کند.
+
+مثال:
+
+```vue
+<style scoped>
+/* Style یک المان داخل کامپوننت فرزند */
+.wrapper :deep(.child-input) {
+  border: 1px solid blue;
+}
+
+/* Style محتوای ارسال شده از طریق slot */
+:slotted(p) {
+  font-weight: bold;
+}
+
+/* اعمال یک قانون واقعاً global از یک scoped block */
+:global(.modal-open) {
+  overflow: hidden;
+}
+</style>
+```
+
+## 🧠 سوال 58
+
+**شناسه**: vue-058
+**عنوان**: چگونه route‌ها را در Vue Router به صورت lazy-load می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مسیریابی (Routing)
+
+### پاسخ 📄
+
+Lazy-loading route‌ها به این معنی است که کامپوننت هر route فقط زمانی بارگذاری می‌شود که کاربر به آن route navigate می‌کند، به جای اینکه همه چیز در bundle اولیه گنجانده شود.
+
+این با استفاده از dynamic import پیاده‌سازی می‌شود: `() => import('./views/Page.vue')`.
+
+Vite و webpack به طور خودکار chunk‌های کد جداگانه برای هر route lazy-loaded ایجاد می‌کنند و payload اولیه JavaScript را به میزان قابل توجهی کاهش می‌دهند.
+
+همچنین می‌توانید مسیرها را با استفاده از کامنت webpackChunkName یا `rollupOptions` در Vite، در یک قطعه کد گروه‌بندی کنید.
+
+مثال:
+
+```js
+import { createRouter, createWebHistory } from 'vue-router';
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      component: () => import('./views/Home.vue'),
+    },
+    {
+      path: '/admin',
+      // فقط زمانی بارگذاری می‌شود که کاربر به /admin برود
+      component: () => import('./views/Admin.vue'),
+    },
+    {
+      path: '/settings',
+      // گروه‌بندی در یک named chunk
+      component: () =>
+        import(/* webpackChunkName: "settings" */ './views/Settings.vue'),
+    },
+  ],
+});
+```
+
+## 🧠 سوال 59
+
+**شناسه**: vue-059
+**عنوان**: کامپوننت‌های functional در Vue 3 چیست و چه زمانی باید از آن‌ها استفاده کرد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+کامپوننت‌های functional کامپوننت‌های stateless هستند که بدون یک component instance رندر می‌شوند.
+
+آن‌ها به صورت توابع plain JavaScript تعریف می‌شوند که props و یک context object حاوی `slots`، `attrs` و `emit` می‌پذیرند.
+
+چون instance creation را skip می‌کنند، هیچ lifecycle hook، داده واکنش‌پذیر یا context `this` ندارند.
+
+کامپوننت‌های functional برای منطق رندر ساده کمی بهتر از کامپوننت‌های stateful هستند، اما این تفاوت در Vue 3 نسبت به Vue 2 کوچک‌تر است.
+
+از آن‌ها برای کامپوننت‌های کاملاً presentational استفاده کنید که صرفاً props را به یک خروجی رندر شده تبدیل می‌کنند.
+
+مثال:
+
+```js
+import { h } from 'vue';
+
+// کامپوننت functional به صورت تابع plain
+const Badge = (props, { slots }) => {
+  return h('span', { class: `badge badge-${props.type}` }, slots.default?.());
+};
+
+Badge.props = ['type'];
+```
+
+## 🧠 سوال 60
+
+**شناسه**: vue-060
+**عنوان**: `useAttrs()` و `useSlots()` در Composition API چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+`useAttrs()` attribute‌های non-prop ارسال شده به کامپوننت را برمی‌گرداند — هر چیزی که به عنوان prop تعریف نشده، از جمله `class`، `style` و event listener‌ها.
+
+`useSlots()` توابع slot موجود برای کامپوننت را برمی‌گرداند.
+
+هر دو هنگام ساخت کامپوننت‌های wrapper یا pass-through که نیاز به forward کردن attribute‌ها و slot‌ها به یک المان داخلی دارند مفید هستند.
+
+به طور پیش‌فرض در `<script setup>`، ویژگی‌ها به طور خودکار به عنصر ریشه اعمال نمی‌شوند، مگر اینکه `inheritAttrs: false` تنظیم شده باشد. استفاده از `v-bind="attrs"` ارسال را صریح می‌کند.
+
+مثال:
+
+```vue
+<script setup>
+import { useAttrs, useSlots } from 'vue';
+
+const attrs = useAttrs();
+const slots = useSlots();
+</script>
+
+<template>
+  <!-- همه attribute‌های non-prop را به المان داخلی forward کنید -->
+  <div class="input-wrapper">
+    <input v-bind="attrs" />
+  </div>
+</template>
+```

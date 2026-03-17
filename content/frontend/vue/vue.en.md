@@ -1735,3 +1735,191 @@ app.use(myPlugin, {
   translations: { welcome: 'Welcome' },
 });
 ```
+
+## 🧠 Question 56
+
+**ID**: vue-056
+**Title**: What is `effectScope()` and when is it useful?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+`effectScope()` creates a scope that captures all reactive effects — computed properties, watchers, and watchEffect calls — created inside it.
+
+All effects within the scope can be stopped simultaneously by calling `scope.stop()`.
+
+This is particularly useful for:
+
+- Vue library authors building composables that create multiple effects
+- Dynamically creating and cleaning up groups of reactive effects
+- Replacing manual cleanup of multiple independent `watch` calls
+
+Example:
+
+```js
+import { effectScope, ref, watch, computed } from 'vue';
+
+const scope = effectScope();
+
+scope.run(() => {
+  const count = ref(0);
+  const doubled = computed(() => count.value * 2);
+
+  watch(count, (val) => {
+    console.log('count:', val);
+  });
+});
+
+// Dispose all effects inside the scope at once
+scope.stop();
+```
+
+## 🧠 Question 57
+
+**ID**: vue-057
+**Title**: What are `:deep()`, `:slotted()`, and `:global()` in scoped styles?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+When using `<style scoped>`, Vue adds a unique data attribute to all elements so that styles only apply within the current component.
+
+This creates challenges when styling child components or slot content from a parent.
+
+- **`:deep(selector)`** — penetrates the scope boundary to style elements inside child components.
+- **`:slotted(selector)`** — targets elements passed into the component via slots.
+- **`:global(selector)`** — applies a style globally without any scope attribute, as if placed in a non-scoped style block.
+
+Example:
+
+```vue
+<style scoped>
+/* Style an element inside a child component */
+.wrapper :deep(.child-input) {
+  border: 1px solid blue;
+}
+
+/* Style content passed via slots */
+:slotted(p) {
+  font-weight: bold;
+}
+
+/* Apply a truly global rule from a scoped block */
+:global(.modal-open) {
+  overflow: hidden;
+}
+</style>
+```
+
+## 🧠 Question 58
+
+**ID**: vue-058
+**Title**: How do you lazy-load routes in Vue Router for code splitting?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Lazy-loading routes means each route's component is loaded only when the user navigates to it, instead of including everything in the initial bundle.
+
+This is implemented using dynamic imports: `() => import('./views/Page.vue')`.
+
+Vite and webpack automatically create separate code chunks for each lazy-loaded route, significantly reducing the initial JavaScript payload.
+
+You can also group routes into the same chunk using the webpackChunkName comment or Vite's `rollupOptions`.
+
+Example:
+
+```js
+import { createRouter, createWebHistory } from 'vue-router';
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      component: () => import('./views/Home.vue'),
+    },
+    {
+      path: '/admin',
+      // loaded only when the user visits /admin
+      component: () => import('./views/Admin.vue'),
+    },
+    {
+      path: '/settings',
+      // Group into a named chunk
+      component: () =>
+        import(/* webpackChunkName: "settings" */ './views/Settings.vue'),
+    },
+  ],
+});
+```
+
+## 🧠 Question 59
+
+**ID**: vue-059
+**Title**: What are functional components in Vue 3 and when should you use them?
+**Difficulty**: Hard
+**Category**: Performance
+
+### Answer 📄
+
+Functional components are stateless components that render without a component instance.
+
+They are defined as plain JavaScript functions that accept props and a context object containing `slots`, `attrs`, and `emit`.
+
+Because they skip instance creation, they have no lifecycle hooks, no reactive data, and no `this` context.
+
+Functional components are more performant than stateful components for simple rendering logic, but the difference is small in Vue 3 compared to Vue 2.
+
+Use them for purely presentational components that only transform props into a rendered output.
+
+Example:
+
+```js
+import { h } from 'vue';
+
+// Functional component as a plain function
+const Badge = (props, { slots }) => {
+  return h('span', { class: `badge badge-${props.type}` }, slots.default?.());
+};
+
+Badge.props = ['type'];
+```
+
+## 🧠 Question 60
+
+**ID**: vue-060
+**Title**: What are `useAttrs()` and `useSlots()` in the Composition API?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+`useAttrs()` returns the non-prop attributes passed to the component — anything not declared as a prop, including `class`, `style`, and event listeners.
+
+`useSlots()` returns the slot functions available to the component.
+
+Both are useful when building transparent wrapper components that need to forward attributes and slots to an inner element.
+
+By default in `<script setup>`, attributes are not automatically applied to the root element unless `inheritAttrs: false` is set. Using `v-bind="attrs"` makes forwarding explicit.
+
+Example:
+
+```vue
+<script setup>
+import { useAttrs, useSlots } from 'vue';
+
+const attrs = useAttrs();
+const slots = useSlots();
+</script>
+
+<template>
+  <!-- Forward all non-prop attributes to the inner element -->
+  <div class="input-wrapper">
+    <input v-bind="attrs" />
+  </div>
+</template>
+```

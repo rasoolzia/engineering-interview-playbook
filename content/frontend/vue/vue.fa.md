@@ -1923,3 +1923,204 @@ const slots = useSlots();
   </div>
 </template>
 ```
+
+## 🧠 سوال 61
+
+**شناسه**: vue-061
+**عنوان**: چگونه side effect‌ها را داخل `watchEffect` پاکسازی می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+`watchEffect` یک تابع `onCleanup` به callback خود ارسال می‌کند که به شما اجازه می‌دهد side effect قبلی را قبل از اجرای مجدد effect لغو یا پاکسازی کنید.
+
+این هنگام انجام عملیات async مانند HTTP request‌ها بسیار مهم است — بدون cleanup، یک request قبلی می‌تواند بعد از یک request جدیدتر resolve شود و باعث race condition شود.
+
+`onCleanup` قبل از اجرای بعدی effect و هنگام unmount کامپوننت اجرا می‌شود.
+
+مثال:
+
+```js
+import { ref, watchEffect } from 'vue';
+
+const userId = ref(1);
+
+watchEffect((onCleanup) => {
+  const controller = new AbortController();
+
+  fetch(`/api/users/${userId.value}`, {
+    signal: controller.signal,
+  })
+    .then((res) => res.json())
+    .then((data) => console.log(data))
+    .catch((err) => {
+      if (err.name !== 'AbortError') console.error(err);
+    });
+
+  onCleanup(() => {
+    controller.abort(); // request در حال انجام را هنگام تغییر userId لغو کنید
+  });
+});
+```
+
+## 🧠 سوال 62
+
+**شناسه**: vue-062
+**عنوان**: Named view‌ها در Vue Router چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مسیریابی (Routing)
+
+### پاسخ 📄
+
+Named view‌ها به چندین کامپوننت `<RouterView>` اجازه می‌دهند همزمان در یک route رندر شوند، هر کدام کامپوننت متفاوتی نمایش دهند.
+
+این برای layout‌های پیچیده مفید است که بخش‌های مختلف صفحه — مانند sidebar، header و محتوای اصلی — هر کدام توسط یک کامپوننت جداگانه کنترل می‌شوند.
+
+هر `<RouterView>` یک attribute `name` دریافت می‌کند و پیکربندی route نام کامپوننت‌ها را با استفاده از گزینه `components` (جمع) به آن نام‌های view map می‌کند.
+
+مثال:
+
+```js
+const router = createRouter({
+  routes: [
+    {
+      path: '/dashboard',
+      components: {
+        default: DashboardMain,
+        sidebar: DashboardSidebar,
+        header: DashboardHeader,
+      },
+    },
+  ],
+});
+```
+
+```vue
+<!-- App.vue -->
+<template>
+  <RouterView name="header" />
+  <div class="layout">
+    <RouterView name="sidebar" />
+    <RouterView />
+    <!-- default -->
+  </div>
+</template>
+```
+
+## 🧠 سوال 63
+
+**شناسه**: vue-063
+**عنوان**: `app.provide()` با `provide` در سطح کامپوننت چه تفاوتی دارد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`app.provide()` یک مقدار را در سطح application ثبت می‌کند و آن را برای inject در هر کامپوننتی در سراسر برنامه در دسترس قرار می‌دهد.
+
+`provide` در سطح کامپوننت (داخل `setup` یک کامپوننت) فقط مقدار را برای کامپوننت‌های فرزند در آن subtree خاص در دسترس قرار می‌دهد.
+
+`app.provide()` روش توصیه شده برای اشتراک‌گذاری سرویس‌های global مانند API client‌ها، object‌های پیکربندی، state احراز هویت یا helper‌های internationalization است.
+
+مثال:
+
+```js
+// main.js
+const app = createApp(App);
+
+app.provide('apiBase', 'https://api.example.com');
+app.provide('featureFlags', { darkMode: true, betaFeatures: false });
+
+app.mount('#app');
+```
+
+```js
+// هر کامپوننتی در برنامه
+import { inject } from 'vue';
+
+const apiBase = inject('apiBase');
+const flags = inject('featureFlags');
+```
+
+## 🧠 سوال 64
+
+**شناسه**: vue-064
+**عنوان**: سیستم واکنش‌پذیری Vue 3 داخلاً با JavaScript Proxy چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم واکنش‌پذیری
+
+### پاسخ 📄
+
+Vue 3 واکنش‌پذیری مبتنی بر `Object.defineProperty` در Vue 2 را با JavaScript `Proxy` جایگزین کرد.
+
+وقتی `reactive(obj)` را فراخوانی می‌کنید، Vue object را در یک `Proxy` که دسترسی به property و mutation را intercept می‌کند wrap می‌کند.
+
+در طول `get`، Vue `track()` را فراخوانی می‌کند تا record کند کدام reactive effect در حال اجرا است و به آن property وابسته است.
+
+در طول `set`، Vue `trigger()` را فراخوانی می‌کند تا تمام effect‌های recorded که به property تغییر یافته وابسته هستند را notify کند تا دوباره اجرا شوند.
+
+این رویکرد مزایای کلیدی نسبت به Vue 2 دارد:
+
+- اضافه و حذف property را بدون API‌های خاص تشخیص می‌دهد
+- آرایه‌ها را بومی بدون wrap کردن متدهای mutation مدیریت می‌کند
+- از `Map`، `Set`، `WeakMap` و `WeakSet` پشتیبانی می‌کند
+
+مثال (internals ساده شده):
+
+```js
+function reactive(target) {
+  return new Proxy(target, {
+    get(target, key, receiver) {
+      track(target, key); // ثبت کنید کدام effect این را می‌خواند
+      return Reflect.get(target, key, receiver);
+    },
+    set(target, key, value, receiver) {
+      const result = Reflect.set(target, key, value, receiver);
+      trigger(target, key); // به effect‌هایی که به این key وابسته هستند اطلاع دهید
+      return result;
+    },
+  });
+}
+```
+
+## 🧠 سوال 65
+
+**شناسه**: vue-065
+**عنوان**: کامپوننت‌های recursive در Vue چیست و چگونه آن‌ها را پیاده‌سازی می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+یک کامپوننت recursive کامپوننتی است که خود را در داخل template خودش رندر می‌کند.
+
+این برای رندر کردن داده‌های با ساختار درختی مانند file explorer‌ها، منوهای nested، thread‌های نظرات یا نمودارهای سازمانی ضروری است.
+
+در Vue 3 با `<script setup>`، یک کامپوننت می‌تواند به طور خودکار با نام فایل خود به خودش ارجاع دهد. در Options API، گزینه `name` الزامی است.
+
+یک base case (معمولاً یک آرایه `children` خالی یا بررسی null) باید همیشه گنجانده شود تا از recursion بی‌نهایت جلوگیری شود.
+
+مثال:
+
+```vue
+<!-- TreeNode.vue -->
+<script setup>
+defineProps({
+  node: {
+    type: Object,
+    required: true,
+  },
+});
+</script>
+
+<template>
+  <li>
+    <span>{{ node.label }}</span>
+    <ul v-if="node.children?.length">
+      <!-- به طور recursive خود را برای هر فرزند رندر می‌کند -->
+      <TreeNode v-for="child in node.children" :key="child.id" :node="child" />
+    </ul>
+  </li>
+</template>
+```

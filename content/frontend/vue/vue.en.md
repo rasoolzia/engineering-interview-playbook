@@ -1,7 +1,7 @@
 ---
 topic: vue
 language: en
-version: 2.3
+version: 2.2
 ---
 
 # Vue.js Interview Questions
@@ -1921,5 +1921,206 @@ const slots = useSlots();
   <div class="input-wrapper">
     <input v-bind="attrs" />
   </div>
+</template>
+```
+
+## 🧠 Question 61
+
+**ID**: vue-061
+**Title**: How do you clean up side effects inside `watchEffect`?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+`watchEffect` passes an `onCleanup` function to its callback that lets you cancel or clean up the previous side effect before the effect runs again.
+
+This is critical when performing async operations such as HTTP requests — without cleanup, a previous request could resolve after a newer one, causing a race condition.
+
+`onCleanup` runs before the next execution of the effect and when the component is unmounted.
+
+Example:
+
+```js
+import { ref, watchEffect } from 'vue';
+
+const userId = ref(1);
+
+watchEffect((onCleanup) => {
+  const controller = new AbortController();
+
+  fetch(`/api/users/${userId.value}`, {
+    signal: controller.signal,
+  })
+    .then((res) => res.json())
+    .then((data) => console.log(data))
+    .catch((err) => {
+      if (err.name !== 'AbortError') console.error(err);
+    });
+
+  onCleanup(() => {
+    controller.abort(); // cancel in-flight request when userId changes
+  });
+});
+```
+
+## 🧠 Question 62
+
+**ID**: vue-062
+**Title**: What are named views in Vue Router?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Named views allow multiple `<RouterView>` components to be rendered simultaneously on the same route, each displaying a different component.
+
+This is useful for complex layouts where different parts of the page — such as a sidebar, header, and main content — are each controlled by a separate component.
+
+Each `<RouterView>` is given a `name` attribute, and the route config maps component names to those view names using the `components` (plural) option.
+
+Example:
+
+```js
+const router = createRouter({
+  routes: [
+    {
+      path: '/dashboard',
+      components: {
+        default: DashboardMain,
+        sidebar: DashboardSidebar,
+        header: DashboardHeader,
+      },
+    },
+  ],
+});
+```
+
+```vue
+<!-- App.vue -->
+<template>
+  <RouterView name="header" />
+  <div class="layout">
+    <RouterView name="sidebar" />
+    <RouterView />
+    <!-- default -->
+  </div>
+</template>
+```
+
+## 🧠 Question 63
+
+**ID**: vue-063
+**Title**: How does `app.provide()` differ from component-level `provide`?
+**Difficulty**: Medium
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`app.provide()` registers a value at the application level, making it injectable in any component anywhere in the application tree.
+
+Component-level `provide` (inside a component's `setup`) only makes the value available to descendant components in that specific subtree.
+
+`app.provide()` is the recommended way to share global services such as API clients, configuration objects, authentication state, or internationalization helpers.
+
+Example:
+
+```js
+// main.js
+const app = createApp(App);
+
+app.provide('apiBase', 'https://api.example.com');
+app.provide('featureFlags', { darkMode: true, betaFeatures: false });
+
+app.mount('#app');
+```
+
+```js
+// Any component in the application
+import { inject } from 'vue';
+
+const apiBase = inject('apiBase');
+const flags = inject('featureFlags');
+```
+
+## 🧠 Question 64
+
+**ID**: vue-064
+**Title**: How does Vue 3's reactivity system work internally using JavaScript Proxy?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+Vue 3 replaced Vue 2's `Object.defineProperty`-based reactivity with JavaScript `Proxy`.
+
+When you call `reactive(obj)`, Vue wraps the object in a `Proxy` that intercepts property access and mutation.
+
+During a `get`, Vue calls `track()` to record which reactive effect is currently executing and depends on that property.
+
+During a `set`, Vue calls `trigger()` to notify all recorded effects that depend on the changed property, causing them to re-run.
+
+This approach has key advantages over Vue 2:
+
+- Detects property additions and deletions without special APIs
+- Handles arrays natively without wrapping mutation methods
+- Supports `Map`, `Set`, `WeakMap`, and `WeakSet`
+
+Example (simplified internals):
+
+```js
+function reactive(target) {
+  return new Proxy(target, {
+    get(target, key, receiver) {
+      track(target, key); // record which effect is reading this
+      return Reflect.get(target, key, receiver);
+    },
+    set(target, key, value, receiver) {
+      const result = Reflect.set(target, key, value, receiver);
+      trigger(target, key); // notify effects that depend on this key
+      return result;
+    },
+  });
+}
+```
+
+## 🧠 Question 65
+
+**ID**: vue-065
+**Title**: What are recursive components in Vue and how do you implement them?
+**Difficulty**: Hard
+**Category**: Components
+
+### Answer 📄
+
+A recursive component is a component that renders itself within its own template.
+
+This is essential for rendering tree-structured data such as file explorers, nested menus, comment threads, or organizational charts.
+
+In Vue 3 with `<script setup>`, a component can reference itself by its filename automatically. In the Options API, a `name` option is required.
+
+A base case (typically an empty `children` array or null check) must always be included to prevent infinite recursion.
+
+Example:
+
+```vue
+<!-- TreeNode.vue -->
+<script setup>
+defineProps({
+  node: {
+    type: Object,
+    required: true,
+  },
+});
+</script>
+
+<template>
+  <li>
+    <span>{{ node.label }}</span>
+    <ul v-if="node.children?.length">
+      <!-- Recursively renders itself for each child -->
+      <TreeNode v-for="child in node.children" :key="child.id" :node="child" />
+    </ul>
+  </li>
 </template>
 ```

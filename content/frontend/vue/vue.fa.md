@@ -2124,3 +2124,189 @@ defineProps({
   </li>
 </template>
 ```
+
+## 🧠 سوال 66
+
+**شناسه**: vue-066
+**عنوان**: تفاوت بین هوک‌های lifecycle به نام‌های `created`، `onBeforeMount` و `mounted` چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: چرخه حیات
+
+### پاسخ 📄
+
+این سه هوک در مراحل مختلف مقداردهی اولیه کامپوننت اجرا می‌شوند.
+
+**`created`** (Options API) / معادل مستقیمی در Composition API ندارد — تابع `setup()` خودش در همین مرحله اجرا می‌شود. داده‌های reactive مقداردهی شده، computed propertyها و watcherها آماده‌اند، اما هنوز DOM وجود ندارد.
+
+**`onBeforeMount`** بعد از compile شدن تابع render و درست قبل از اولین اجرا فراخوانی می‌شود، اما قبل از اینکه nodeهای DOM کامپوننت به document اضافه شوند.
+
+**`mounted`** / **`onMounted`** بعد از ساخته و درج شدن DOM کامپوننت اجرا می‌شود. اینجا محل مناسب برای دسترسی به DOM واقعی، شروع subscriptionها، اندازه‌گیری المنت‌ها یا مقداردهی اولیه کتابخانه‌های third-party است.
+
+```vue
+<script setup>
+import { onBeforeMount, onMounted } from 'vue';
+
+console.log('setup (= created): DOM هنوز موجود نیست');
+
+onBeforeMount(() => {
+  console.log('onBeforeMount: در شرف رندر شدن');
+});
+
+onMounted(() => {
+  console.log('onMounted: DOM آماده است');
+});
+</script>
+```
+
+## 🧠 سوال 67
+
+**شناسه**: vue-067
+**عنوان**: هنگام mount شدن یک کامپوننت Vue 3 چه اتفاقی می‌افتد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رندرینگ و ساختار داخلی
+
+### پاسخ 📄
+
+وقتی یک کامپوننت Vue 3 mount می‌شود، runtime یک دنباله مشخص را طی می‌کند:
+
+1. **ساخت instance کامپوننت** — state reactive، computed propertyها و watcherها مقداردهی می‌شوند.
+2. **اجرای `setup()`** — نقطه ورود Composition API. Propها resolve می‌شوند و زنجیره‌های `provide`/`inject` برقرار می‌شوند.
+3. **Compile شدن تابع render** (در SFCها این کار در build time توسط compiler انجام می‌شود).
+4. **اجرای هوک‌های `onBeforeMount`**.
+5. **اجرای render effect** — تابع render اجرا شده و یک درخت virtual DOM تولید می‌کند. در طول این اجرا، وابستگی‌های reactive ردیابی می‌شوند.
+6. **Patch کردن virtual DOM روی DOM واقعی** — ماژول runtime-dom درخت vnode را به nodeهای DOM واقعی تبدیل می‌کند.
+7. **اجرای هوک‌های `onMounted`** — هوک‌های فرزندان قبل از والدین اجرا می‌شوند (از پایین به بالا).
+
+بعد از mount، هر تغییر در وابستگی reactive باعث می‌شود render effect کامپوننت دوباره اجرا شود، یک درخت vnode جدید تولید کند، و Vue فقط nodeهای تغییریافته DOM را به‌روز کند.
+
+## 🧠 سوال 68
+
+**شناسه**: vue-068
+**عنوان**: تفاوت‌های کلیدی بین Vuex و Pinia چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت state
+
+### پاسخ 📄
+
+Pinia کتابخانه مدیریت state رسمی و توصیه‌شده برای Vue 3 است که عملاً جایگزین Vuex شده.
+
+تفاوت‌های کلیدی:
+
+| ویژگی           | Vuex                        | Pinia                                     |
+| --------------- | --------------------------- | ----------------------------------------- |
+| Mutationها      | برای تغییر state الزامی بود | حذف شده — state مستقیم تغییر می‌کند       |
+| ماژول‌ها        | nested و verbose            | هر store یک ماژول مسطح مستقل است          |
+| TypeScript      | نیاز به boilerplate دارد    | پشتیبانی first-class از TypeScript        |
+| ابزارهای توسعه  | پشتیبانی‌شده                | پشتیبانی‌شده با DX بهتر                   |
+| حجم bundle      | بزرگ‌تر                     | بسیار کوچک‌تر (~۱KB)                      |
+| Composition API | پشتیبانی محدود              | پشتیبانی native با store به سبک `setup()` |
+
+در Pinia می‌توانید از Options-style یا setup-style استفاده کنید:
+
+```js
+// Pinia - Options store
+import { defineStore } from 'pinia';
+
+export const useCounterStore = defineStore('counter', {
+  state: () => ({ count: 0 }),
+  getters: {
+    double: (state) => state.count * 2,
+  },
+  actions: {
+    increment() {
+      this.count++;
+    },
+  },
+});
+
+// Pinia - Setup store (سبک Composition API)
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0);
+  const double = computed(() => count.value * 2);
+  function increment() {
+    count.value++;
+  }
+  return { count, double, increment };
+});
+```
+
+## 🧠 سوال 69
+
+**شناسه**: vue-069
+**عنوان**: پارامترهای dynamic route در Vue Router چگونه کار می‌کنند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Routing
+
+### پاسخ 📄
+
+بخش‌های dynamic route با پیشوند دو نقطه در path route تعریف می‌شوند. آن‌ها هر مقداری را در آن موقعیت تطبیق می‌دهند و مقدار منطبق را از طریق `route.params` در دسترس قرار می‌دهند.
+
+```js
+const routes = [
+  { path: '/users/:id', component: UserProfile },
+  { path: '/posts/:category/:slug', component: BlogPost },
+];
+```
+
+درون یک کامپوننت با `useRoute()` به آن‌ها دسترسی دارید:
+
+```vue
+<script setup>
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+const userId = route.params.id; // مثلاً "42"
+</script>
+```
+
+**واکنش به تغییر param** — هنگام ناوبری بین همان route با paramهای مختلف (مثلاً `/users/1` → `/users/2`)، کامپوننت reuse می‌شود. از `watch` یا `watchEffect` استفاده کنید:
+
+```js
+watch(
+  () => route.params.id,
+  (newId) => {
+    fetchUser(newId);
+  },
+);
+```
+
+**Paramهای اختیاری** از `?` و **تطبیق چندگانه** از `*` یا `+` استفاده می‌کنند:
+
+```js
+{
+  path: '/files/:path*';
+} // /files/a/b/c را تطبیق می‌دهد
+```
+
+## 🧠 سوال 70
+
+**شناسه**: vue-070
+**عنوان**: تفاوت route params و query params در Vue Router چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Routing
+
+### پاسخ 📄
+
+**Route params** بخشی از مسیر URL هستند که با `:paramName` تعریف می‌شوند. آن‌ها توسط الگوی route الزامی هستند و تغییرشان بر route منطبق تأثیر می‌گذارد.
+
+**Query params** بعد از `?` در URL ظاهر می‌شوند و جفت‌های کلید-مقدار اختیاری هستند. بر تطبیق route تأثیری ندارند.
+
+```js
+// URL: /search?q=vue&page=2
+const route = useRoute();
+route.params.id; // path param — در تعریف route مشخص شده
+route.query.q; // 'vue'
+route.query.page; // '2'
+```
+
+ناوبری برنامه‌نویسی با هر دو:
+
+```js
+router.push({
+  path: '/users/42',
+  query: { tab: 'posts', sort: 'recent' },
+});
+// → /users/42?tab=posts&sort=recent
+```
+
+از params برای هویت منبع (شناسه کاربر، slug مقاله) و از query params برای state رابط کاربری (فیلترها، صفحه‌بندی، مرتب‌سازی) استفاده کنید.

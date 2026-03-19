@@ -2124,3 +2124,189 @@ defineProps({
   </li>
 </template>
 ```
+
+## 🧠 Question 66
+
+**ID**: vue-066
+**Title**: What is the difference between `created`, `onBeforeMount`, and `mounted` lifecycle hooks?
+**Difficulty**: Medium
+**Category**: Lifecycle
+
+### Answer 📄
+
+These three hooks fire at different stages of a component's initialization.
+
+**`created`** (Options API) / no direct equivalent in Composition API — the `setup()` function itself runs at this stage. The reactive data is initialized, computed properties and watchers are set up, but the component has not yet been added to the DOM.
+
+**`onBeforeMount`** runs after the render function is compiled and about to execute for the first time, but before the component's DOM nodes are inserted into the document.
+
+**`mounted`** / **`onMounted`** runs after the component's DOM has been created and inserted. This is the correct place to access the real DOM, start subscriptions, measure elements, or initialize third-party libraries that require a DOM node.
+
+```vue
+<script setup>
+import { onBeforeMount, onMounted } from 'vue';
+
+console.log('setup (= created): DOM not yet available');
+
+onBeforeMount(() => {
+  console.log('onBeforeMount: about to render');
+});
+
+onMounted(() => {
+  console.log('onMounted: DOM is ready');
+});
+</script>
+```
+
+## 🧠 Question 67
+
+**ID**: vue-067
+**Title**: What happens internally when a Vue 3 component mounts?
+**Difficulty**: Hard
+**Category**: Rendering & Internals
+
+### Answer 📄
+
+When a Vue 3 component mounts, the runtime goes through a well-defined sequence:
+
+1. **Component instance is created** — reactive state, computed properties, and watchers are initialized.
+2. **`setup()` runs** — the Composition API entry point. Props are resolved, `provide`/`inject` chains are connected.
+3. **Render function is compiled** (if using SFC templates, this is done at build time by the Vue compiler).
+4. **`onBeforeMount` hooks fire**.
+5. **Render effect runs** — the render function executes, producing a virtual DOM tree. During this execution, reactive dependencies are tracked.
+6. **Virtual DOM is patched into the real DOM** — Vue's runtime-dom module converts the vnode tree into actual DOM nodes.
+7. **`onMounted` hooks fire** — child hooks fire before parent hooks (bottom-up).
+
+After mounting, any reactive dependency change triggers the component's render effect to re-run (producing a new vnode tree), which Vue diffs against the previous tree and patches only the changed DOM nodes.
+
+## 🧠 Question 68
+
+**ID**: vue-068
+**Title**: What are the key differences between Vuex and Pinia?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+Pinia is the official recommended state management library for Vue 3, effectively replacing Vuex.
+
+Key differences:
+
+| Feature         | Vuex                     | Pinia                                    |
+| --------------- | ------------------------ | ---------------------------------------- |
+| Mutations       | Required to change state | Removed — state is changed directly      |
+| Modules         | Nested, verbose setup    | Each store is a flat, independent module |
+| TypeScript      | Requires boilerplate     | First-class TypeScript support           |
+| Devtools        | Supported                | Supported with better DX                 |
+| Bundle size     | Larger                   | Much smaller (~1KB)                      |
+| Composition API | Limited support          | Native support with `setup()` stores     |
+
+In Pinia you can use either the Options-style or the setup-style store:
+
+```js
+// Pinia - Options store
+import { defineStore } from 'pinia';
+
+export const useCounterStore = defineStore('counter', {
+  state: () => ({ count: 0 }),
+  getters: {
+    double: (state) => state.count * 2,
+  },
+  actions: {
+    increment() {
+      this.count++;
+    },
+  },
+});
+
+// Pinia - Setup store (Composition API style)
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0);
+  const double = computed(() => count.value * 2);
+  function increment() {
+    count.value++;
+  }
+  return { count, double, increment };
+});
+```
+
+## 🧠 Question 69
+
+**ID**: vue-069
+**Title**: How do dynamic route parameters work in Vue Router?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Dynamic route segments are defined using a colon prefix in the route path. They match any value at that position and expose the matched value via `route.params`.
+
+```js
+const routes = [
+  { path: '/users/:id', component: UserProfile },
+  { path: '/posts/:category/:slug', component: BlogPost },
+];
+```
+
+Inside a component you access them with `useRoute()`:
+
+```vue
+<script setup>
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+const userId = route.params.id; // e.g., "42"
+</script>
+```
+
+**Reacting to param changes** — when navigating between the same route with different params (e.g., `/users/1` → `/users/2`), the component is reused. Use `watch` or `watchEffect` to react:
+
+```js
+watch(
+  () => route.params.id,
+  (newId) => {
+    fetchUser(newId);
+  },
+);
+```
+
+**Optional params** use `?` and **multiple matches** use `*` or `+`:
+
+```js
+{
+  path: '/files/:path*';
+} // matches /files/a/b/c
+```
+
+## 🧠 Question 70
+
+**ID**: vue-070
+**Title**: What is the difference between route params and query params in Vue Router?
+**Difficulty**: Easy
+**Category**: Routing
+
+### Answer 📄
+
+**Route params** are part of the URL path defined with `:paramName`. They are required by the route pattern and change which route matches.
+
+**Query params** appear after the `?` in the URL and are optional key-value pairs. They do not affect route matching.
+
+```js
+// URL: /search?q=vue&page=2
+const route = useRoute();
+route.params.id; // path param — defined in route definition
+route.query.q; // 'vue'
+route.query.page; // '2'
+```
+
+Programmatic navigation with both:
+
+```js
+router.push({
+  path: '/users/42',
+  query: { tab: 'posts', sort: 'recent' },
+});
+// → /users/42?tab=posts&sort=recent
+```
+
+Use params for resource identity (user ID, article slug) and query params for UI state (filters, pagination, sorting).

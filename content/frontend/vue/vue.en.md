@@ -2310,3 +2310,208 @@ router.push({
 ```
 
 Use params for resource identity (user ID, article slug) and query params for UI state (filters, pagination, sorting).
+
+## 🧠 Question 71
+
+**ID**: vue-071
+**Title**: How does Vue compile `.vue` templates into render functions?
+**Difficulty**: Hard
+**Category**: Rendering & Internals
+
+### Answer 📄
+
+Vue's template compiler (`@vue/compiler-dom`) transforms `.vue` template strings into JavaScript render functions at build time (via `@vitejs/plugin-vue` or `vue-loader`).
+
+The compilation pipeline has three stages:
+
+1. **Parse** — the template HTML is parsed into an Abstract Syntax Tree (AST).
+2. **Transform** — the AST is traversed and optimized. Vue applies transforms for directives (`v-if`, `v-for`), event handlers, slot compilation, and marks static subtrees with `hoistStatic` flags so they are created once outside the render function.
+3. **Generate (Code generation)** — the optimized AST is converted into a JavaScript function string.
+
+A simple template like:
+
+```html
+<div class="hello">{{ msg }}</div>
+```
+
+Compiles to roughly:
+
+```js
+import {
+  createElementVNode as _createElementVNode,
+  toDisplayString as _toDisplayString,
+} from 'vue';
+
+function render(_ctx) {
+  return _createElementVNode(
+    'div',
+    { class: 'hello' },
+    _toDisplayString(_ctx.msg),
+  );
+}
+```
+
+Static nodes are hoisted above the function so they are only created once, avoiding unnecessary allocations on re-renders. Dynamic nodes are tracked using patch flags (bitwise integers) that tell the runtime exactly what changed.
+
+## 🧠 Question 72
+
+**ID**: vue-072
+**Title**: How does the Vue scheduler batch and defer reactive updates?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+Vue does not update the DOM synchronously when reactive state changes. Instead, it queues the component's re-render and flushes the queue asynchronously in a microtask (using `Promise.then`).
+
+This means multiple synchronous state changes within one task only cause one re-render:
+
+```js
+const count = ref(0);
+
+count.value++;
+count.value++;
+count.value++;
+// DOM is updated once, not three times
+```
+
+Vue maintains a job queue. When a reactive effect is triggered, Vue calls `queueJob(effect)`. Duplicate jobs (same component render effect) are deduplicated using their internal `id`. After all synchronous code finishes, the microtask runs `flushJobs()`, sorting jobs by their `id` (parent components render before children) and executing them in order.
+
+`nextTick()` returns a promise that resolves after the current flush cycle:
+
+```js
+import { nextTick, ref } from 'vue';
+
+const msg = ref('hello');
+msg.value = 'world';
+
+await nextTick();
+// DOM now reflects 'world'
+```
+
+Pre-flush watchers (using `flush: 'pre'`, the default for `watch`) run before the component re-renders. Post-flush watchers (`flush: 'post'`) run after.
+
+## 🧠 Question 73
+
+**ID**: vue-073
+**Title**: How does Vue 3's effect tracking work internally (activeEffect and dependency sets)?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+Vue 3's reactivity is built on two concepts: **effects** (functions that should re-run when dependencies change) and **dependency sets** (sets of effects that read a reactive property).
+
+Internally Vue maintains a global `activeEffect` variable that points to the effect currently executing. During a reactive getter (`get` Proxy trap), Vue's `track()` function:
+
+1. Reads `activeEffect` — if null, nothing is tracked.
+2. Looks up (or creates) a `WeakMap<target, Map<key, Set<effect>>>` structure.
+3. Adds `activeEffect` to the `Set` for that `target.key` pair.
+
+During a reactive setter (`set` Proxy trap), Vue's `trigger()` function:
+
+1. Looks up the dependency set for `target.key`.
+2. Schedules all effects in that set to re-run via the Vue scheduler.
+
+```js
+// Simplified pseudocode
+let activeEffect = null;
+const targetMap = new WeakMap();
+
+function track(target, key) {
+  if (!activeEffect) return;
+  let depsMap = targetMap.get(target);
+  if (!depsMap) targetMap.set(target, (depsMap = new Map()));
+  let dep = depsMap.get(key);
+  if (!dep) depsMap.set(key, (dep = new Set()));
+  dep.add(activeEffect);
+}
+
+function trigger(target, key) {
+  const depsMap = targetMap.get(target);
+  if (!depsMap) return;
+  depsMap.get(key)?.forEach((effect) => effect());
+}
+```
+
+Using a `WeakMap` means the dependency map for an object is garbage-collected when the object itself is.
+
+## 🧠 Question 74
+
+**ID**: vue-074
+**Title**: What is the difference between Client-Side Rendering (CSR) and Server-Side Rendering (SSR) in Vue?
+**Difficulty**: Medium
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+**CSR (Client-Side Rendering)** — the server sends a minimal HTML shell (often just `<div id="app"></div>`) and a JavaScript bundle. The browser downloads the JS, runs Vue, and builds the DOM entirely on the client. Time to First Byte is fast, but the page is blank until JS is parsed and executed (slow Time to Interactive on slow networks).
+
+**SSR (Server-Side Rendering)** — Vue renders the component tree to an HTML string on the server. The browser receives fully-formed HTML immediately (fast First Contentful Paint). After the JS bundle loads, Vue **hydrates** the existing DOM — attaching event listeners and making it interactive without re-rendering.
+
+|             | CSR                  | SSR                     |
+| ----------- | -------------------- | ----------------------- |
+| First paint | Slow (blank page)    | Fast (HTML ready)       |
+| SEO         | Requires extra setup | Excellent               |
+| Server load | Low                  | Higher                  |
+| Complexity  | Simpler              | Requires Node.js server |
+
+Vue's official SSR solution is **Nuxt.js**, which abstracts the server setup, file-based routing, and hydration strategy (including partial hydration and streaming).
+
+For non-Node SSR, `vue/server-renderer` can output HTML strings from any server environment.
+
+## 🧠 Question 75
+
+**ID**: vue-075
+**Title**: What are advanced patterns for `provide` / `inject` — Symbol keys, reactive injection, and defaults?
+**Difficulty**: Hard
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`provide` / `inject` is Vue's dependency injection system for sharing data across a component tree without prop drilling.
+
+**Symbol keys** prevent accidental key collisions across libraries or large codebases. Export the Symbol from a shared file:
+
+```js
+// keys.js
+export const USER_KEY = Symbol('user');
+```
+
+```js
+// Provider component
+import { provide, ref } from 'vue';
+import { USER_KEY } from './keys';
+
+const user = ref({ name: 'Alice' });
+provide(USER_KEY, user);
+```
+
+```js
+// Descendant component
+import { inject } from 'vue';
+import { USER_KEY } from './keys';
+
+const user = inject(USER_KEY); // fully typed if using TypeScript
+```
+
+**Reactive injection** — providing a `ref` or `reactive` value keeps the injected value live. The consumer sees changes automatically:
+
+```js
+// In provider
+const theme = ref('light');
+provide('theme', theme); // provide the ref itself, not theme.value
+
+// In consumer
+const theme = inject('theme'); // theme is a Ref<string>
+```
+
+**Default values** — the second argument to `inject` is a fallback used when no provider is found:
+
+```js
+const theme = inject('theme', ref('light'));
+// Or a factory function for expensive defaults:
+const config = inject('config', () => ({ debug: false }), true);
+```
+
+**Read-only injection** — wrap with `readonly()` before providing to prevent consumers from mutating the value.

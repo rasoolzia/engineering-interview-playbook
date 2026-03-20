@@ -2310,3 +2310,208 @@ router.push({
 ```
 
 از params برای هویت منبع (شناسه کاربر، slug مقاله) و از query params برای state رابط کاربری (فیلترها، صفحه‌بندی، مرتب‌سازی) استفاده کنید.
+
+## 🧠 سوال 71
+
+**شناسه**: vue-071
+**عنوان**: Vue چگونه templateهای `.vue` را به render function تبدیل می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رندرینگ و ساختار داخلی
+
+### پاسخ 📄
+
+compiler template Vue به نام `@vue/compiler-dom` در build time رشته‌های template را به render function جاوااسکریپت تبدیل می‌کند (از طریق `@vitejs/plugin-vue` یا `vue-loader`).
+
+pipeline کامپایل سه مرحله دارد:
+
+1. **Parse** — HTML template به یک Abstract Syntax Tree (AST) تجزیه می‌شود.
+2. **Transform** — AST پیمایش و بهینه‌سازی می‌شود. Vue transformهایی برای directive‌ها (`v-if`، `v-for`)، event handlerها، کامپایل slot و علامت‌گذاری زیردرخت‌های static با فلگ‌های `hoistStatic` اعمال می‌کند تا یک‌بار خارج از تابع render ساخته شوند.
+3. **Generate (تولید کد)** — AST بهینه‌شده به یک رشته تابع جاوااسکریپت تبدیل می‌شود.
+
+یک template ساده مثل:
+
+```html
+<div class="hello">{{ msg }}</div>
+```
+
+تقریباً به این شکل کامپایل می‌شود:
+
+```js
+import {
+  createElementVNode as _createElementVNode,
+  toDisplayString as _toDisplayString,
+} from 'vue';
+
+function render(_ctx) {
+  return _createElementVNode(
+    'div',
+    { class: 'hello' },
+    _toDisplayString(_ctx.msg),
+  );
+}
+```
+
+nodeهای static بالای تابع hoist می‌شوند تا فقط یک‌بار ساخته شوند و از allocate شدن غیرضروری در re-renderها جلوگیری شود. nodeهای dynamic با patch flag (اعداد صحیح bitwise) ردیابی می‌شوند که به runtime می‌گویند دقیقاً چه چیزی تغییر کرده.
+
+## 🧠 سوال 72
+
+**شناسه**: vue-072
+**عنوان**: Vue scheduler چگونه به‌روزرسانی‌های reactive را دسته‌بندی و به تأخیر می‌اندازد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+Vue DOM را به‌صورت synchronous به‌روز نمی‌کند. در عوض، re-render کامپوننت را در یک صف قرار داده و به‌صورت async در یک microtask (با `Promise.then`) flush می‌کند.
+
+یعنی چندین تغییر state synchronous در یک task فقط یک re-render ایجاد می‌کنند:
+
+```js
+const count = ref(0);
+
+count.value++;
+count.value++;
+count.value++;
+// DOM یک بار به‌روز می‌شود، نه سه بار
+```
+
+Vue یک job queue نگهداری می‌کند. وقتی یک reactive effect trigger می‌شود، `queueJob(effect)` فراخوانی می‌شود. jobهای تکراری (یک render effect کامپوننت) با `id` داخلی deduplicate می‌شوند. بعد از پایان کد synchronous، microtask مربوطه `flushJobs()` را اجرا می‌کند، jobها بر اساس `id` مرتب (کامپوننت‌های والد قبل از فرزندان رندر می‌شوند) و به ترتیب اجرا می‌شوند.
+
+`nextTick()` یک promise برمی‌گرداند که بعد از چرخه flush فعلی resolve می‌شود:
+
+```js
+import { nextTick, ref } from 'vue';
+
+const msg = ref('hello');
+msg.value = 'world';
+
+await nextTick();
+// DOM حالا 'world' را نمایش می‌دهد
+```
+
+Watcherهای pre-flush (با `flush: 'pre'`، پیش‌فرض `watch`) قبل از re-render کامپوننت اجرا می‌شوند. Watcherهای post-flush (`flush: 'post'`) بعد از آن اجرا می‌شوند.
+
+## 🧠 سوال 73
+
+**شناسه**: vue-073
+**عنوان**: ردیابی effect در Vue 3 از نظر داخلی چگونه کار می‌کند (activeEffect و مجموعه‌های dependency)?
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+reactivity Vue 3 بر دو مفهوم بنا شده: **effectها** (توابعی که باید با تغییر وابستگی‌هاشان دوباره اجرا شوند) و **مجموعه‌های dependency** (Set هایی از effectها که یک property reactive می‌خوانند).
+
+Vue به‌صورت داخلی یک متغیر global `activeEffect` نگه می‌دارد که به effect در حال اجرا اشاره می‌کند. در طول getter reactive (trap `get` از Proxy)، تابع `track()` Vue:
+
+1. `activeEffect` را می‌خواند — اگر null باشد، چیزی ردیابی نمی‌شود.
+2. یک ساختار `WeakMap<target, Map<key, Set<effect>>>` جستجو (یا ایجاد) می‌کند.
+3. `activeEffect` را به `Set` مربوط به آن جفت `target.key` اضافه می‌کند.
+
+در طول setter reactive (trap `set` از Proxy)، تابع `trigger()` Vue:
+
+1. مجموعه dependency برای `target.key` را جستجو می‌کند.
+2. تمام effectهای آن مجموعه را برای اجرای مجدد از طریق Vue scheduler برنامه‌ریزی می‌کند.
+
+```js
+// pseudocode ساده‌شده
+let activeEffect = null;
+const targetMap = new WeakMap();
+
+function track(target, key) {
+  if (!activeEffect) return;
+  let depsMap = targetMap.get(target);
+  if (!depsMap) targetMap.set(target, (depsMap = new Map()));
+  let dep = depsMap.get(key);
+  if (!dep) depsMap.set(key, (dep = new Set()));
+  dep.add(activeEffect);
+}
+
+function trigger(target, key) {
+  const depsMap = targetMap.get(target);
+  if (!depsMap) return;
+  depsMap.get(key)?.forEach((effect) => effect());
+}
+```
+
+استفاده از `WeakMap` به این معناست که نقشه dependency برای یک شی وقتی خود شی garbage collect می‌شود، آزاد می‌شود.
+
+## 🧠 سوال 74
+
+**شناسه**: vue-074
+**عنوان**: تفاوت Client-Side Rendering (CSR) و Server-Side Rendering (SSR) در Vue چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+**CSR (رندر سمت client)** — سرور یک پوسته HTML حداقلی (اغلب فقط `<div id="app"></div>`) و یک JavaScript bundle ارسال می‌کند. مرورگر JS را دانلود، Vue را اجرا و DOM را کاملاً سمت client می‌سازد. Time to First Byte سریع است، اما صفحه تا پارس و اجرا شدن JS خالی است (Time to Interactive کند در شبکه‌های کند).
+
+**SSR (رندر سمت server)** — Vue درخت کامپوننت را روی سرور به یک رشته HTML رندر می‌کند. مرورگر بلافاصله HTML کامل دریافت می‌کند (First Contentful Paint سریع). بعد از load شدن bundle JS، Vue **hydrate** می‌کند — event listenerها را متصل و آن را interactive می‌کند بدون re-render.
+
+|          | CSR                 | SSR                  |
+| -------- | ------------------- | -------------------- |
+| رندر اول | کند (صفحه خالی)     | سریع (HTML آماده)    |
+| SEO      | نیاز به تنظیم اضافی | عالی                 |
+| بار سرور | کم                  | بیشتر                |
+| پیچیدگی  | ساده‌تر             | نیاز به سرور Node.js |
+
+راه‌حل رسمی SSR Vue، **Nuxt.js** است که تنظیمات سرور، routing مبتنی بر فایل و استراتژی hydration را abstract می‌کند.
+
+برای SSR غیر Node، `vue/server-renderer` می‌تواند رشته‌های HTML را از هر محیط سروری خروجی دهد.
+
+## 🧠 سوال 75
+
+**شناسه**: vue-075
+**عنوان**: الگوهای پیشرفته `provide` / `inject` — کلیدهای Symbol، injection reactive و مقادیر پیش‌فرض چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`provide` / `inject` سیستم dependency injection Vue برای به اشتراک‌گذاری داده در یک درخت کامپوننت بدون prop drilling است.
+
+**کلیدهای Symbol** از تداخل تصادفی کلیدها در کتابخانه‌ها یا codebases بزرگ جلوگیری می‌کنند:
+
+```js
+// keys.js
+export const USER_KEY = Symbol('user');
+```
+
+```js
+// کامپوننت Provider
+import { provide, ref } from 'vue';
+import { USER_KEY } from './keys';
+
+const user = ref({ name: 'علی' });
+provide(USER_KEY, user);
+```
+
+```js
+// کامپوننت فرزند
+import { inject } from 'vue';
+import { USER_KEY } from './keys';
+
+const user = inject(USER_KEY);
+```
+
+**Injection reactive** — ارائه یک مقدار `ref` یا `reactive` مقدار inject شده را زنده نگه می‌دارد:
+
+```js
+// در provider
+const theme = ref('light');
+provide('theme', theme); // خود ref را provide کنید، نه theme.value را
+
+// در consumer
+const theme = inject('theme'); // theme یک Ref<string> است
+```
+
+**مقادیر پیش‌فرض** — آرگومان دوم `inject` یک fallback است که وقتی provider‌ای پیدا نشد استفاده می‌شود:
+
+```js
+const theme = inject('theme', ref('light'));
+// یا یک factory function برای پیش‌فرض‌های گران:
+const config = inject('config', () => ({ debug: false }), true);
+```
+
+**Injection فقط خواندنی** — قبل از provide کردن با `readonly()` wrap کنید تا consumer‌ها نتوانند مقدار را mutate کنند.

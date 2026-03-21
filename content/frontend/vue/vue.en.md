@@ -1,7 +1,7 @@
 ---
 topic: vue
 language: en
-version: 2.6
+version: 2.7
 ---
 
 # Vue.js Interview Questions

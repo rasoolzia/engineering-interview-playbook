@@ -2515,3 +2515,198 @@ const config = inject('config', () => ({ debug: false }), true);
 ```
 
 **Read-only injection** — wrap with `readonly()` before providing to prevent consumers from mutating the value.
+
+## 🧠 Question 76
+
+**ID**: vue-076
+**Title**: What is the Vue rendering pipeline from state change to DOM update?
+**Difficulty**: Hard
+**Category**: Rendering & Internals
+
+### Answer 📄
+
+When reactive state changes, Vue's rendering pipeline follows these steps:
+
+1. **Trigger** — a reactive setter calls `trigger()`, scheduling the component's render effect in the job queue.
+2. **Scheduler flush** — on the next microtask, `flushJobs()` runs, processing queued render effects in parent-first order.
+3. **Re-render** — the component's render function runs, accessing reactive state (which is tracked) and producing a new **virtual DOM (vnode) tree**.
+4. **Diff (patch)** — Vue compares the new vnode tree to the previous tree. Using **patch flags** set by the compiler, Vue knows exactly which nodes and attributes are dynamic, skipping static parts entirely.
+5. **DOM update** — only the nodes that changed are updated in the real DOM via the runtime-dom module.
+6. **Post-flush hooks** — `onUpdated` hooks fire, and `watchEffect` / `watch` post-flush callbacks run.
+
+The compiler's static hoisting and patch flags are critical for performance — they allow the runtime to skip large subtrees that didn't change, making Vue updates sub-linear relative to tree size.
+
+## 🧠 Question 77
+
+**ID**: vue-077
+**Title**: What are the different component communication patterns in Vue?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+Vue provides several mechanisms for components to communicate:
+
+**1. Props (parent → child)** — the standard way to pass data down:
+
+```js
+defineProps({ title: String, count: Number });
+```
+
+**2. Emits (child → parent)** — the child fires events the parent listens to:
+
+```js
+const emit = defineEmits(['update:modelValue', 'close']);
+emit('close');
+```
+
+**3. v-model** — two-way binding shorthand using props + emits:
+
+```html
+<MyInput v-model="text" />
+<!-- expands to: :modelValue="text" @update:modelValue="text = $event" -->
+```
+
+**4. provide / inject** — ancestor → any descendant, bypasses intermediate components.
+
+**5. Pinia / Vuex** — cross-component state in a centralized store.
+
+**6. Template refs + defineExpose** — parent directly calls methods or reads state from a child:
+
+```js
+// Child exposes
+defineExpose({ reset, validate });
+// Parent
+const formRef = ref(null);
+formRef.value.validate();
+```
+
+**7. Event bus** — using a tiny mitt instance for truly decoupled communication between unrelated components. Use sparingly.
+
+## 🧠 Question 78
+
+**ID**: vue-078
+**Title**: What is `<Teleport>` and when should you use it?
+**Difficulty**: Medium
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`<Teleport>` renders its slot content into a different DOM node than where the component logically lives in the component tree.
+
+This is essential for modals, tooltips, dropdowns, and notifications — UI that must escape CSS `overflow: hidden` or `z-index` stacking contexts imposed by parent elements.
+
+```vue
+<template>
+  <button @click="open = true">Open Modal</button>
+
+  <Teleport to="body">
+    <div v-if="open" class="modal-overlay">
+      <div class="modal">
+        <p>Modal content</p>
+        <button @click="open = false">Close</button>
+      </div>
+    </div>
+  </Teleport>
+</template>
+```
+
+The `to` attribute accepts a CSS selector or an actual DOM element. The teleported content remains part of the component's logical tree — it inherits `provide`/`inject` from its parent component, and its event handlers work normally.
+
+`disabled` prop lets you conditionally disable teleporting:
+
+```vue
+<Teleport to="body" :disabled="isMobile">...</Teleport>
+```
+
+Multiple teleports can target the same container and are appended in order.
+
+## 🧠 Question 79
+
+**ID**: vue-079
+**Title**: What is `<Suspense>` and how does it handle async components?
+**Difficulty**: Hard
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`<Suspense>` is a built-in Vue component that coordinates the loading state of multiple async operations in its component subtree, showing fallback content until all async dependencies resolve.
+
+It has two named slots:
+
+- `#default` — the actual content (may contain async components or components with async `setup()`)
+- `#fallback` — shown while any default-slot component is still loading
+
+```vue
+<Suspense>
+  <template #default>
+    <AsyncDashboard />  <!-- has async setup() -->
+  </template>
+  <template #fallback>
+    <LoadingSpinner />
+  </template>
+</Suspense>
+```
+
+An async `setup()` is a component whose `setup` function is `async` or returns a Promise:
+
+```vue
+<script setup>
+const data = await fetch('/api/dashboard').then((r) => r.json());
+</script>
+```
+
+`<Suspense>` emits `@pending`, `@resolve`, and `@fallback` events for fine-grained control.
+
+**Nesting**: child `<Suspense>` boundaries handle their own loading independently.
+
+**Note**: `<Suspense>` is still experimental in some configurations and works best when combined with SSR streaming in frameworks like Nuxt 3.
+
+## 🧠 Question 80
+
+**ID**: vue-080
+**Title**: What are `v-model` modifiers and how do you create custom ones?
+**Difficulty**: Medium
+**Category**: Directives
+
+### Answer 📄
+
+Vue provides built-in `v-model` modifiers that transform the bound value:
+
+- `.trim` — strips leading/trailing whitespace from strings
+- `.number` — converts the input value to a number using `parseFloat`
+- `.lazy` — syncs the value on `change` event instead of `input`
+
+```html
+<input v-model.trim.lazy="username" />
+```
+
+**Custom modifiers** — when using `v-model` on a custom component, modifiers are passed as a `modelModifiers` prop (or `[propName]Modifiers` for named v-models):
+
+```vue
+<!-- Parent -->
+<MyInput v-model.capitalize="text" />
+```
+
+```vue
+<!-- MyInput.vue -->
+<script setup>
+const props = defineProps({
+  modelValue: String,
+  modelModifiers: { default: () => ({}) },
+});
+const emit = defineEmits(['update:modelValue']);
+
+function handleInput(e) {
+  let value = e.target.value;
+  if (props.modelModifiers.capitalize) {
+    value = value.charAt(0).toUpperCase() + value.slice(1);
+  }
+  emit('update:modelValue', value);
+}
+</script>
+
+<template>
+  <input :value="modelValue" @input="handleInput" />
+</template>
+```

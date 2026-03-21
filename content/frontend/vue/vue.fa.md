@@ -2515,3 +2515,198 @@ const config = inject('config', () => ({ debug: false }), true);
 ```
 
 **Injection فقط خواندنی** — قبل از provide کردن با `readonly()` wrap کنید تا consumer‌ها نتوانند مقدار را mutate کنند.
+
+## 🧠 سوال 76
+
+**شناسه**: vue-076
+**عنوان**: pipeline رندرینگ Vue از تغییر state تا به‌روزرسانی DOM چگونه است؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رندرینگ و ساختار داخلی
+
+### پاسخ 📄
+
+وقتی state reactive تغییر می‌کند، pipeline رندرینگ Vue این مراحل را طی می‌کند:
+
+1. **Trigger** — یک setter reactive، `trigger()` را فراخوانی کرده و render effect کامپوننت را در job queue برنامه‌ریزی می‌کند.
+2. **Flush scheduler** — در microtask بعدی، `flushJobs()` اجرا شده و render effectهای صف شده را به ترتیب والد-اول پردازش می‌کند.
+3. **Re-render** — تابع render کامپوننت اجرا شده، به state reactive دسترسی می‌یابد (که ردیابی می‌شود) و یک درخت **virtual DOM (vnode)** جدید تولید می‌کند.
+4. **Diff (patch)** — Vue درخت vnode جدید را با درخت قبلی مقایسه می‌کند. با استفاده از **patch flagهای** تنظیم‌شده توسط compiler، Vue دقیقاً می‌داند کدام nodeها و attributeها dynamic هستند و بخش‌های static را کاملاً رد می‌کند.
+5. **به‌روزرسانی DOM** — فقط nodeهایی که تغییر کرده‌اند از طریق ماژول runtime-dom در DOM واقعی به‌روز می‌شوند.
+6. **Post-flush hooks** — هوک‌های `onUpdated` اجرا می‌شوند و callback‌های post-flush از `watchEffect` / `watch` اجرا می‌شوند.
+
+static hoisting و patch flagهای compiler برای عملکرد حیاتی هستند — آن‌ها به runtime اجازه می‌دهند زیردرخت‌های بزرگ که تغییر نکرده‌اند را رد کند.
+
+## 🧠 سوال 77
+
+**شناسه**: vue-077
+**عنوان**: الگوهای مختلف ارتباط بین کامپوننت‌ها در Vue کدامند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+Vue مکانیزم‌های مختلفی برای ارتباط کامپوننت‌ها فراهم می‌کند:
+
+**۱. Props (والد → فرزند)** — روش استاندارد برای انتقال داده به پایین:
+
+```js
+defineProps({ title: String, count: Number });
+```
+
+**۲. Emits (فرزند → والد)** — فرزند رویدادهایی emit می‌کند که والد به آن‌ها گوش می‌دهد:
+
+```js
+const emit = defineEmits(['update:modelValue', 'close']);
+emit('close');
+```
+
+**۳. v-model** — two-way binding به عنوان خلاصه props + emits:
+
+```html
+<MyInput v-model="text" />
+<!-- گسترش می‌یابد به: :modelValue="text" @update:modelValue="text = $event" -->
+```
+
+**۴. provide / inject** — جد → هر فرزندی، از کامپوننت‌های میانی عبور می‌کند.
+
+**۵. Pinia / Vuex** — state مشترک بین کامپوننت‌ها در یک store مرکزی.
+
+**۶. Template refs + defineExpose** — والد مستقیماً متدها یا state فرزند را فراخوانی می‌کند:
+
+```js
+// فرزند expose می‌کند
+defineExpose({ reset, validate });
+// والد
+const formRef = ref(null);
+formRef.value.validate();
+```
+
+**۷. Event bus** — با استفاده از یک instance کوچک mitt برای ارتباط کاملاً مجزا بین کامپوننت‌های غیرمرتبط. با احتیاط استفاده کنید.
+
+## 🧠 سوال 78
+
+**شناسه**: vue-078
+**عنوان**: `<Teleport>` چیست و چه زمانی باید از آن استفاده کرد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`<Teleport>` محتوای slot خود را در یک نود DOM متفاوت از جایی که کامپوننت از نظر منطقی در درخت کامپوننت قرار دارد، رندر می‌کند.
+
+این برای modalها، tooltipها، dropdownها و notificationها ضروری است — رابط کاربری که باید از `overflow: hidden` یا stacking context های `z-index` اعمال‌شده توسط المنت‌های والد خارج شود.
+
+```vue
+<template>
+  <button @click="open = true">باز کردن Modal</button>
+
+  <Teleport to="body">
+    <div v-if="open" class="modal-overlay">
+      <div class="modal">
+        <p>محتوای modal</p>
+        <button @click="open = false">بستن</button>
+      </div>
+    </div>
+  </Teleport>
+</template>
+```
+
+attribute `to` یک CSS selector یا یک المنت DOM واقعی قبول می‌کند. محتوای teleport شده بخشی از درخت منطقی کامپوننت باقی می‌ماند — `provide`/`inject` از کامپوننت والدش به ارث می‌برد و event handlerهایش عادی کار می‌کنند.
+
+prop `disabled` به شما اجازه می‌دهد teleport کردن را به‌صورت شرطی غیرفعال کنید:
+
+```vue
+<Teleport to="body" :disabled="isMobile">...</Teleport>
+```
+
+چندین تله‌پورت می‌توانند یک کانتینر را هدف قرار دهند و به ترتیب به هم متصل شوند.
+
+## 🧠 سوال 79
+
+**شناسه**: vue-079
+**عنوان**: `<Suspense>` چیست و چگونه async componentها را مدیریت می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`<Suspense>` یک کامپوننت داخلی Vue است که حالت loading چندین عملیات async در زیردرخت کامپوننت‌هایش را هماهنگ می‌کند و محتوای fallback را نمایش می‌دهد تا زمانی که همه وابستگی‌های async resolve شوند.
+
+دو named slot دارد:
+
+- `#default` — محتوای اصلی (می‌تواند شامل async componentها یا کامپوننت‌هایی با `setup()` async باشد)
+- `#fallback` — هنگامی که هر کامپوننت default-slot هنوز در حال load شدن است نمایش داده می‌شود
+
+```vue
+<Suspense>
+  <template #default>
+    <AsyncDashboard />
+  </template>
+  <template #fallback>
+    <LoadingSpinner />
+  </template>
+</Suspense>
+```
+
+یک `setup()` async کامپوننتی است که تابع `setup` آن `async` است یا یک Promise برمی‌گرداند:
+
+```vue
+<script setup>
+const data = await fetch('/api/dashboard').then((r) => r.json());
+</script>
+```
+
+`<Suspense>` رویدادهای `@pending`، `@resolve` و `@fallback` برای کنترل دقیق emit می‌کند.
+
+**تودرتو**: مرزهای فرزند `<Suspense>` بارگذاری خود را به طور مستقل مدیریت می‌کنند.
+
+**نکته**: `<Suspense>` هنوز در برخی تنظیمات آزمایشی است و در ترکیب با SSR streaming در frameworkهایی مثل Nuxt 3 بهترین عملکرد را دارد.
+
+## 🧠 سوال 80
+
+**شناسه**: vue-080
+**عنوان**: modifier های `v-model` چیست و چگونه modifier سفارشی می‌سازید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Directive‌ها
+
+### پاسخ 📄
+
+Vue modifier های داخلی `v-model` را ارائه می‌دهد که مقدار bound شده را تبدیل می‌کنند:
+
+- `.trim` — فضای خالی ابتدا و انتهای رشته‌ها را حذف می‌کند
+- `.number` — مقدار input را با `parseFloat` به عدد تبدیل می‌کند
+- `.lazy` — مقدار را به جای رویداد `input` روی رویداد `change` sync می‌کند
+
+```html
+<input v-model.trim.lazy="username" />
+```
+
+**Modifier های سفارشی** — هنگام استفاده از `v-model` روی یک کامپوننت سفارشی، modifier ها به عنوان prop `modelModifiers` (یا `[propName]Modifiers` برای v-modelهای نام‌گذاری‌شده) ارسال می‌شوند:
+
+```vue
+<!-- Parent -->
+<MyInput v-model.capitalize="text" />
+```
+
+```vue
+<!-- MyInput.vue -->
+<script setup>
+const props = defineProps({
+  modelValue: String,
+  modelModifiers: { default: () => ({}) },
+});
+const emit = defineEmits(['update:modelValue']);
+
+function handleInput(e) {
+  let value = e.target.value;
+  if (props.modelModifiers.capitalize) {
+    value = value.charAt(0).toUpperCase() + value.slice(1);
+  }
+  emit('update:modelValue', value);
+}
+</script>
+
+<template>
+  <input :value="modelValue" @input="handleInput" />
+</template>
+```

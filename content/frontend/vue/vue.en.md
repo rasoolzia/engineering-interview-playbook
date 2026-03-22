@@ -2710,3 +2710,234 @@ function handleInput(e) {
   <input :value="modelValue" @input="handleInput" />
 </template>
 ```
+
+## 🧠 Question 81
+
+**ID**: vue-081
+**Title**: What is `<TransitionGroup>` and how does it differ from `<Transition>`?
+**Difficulty**: Medium
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`<Transition>` animates a single element or component entering and leaving the DOM.
+
+`<TransitionGroup>` animates a **list of elements** — it handles multiple items adding, removing, and reordering simultaneously, and supports the FLIP animation technique via the `v-move` class.
+
+Key differences:
+
+- `<TransitionGroup>` renders a real wrapper element by default (use `tag` prop or `tag=""` for fragment mode in Vue 3.1+).
+- Items must have a unique `key` for the FLIP calculations to work.
+- Supports `v-move` class applied to items that are repositioning (not just entering/leaving).
+
+```vue
+<TransitionGroup name="list" tag="ul">
+  <li v-for="item in items" :key="item.id">
+    {{ item.text }}
+  </li>
+</TransitionGroup>
+```
+
+```css
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+/* FLIP move transition */
+.list-move {
+  transition: transform 0.3s ease;
+}
+```
+
+## 🧠 Question 82
+
+**ID**: vue-082
+**Title**: How do you use Vue 3 with TypeScript for props and emits?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+Vue 3 has first-class TypeScript support. In `<script setup>` you can type props and emits using generic type arguments passed to the macros.
+
+**Typed props with `defineProps`:**
+
+```vue
+<script setup lang="ts">
+interface Props {
+  title: string;
+  count?: number;
+  items: string[];
+}
+
+const props = defineProps<Props>();
+</script>
+```
+
+**Default values for typed props** use `withDefaults`:
+
+```ts
+const props = withDefaults(defineProps<Props>(), {
+  count: 0,
+  items: () => [],
+});
+```
+
+**Typed emits with `defineEmits`:**
+
+```ts
+const emit = defineEmits<{
+  change: [value: string];
+  submit: [id: number, data: Record<string, unknown>];
+  close: [];
+}>();
+
+emit('change', 'new value');
+```
+
+This syntax (added in Vue 3.3) uses a type with labeled tuple members instead of function overloads, providing better IDE autocomplete for emit arguments.
+
+## 🧠 Question 83
+
+**ID**: vue-083
+**Title**: What are composables in Vue 3 and what are best practices for writing them?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+Composables are functions that encapsulate and reuse stateful logic using the Composition API. They are the Vue 3 equivalent of React hooks and replace Vue 2's mixins.
+
+A composable:
+
+- Has a `use` prefix by convention (`useFetch`, `useMousePosition`)
+- Can use `ref`, `reactive`, `computed`, `watch`, `onMounted`, etc.
+- Returns reactive state and/or functions
+
+```js
+// useFetch.js
+import { ref, watchEffect } from 'vue';
+
+export function useFetch(url) {
+  const data = ref(null);
+  const error = ref(null);
+  const loading = ref(false);
+
+  watchEffect(async (onCleanup) => {
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const res = await fetch(url.value ?? url, { signal: controller.signal });
+      data.value = await res.json();
+    } catch (e) {
+      if (e.name !== 'AbortError') error.value = e;
+    } finally {
+      loading.value = false;
+    }
+  });
+
+  return { data, error, loading };
+}
+```
+
+**Best practices:**
+
+- Accept refs as arguments to keep the composable reactive to changing inputs
+- Clean up side effects (timers, subscriptions) with `onUnmounted` or `onCleanup`
+- Return plain reactive references — don't destructure internal state before returning
+- Composables should only be called inside `setup()` or another composable
+
+## 🧠 Question 84
+
+**ID**: vue-084
+**Title**: What are template refs and how do you use them in Composition API?
+**Difficulty**: Easy
+**Category**: Composition API
+
+### Answer 📄
+
+Template refs give direct access to a DOM element or child component instance after the component is mounted.
+
+In `<script setup>`, declare a `ref` with the same name as the `ref` attribute on the element:
+
+```vue
+<script setup>
+import { ref, onMounted } from 'vue';
+
+const inputEl = ref(null);
+
+onMounted(() => {
+  inputEl.value.focus(); // access the real DOM element
+});
+</script>
+
+<template>
+  <input ref="inputEl" type="text" />
+</template>
+```
+
+For a **child component**, the ref points to the child's public interface. In `<script setup>` components, you must use `defineExpose` for the parent to access anything:
+
+```vue
+<!-- Child.vue -->
+<script setup>
+const count = ref(0);
+defineExpose({ count });
+</script>
+```
+
+```vue
+<!-- Parent.vue -->
+<script setup>
+const childRef = ref(null);
+// After mount: childRef.value.count is accessible
+</script>
+<template>
+  <Child ref="childRef" />
+</template>
+```
+
+**`v-for` with refs** — a ref on a `v-for` element populates with an array of DOM nodes after mount.
+
+## 🧠 Question 85
+
+**ID**: vue-085
+**Title**: What is the `watch` flush option and when does each flush timing run?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+The `flush` option in `watch` and `watchEffect` controls when the callback runs relative to Vue's component update cycle.
+
+**`flush: 'pre'` (default for `watch`)** — the callback runs before the component re-renders. Useful when you need to read or modify state that will then be reflected in the current render.
+
+**`flush: 'post'` (default for `watchEffect` when using `watchPostEffect`)** — runs after the component has re-rendered and the DOM has been updated. Use this when the callback needs to access the updated DOM.
+
+**`flush: 'sync'`** — runs synchronously, immediately when the reactive dependency changes. Bypasses the scheduler entirely. Use with extreme caution — can cause performance issues and multiple synchronous updates.
+
+```js
+import { watch, watchEffect, watchPostEffect, watchSyncEffect } from 'vue';
+
+// Runs before component update (pre is default for watch)
+watch(source, callback, { flush: 'pre' });
+
+// Runs after component update — can access updated DOM
+watch(source, callback, { flush: 'post' });
+
+// Convenience aliases
+watchPostEffect(() => {
+  /* post-flush */
+});
+watchSyncEffect(() => {
+  /* sync */
+});
+```

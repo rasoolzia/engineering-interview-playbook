@@ -2710,3 +2710,234 @@ function handleInput(e) {
   <input :value="modelValue" @input="handleInput" />
 </template>
 ```
+
+## 🧠 سوال 81
+
+**شناسه**: vue-081
+**عنوان**: `<TransitionGroup>` چیست و چه تفاوتی با `<Transition>` دارد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`<Transition>` یک المنت یا کامپوننت تکی را هنگام ورود و خروج از DOM animate می‌کند.
+
+`<TransitionGroup>` یک **لیست از المنت‌ها** را animate می‌کند — اضافه شدن، حذف شدن و مرتب‌سازی مجدد چندین آیتم به‌طور همزمان را مدیریت می‌کند و از تکنیک FLIP animation از طریق کلاس `v-move` پشتیبانی می‌کند.
+
+تفاوت‌های کلیدی:
+
+- `<TransitionGroup>` به‌طور پیش‌فرض یک المنت wrapper واقعی رندر می‌کند (از prop `tag` یا `tag=""` برای حالت fragment استفاده کنید).
+- آیتم‌ها باید `key` یکتا داشته باشند تا محاسبات FLIP کار کنند.
+- از کلاس `v-move` پشتیبانی می‌کند که روی آیتم‌های در حال جابه‌جایی اعمال می‌شود.
+
+```vue
+<TransitionGroup name="list" tag="ul">
+  <li v-for="item in items" :key="item.id">
+    {{ item.text }}
+  </li>
+</TransitionGroup>
+```
+
+```css
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+/* FLIP move transition */
+.list-move {
+  transition: transform 0.3s ease;
+}
+```
+
+## 🧠 سوال 82
+
+**شناسه**: vue-082
+**عنوان**: چگونه از TypeScript برای props و emits در Vue 3 استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+Vue 3 پشتیبانی first-class از TypeScript دارد. در `<script setup>` می‌توانید props و emits را با استفاده از آرگومان‌های type generic که به ماکروها ارسال می‌شوند، type کنید.
+
+**Props type شده با `defineProps`:**
+
+```vue
+<script setup lang="ts">
+interface Props {
+  title: string;
+  count?: number;
+  items: string[];
+}
+
+const props = defineProps<Props>();
+</script>
+```
+
+**مقادیر پیش‌فرض برای props type شده** از `withDefaults` استفاده می‌کنند:
+
+```ts
+const props = withDefaults(defineProps<Props>(), {
+  count: 0,
+  items: () => [],
+});
+```
+
+**Emits type شده با `defineEmits`:**
+
+```ts
+const emit = defineEmits<{
+  change: [value: string];
+  submit: [id: number, data: Record<string, unknown>];
+  close: [];
+}>();
+
+emit('change', 'مقدار جدید');
+```
+
+این سینتکس (اضافه‌شده در Vue 3.3) از یک type با اعضای tuple برچسب‌دار به جای function overloadها استفاده می‌کند و autocomplete بهتری برای آرگومان‌های emit فراهم می‌کند.
+
+## 🧠 سوال 83
+
+**شناسه**: vue-083
+**عنوان**: composableها در Vue 3 چیست و بهترین روش‌های نوشتن آن‌ها کدامند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+Composableها توابعی هستند که منطق stateful را با استفاده از Composition API کپسوله و reuse می‌کنند. معادل Vue 3 برای React hookها هستند و جایگزین mixinهای Vue 2 می‌شوند.
+
+یک composable:
+
+- به قرارداد از پیشوند `use` استفاده می‌کند (`useFetch`، `useMousePosition`)
+- می‌تواند از `ref`، `reactive`، `computed`، `watch`، `onMounted` و غیره استفاده کند
+- state reactive و/یا توابع برمی‌گرداند
+
+```js
+// useFetch.js
+import { ref, watchEffect } from 'vue';
+
+export function useFetch(url) {
+  const data = ref(null);
+  const error = ref(null);
+  const loading = ref(false);
+
+  watchEffect(async (onCleanup) => {
+    const controller = new AbortController();
+    onCleanup(() => controller.abort());
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const res = await fetch(url.value ?? url, { signal: controller.signal });
+      data.value = await res.json();
+    } catch (e) {
+      if (e.name !== 'AbortError') error.value = e;
+    } finally {
+      loading.value = false;
+    }
+  });
+
+  return { data, error, loading };
+}
+```
+
+**بهترین روش‌ها:**
+
+- refها را به عنوان آرگومان قبول کنید تا composable به ورودی‌های متغیر واکنش‌پذیر باشد
+- side effectها (تایمرها، subscriptionها) را با `onUnmounted` یا `onCleanup` پاکسازی کنید
+- ارجاعات reactive ساده برگردانید — state داخلی را قبل از بازگشت destructure نکنید
+- composableها باید فقط داخل `setup()` یا composable دیگری فراخوانی شوند
+
+## 🧠 سوال 84
+
+**شناسه**: vue-084
+**عنوان**: template refها چیست و چگونه از آن‌ها در Composition API استفاده می‌کنید؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+Template refها دسترسی مستقیم به یک المنت DOM یا instance کامپوننت فرزند را بعد از mount شدن کامپوننت فراهم می‌کنند.
+
+در `<script setup>`، یک `ref` با همان نام attribute `ref` روی المنت تعریف کنید:
+
+```vue
+<script setup>
+import { ref, onMounted } from 'vue';
+
+const inputEl = ref(null);
+
+onMounted(() => {
+  inputEl.value.focus(); // دسترسی به المنت DOM واقعی
+});
+</script>
+
+<template>
+  <input ref="inputEl" type="text" />
+</template>
+```
+
+برای **کامپوننت فرزند**، ref به interface عمومی فرزند اشاره می‌کند. در کامپوننت‌های `<script setup>`، باید از `defineExpose` استفاده کنید تا والد بتواند به چیزی دسترسی داشته باشد:
+
+```vue
+<!-- Child.vue -->
+<script setup>
+const count = ref(0);
+defineExpose({ count });
+</script>
+```
+
+```vue
+<!-- Parent.vue -->
+<script setup>
+const childRef = ref(null);
+// بعد از mount: childRef.value.count قابل دسترسی است
+</script>
+<template>
+  <Child ref="childRef" />
+</template>
+```
+
+**`v-for` با refs** — یک ref روی المنت `v-for` بعد از mount با آرایه‌ای از nodeهای DOM پر می‌شود.
+
+## 🧠 سوال 85
+
+**شناسه**: vue-085
+**عنوان**: گزینه `flush` در `watch` چیست و هر زمان‌بندی flush کِی اجرا می‌شود؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+گزینه `flush` در `watch` و `watchEffect` کنترل می‌کند که callback نسبت به چرخه به‌روزرسانی کامپوننت Vue چه زمانی اجرا شود.
+
+**`flush: 'pre'` (پیش‌فرض برای `watch`)** — callback قبل از re-render کامپوننت اجرا می‌شود. مفید وقتی نیاز دارید state ای را بخوانید یا تغییر دهید که سپس در render فعلی منعکس شود.
+
+**`flush: 'post'` (پیش‌فرض برای `watchEffect` هنگام استفاده از `watchPostEffect`)** — بعد از re-render کامپوننت و به‌روزرسانی DOM اجرا می‌شود. هنگامی استفاده کنید که callback نیاز به دسترسی به DOM به‌روز شده دارد.
+
+**`flush: 'sync'`** — به‌صورت synchronous اجرا می‌شود، بلافاصله وقتی وابستگی reactive تغییر می‌کند. scheduler را کاملاً دور می‌زند. با احتیاط بسیار زیاد استفاده کنید.
+
+```js
+import { watch, watchPostEffect, watchSyncEffect } from 'vue';
+
+// قبل از به‌روزرسانی کامپوننت اجرا می‌شود (pre پیش‌فرض watch است)
+watch(source, callback, { flush: 'pre' });
+
+// بعد از به‌روزرسانی کامپوننت اجرا می‌شود
+watch(source, callback, { flush: 'post' });
+
+// aliasهای راحت
+watchPostEffect(() => {
+  /* post-flush */
+});
+watchSyncEffect(() => {
+  /* sync */
+});
+```

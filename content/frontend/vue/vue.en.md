@@ -2941,3 +2941,201 @@ watchSyncEffect(() => {
   /* sync */
 });
 ```
+
+## 🧠 Question 86
+
+**ID**: vue-086
+**Title**: What is `defineOptions` and what problems does it solve?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+`defineOptions` is a compiler macro (added in Vue 3.3) that lets you declare component options — such as `name`, `inheritAttrs`, or custom options — inside `<script setup>` without needing a separate `<script>` block.
+
+Before `defineOptions`, if you needed to set `inheritAttrs: false` alongside `<script setup>`, you had to use two script blocks:
+
+```vue
+<!-- Old approach — required two <script> blocks -->
+<script>
+export default { inheritAttrs: false, name: 'MyWrapper' };
+</script>
+<script setup>
+// ...
+</script>
+```
+
+With `defineOptions`:
+
+```vue
+<script setup>
+defineOptions({
+  name: 'MyWrapper',
+  inheritAttrs: false,
+});
+
+import { useAttrs } from 'vue';
+const attrs = useAttrs();
+</script>
+
+<template>
+  <div class="wrapper" v-bind="attrs">
+    <slot />
+  </div>
+</template>
+```
+
+It cannot declare `props`, `emits`, `expose`, or `setup` — those remain handled by their own macros.
+
+## 🧠 Question 87
+
+**ID**: vue-087
+**Title**: What causes hydration mismatches in Vue SSR and how do you fix them?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+A hydration mismatch occurs when the HTML rendered on the server differs from what Vue would render on the client. Vue logs a warning and falls back to client-side rendering for the mismatched subtree.
+
+**Common causes:**
+
+1. **Non-deterministic rendering** — using `Math.random()`, `Date.now()`, or `uuid()` directly in templates without seeding consistently.
+2. **Browser-only APIs** — checking `window`, `localStorage`, or `document` in `setup()` without guarding with `onMounted` or `import.meta.client`.
+3. **Invalid HTML structure** — e.g., a `<p>` inside another `<p>`, which browsers silently fix.
+4. **User agent based differences** — rendering different content based on the HTTP `User-Agent` header.
+
+**Fixes:**
+
+```vue
+<script setup>
+import { ref, onMounted } from 'vue';
+
+const isClient = ref(false);
+onMounted(() => {
+  isClient.value = true;
+});
+</script>
+
+<template>
+  <!-- Only renders on client, no mismatch -->
+  <ClientOnly>
+    <DatePicker />
+  </ClientOnly>
+
+  <!-- Or guard manually -->
+  <div v-if="isClient">{{ new Date().toLocaleString() }}</div>
+</template>
+```
+
+Use `v-if="false"` with a `<ClientOnly>` wrapper (available in Nuxt) or the `suppressHydrationWarning` attribute for intentional differences.
+
+## 🧠 Question 88
+
+**ID**: vue-088
+**Title**: How does Vue handle array mutation reactivity?
+**Difficulty**: Medium
+**Category**: Reactivity System
+
+### Answer 📄
+
+Vue 3's `reactive()` uses Proxy to intercept all property accesses including array index reads and length changes — so array mutations are reactive without any special wrapping.
+
+Both indexed access and mutation methods trigger reactive updates:
+
+```js
+import { reactive } from 'vue';
+
+const list = reactive(['a', 'b', 'c']);
+
+list.push('d'); // triggers update
+list[0] = 'z'; // triggers update
+list.length = 1; // triggers update
+list.sort(); // triggers update
+list.splice(1, 1); // triggers update
+```
+
+This differs from Vue 2, where only specific mutation methods (`push`, `pop`, `splice`, etc.) were intercepted, and direct index assignment (`arr[0] = 'x'`) did not trigger updates.
+
+For `ref` arrays:
+
+```js
+const items = ref(['a', 'b', 'c']);
+items.value.push('d'); // reactive
+items.value = [...items.value, 'e']; // also reactive — replaces the whole array
+```
+
+**Replacing the array** is often the cleaner pattern when doing filtering or mapping, as it ensures Vue sees the change and properly diffs the new and old lists.
+
+## 🧠 Question 89
+
+**ID**: vue-089
+**Title**: What is `shallowRef` and when should you use it over `ref`?
+**Difficulty**: Medium
+**Category**: Reactivity System
+
+### Answer 📄
+
+`shallowRef` creates a ref where only the `.value` assignment itself is reactive — the inner object's properties are **not** made deeply reactive.
+
+```js
+import { shallowRef } from 'vue';
+
+const state = shallowRef({ count: 0 });
+
+state.value.count++; // does NOT trigger an update
+state.value = { count: 1 }; // DOES trigger an update (replacing .value)
+```
+
+**When to use `shallowRef`:**
+
+1. **Large data structures** — wrapping a deeply nested object with `ref` makes every property reactive, which is expensive. If you only ever replace the entire object (not mutate it), `shallowRef` avoids the cost.
+2. **External/immutable data** — data from an API response that you won't mutate in place.
+3. **Non-reactive objects** — objects that are not meant to be reactive but are stored for reference (e.g., a canvas context or a class instance). Use alongside `markRaw` for those.
+
+```js
+// Expensive — creates deep proxy for a 10,000-item dataset
+const data = ref(largeDataset);
+
+// Better — only the .value swap is tracked
+const data = shallowRef(largeDataset);
+data.value = newDataset; // triggers a re-render
+```
+
+`triggerRef(shallowRef)` forces an update even when mutating the inner object directly.
+
+## 🧠 Question 90
+
+**ID**: vue-090
+**Title**: What are multi-root components (fragments) in Vue 3?
+**Difficulty**: Easy
+**Category**: Components
+
+### Answer 📄
+
+In Vue 3, a component template can have multiple root elements — a feature called **fragments**. Vue 2 required a single root element.
+
+```vue
+<!-- Valid in Vue 3 -->
+<template>
+  <header>Header</header>
+  <main>Content</main>
+  <footer>Footer</footer>
+</template>
+```
+
+**Important implication for attribute inheritance**: with multiple root elements, Vue cannot determine which element should receive inherited attributes (class, style, event listeners). Therefore attribute inheritance is **disabled by default** for multi-root components, and you must explicitly apply `$attrs` using `v-bind="$attrs"` on the intended element.
+
+```vue
+<script setup>
+import { useAttrs } from 'vue';
+const attrs = useAttrs();
+</script>
+
+<template>
+  <header v-bind="attrs">...</header>
+  <main>...</main>
+</template>
+```
+
+Fragments reduce unnecessary wrapper `<div>` elements that were previously added solely to satisfy Vue 2's single-root requirement, resulting in cleaner markup.

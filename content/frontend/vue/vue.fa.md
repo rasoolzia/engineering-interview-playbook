@@ -2941,3 +2941,201 @@ watchSyncEffect(() => {
   /* sync */
 });
 ```
+
+## 🧠 سوال 86
+
+**شناسه**: vue-086
+**عنوان**: `defineOptions` چیست و چه مشکلاتی را حل می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+`defineOptions` یک compiler macro است (اضافه‌شده در Vue 3.3) که به شما اجازه می‌دهد گزینه‌های کامپوننت — مثل `name`، `inheritAttrs` یا گزینه‌های سفارشی — را داخل `<script setup>` بدون نیاز به یک بلاک `<script>` جداگانه تعریف کنید.
+
+قبل از `defineOptions`، اگر نیاز داشتید `inheritAttrs: false` را کنار `<script setup>` تنظیم کنید، باید از دو بلاک script استفاده می‌کردید:
+
+```vue
+<!-- رویکرد قدیمی — نیاز به دو بلاک <script> داشت -->
+<script>
+export default { inheritAttrs: false, name: 'MyWrapper' };
+</script>
+<script setup>
+// ...
+</script>
+```
+
+با `defineOptions`:
+
+```vue
+<script setup>
+defineOptions({
+  name: 'MyWrapper',
+  inheritAttrs: false,
+});
+
+import { useAttrs } from 'vue';
+const attrs = useAttrs();
+</script>
+
+<template>
+  <div class="wrapper" v-bind="attrs">
+    <slot />
+  </div>
+</template>
+```
+
+نمی‌توان `props`، `emits`، `expose` یا `setup` را تعریف کرد — آن‌ها توسط ماکروهای مخصوص خودشان مدیریت می‌شوند.
+
+## 🧠 سوال 87
+
+**شناسه**: vue-087
+**عنوان**: چه چیزی باعث hydration mismatch در Vue SSR می‌شود و چگونه آن را برطرف می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+یک hydration mismatch زمانی رخ می‌دهد که HTML رندر شده روی سرور با آنچه Vue روی client رندر می‌کند متفاوت باشد. Vue یک warning log می‌کند و به client-side rendering برای زیردرخت ناهماهنگ fallback می‌کند.
+
+**دلایل رایج:**
+
+1. **رندر غیرقطعی** — استفاده مستقیم از `Math.random()`، `Date.now()` یا `uuid()` در templateها.
+2. **API‌های مخصوص browser** — بررسی `window`، `localStorage` یا `document` در `setup()` بدون گارد با `onMounted`.
+3. **ساختار HTML نامعتبر** — مثلاً یک `<p>` داخل `<p>` دیگر که مرورگرها بی‌سروصدا درست می‌کنند.
+4. **تفاوت‌های مبتنی بر user agent** — رندر محتوای متفاوت بر اساس هدر HTTP `User-Agent`.
+
+**راه‌حل‌ها:**
+
+```vue
+<script setup>
+import { ref, onMounted } from 'vue';
+
+const isClient = ref(false);
+onMounted(() => {
+  isClient.value = true;
+});
+</script>
+
+<template>
+  <!-- فقط روی client رندر می‌شود، بدون mismatch -->
+  <ClientOnly>
+    <DatePicker />
+  </ClientOnly>
+
+  <!-- یا گارد دستی -->
+  <div v-if="isClient">{{ new Date().toLocaleString() }}</div>
+</template>
+```
+
+از `v-if="false"` با wrapper `<ClientOnly>` (موجود در Nuxt) یا attribute `suppressHydrationWarning` برای تفاوت‌های عمدی استفاده کنید.
+
+## 🧠 سوال 88
+
+**شناسه**: vue-088
+**عنوان**: Vue چگونه mutation‌های آرایه را به‌صورت reactive مدیریت می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+`reactive()` در Vue 3 از Proxy برای رهگیری تمام دسترسی‌های property استفاده می‌کند، از جمله خواندن ایندکس آرایه و تغییر `length` — بنابراین mutation‌های آرایه بدون هیچ wrapping خاصی reactive هستند.
+
+هم دسترسی index‌گذاری و هم متدهای mutation به‌روزرسانی‌های reactive را trigger می‌کنند:
+
+```js
+import { reactive } from 'vue';
+
+const list = reactive(['a', 'b', 'c']);
+
+list.push('d'); // به‌روزرسانی trigger می‌کند
+list[0] = 'z'; // به‌روزرسانی trigger می‌کند
+list.length = 1; // به‌روزرسانی trigger می‌کند
+list.sort(); // به‌روزرسانی trigger می‌کند
+list.splice(1, 1); // به‌روزرسانی trigger می‌کند
+```
+
+این با Vue 2 متفاوت است، جایی که فقط متدهای mutation خاص (`push`، `pop`، `splice` و غیره) رهگیری می‌شدند و انتساب مستقیم ایندکس به‌روزرسانی را trigger نمی‌کرد.
+
+برای آرایه‌های `ref`:
+
+```js
+const items = ref(['a', 'b', 'c']);
+items.value.push('d'); // reactive
+items.value = [...items.value, 'e']; // همچنین reactive — کل آرایه را جایگزین می‌کند
+```
+
+**جایگزین کردن آرایه** اغلب الگوی تمیزتری است هنگام فیلتر کردن یا map کردن، زیرا اطمینان می‌دهد Vue تغییر را می‌بیند و لیست‌های جدید و قدیمی را به‌درستی diff می‌کند.
+
+## 🧠 سوال 89
+
+**شناسه**: vue-089
+**عنوان**: `shallowRef` چیست و چه زمانی باید به جای `ref` استفاده کرد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+`shallowRef` یک ref می‌سازد که فقط خود انتساب `.value` reactive است — property‌های شیء داخلی **به‌صورت عمیق** reactive نمی‌شوند.
+
+```js
+import { shallowRef } from 'vue';
+
+const state = shallowRef({ count: 0 });
+
+state.value.count++; // به‌روزرسانی trigger نمی‌کند
+state.value = { count: 1 }; // به‌روزرسانی trigger می‌کند (جایگزین کردن .value)
+```
+
+**چه زمانی از `shallowRef` استفاده کنید:**
+
+1. **ساختارهای داده بزرگ** — wrapping یک شیء deeply nested با `ref` هر property را reactive می‌کند که گران است. اگر همیشه کل شیء را جایگزین می‌کنید (نه mutate)، `shallowRef` این هزینه را می‌پرهیزد.
+2. **داده‌های خارجی/immutable** — داده‌های پاسخ API که در جای خود mutate نمی‌کنید.
+3. **اشیاء غیر-reactive** — اشیایی که قرار نیست reactive باشند اما برای reference ذخیره می‌شوند.
+
+```js
+// گران — proxy عمیق برای یک dataset ۱۰،۰۰۰ آیتمی می‌سازد
+const data = ref(largeDataset);
+
+// بهتر — فقط تعویض .value ردیابی می‌شود
+const data = shallowRef(largeDataset);
+data.value = newDataset; // یک re-render trigger می‌کند
+```
+
+`triggerRef(shallowRef)` حتی هنگام mutate مستقیم شیء داخلی، به‌روزرسانی را اجبار می‌کند.
+
+## 🧠 سوال 90
+
+**شناسه**: vue-090
+**عنوان**: کامپوننت‌های multi-root (fragment‌ها) در Vue 3 چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+در Vue 3، یک template کامپوننت می‌تواند چندین المنت root داشته باشد — ویژگی‌ای به نام **fragmentها**. Vue 2 به یک المنت root تکی نیاز داشت.
+
+```vue
+<!-- در Vue 3 معتبر است -->
+<template>
+  <header>هدر</header>
+  <main>محتوا</main>
+  <footer>فوتر</footer>
+</template>
+```
+
+**پیامد مهم برای attribute inheritance**: با چندین المنت root، Vue نمی‌تواند تعیین کند کدام المنت باید attribute‌های به‌ارث‌رسیده (class، style، event listenerها) را دریافت کند. بنابراین attribute inheritance به‌طور پیش‌فرض **غیرفعال** است و باید صریحاً `$attrs` را با `v-bind="$attrs"` روی المنت مورد نظر اعمال کنید.
+
+```vue
+<script setup>
+import { useAttrs } from 'vue';
+const attrs = useAttrs();
+</script>
+
+<template>
+  <header v-bind="attrs">...</header>
+  <main>...</main>
+</template>
+```
+
+Fragmentها نیاز به المنت `<div>` اضافی که صرفاً برای پاسخ به نیاز Vue 2 به single-root اضافه می‌شد را حذف می‌کنند.

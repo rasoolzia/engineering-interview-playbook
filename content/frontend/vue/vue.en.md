@@ -3139,3 +3139,212 @@ const attrs = useAttrs();
 ```
 
 Fragments reduce unnecessary wrapper `<div>` elements that were previously added solely to satisfy Vue 2's single-root requirement, resulting in cleaner markup.
+
+## 🧠 Question 91
+
+**ID**: vue-091
+**Title**: What is `app.config.errorHandler` and how do you use it for global error handling?
+**Difficulty**: Medium
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`app.config.errorHandler` registers a global handler that catches errors thrown during component rendering, lifecycle hooks, and event handlers that are not caught by local `onErrorCaptured` hooks.
+
+It receives three arguments: the error, the component instance, and a string describing where the error occurred.
+
+```js
+// main.js
+import { createApp } from 'vue';
+import App from './App.vue';
+
+const app = createApp(App);
+
+app.config.errorHandler = (error, instance, info) => {
+  // info is a string like 'setup function', 'v-on handler', etc.
+  console.error('Global Vue error:', error);
+  console.log('Component:', instance?.$options.name ?? 'unknown');
+  console.log('Location:', info);
+
+  // Send to error tracking service
+  Sentry.captureException(error, { extra: { info } });
+};
+
+app.mount('#app');
+```
+
+**Error propagation order:**
+
+1. `onErrorCaptured` on parent components — can suppress by returning `false`
+2. `app.config.errorHandler` — catches anything not suppressed
+
+`app.config.warnHandler` works similarly but for Vue warnings (only active in development).
+
+## 🧠 Question 92
+
+**ID**: vue-092
+**Title**: What is the difference between `v-if` and `v-show` at the DOM level?
+**Difficulty**: Easy
+**Category**: Directives
+
+### Answer 📄
+
+`v-if` and `v-show` both conditionally display elements, but they work differently at the DOM level.
+
+**`v-if`** — completely adds or removes the element from the DOM. When false, the element (and its component) is destroyed. When true, it is created fresh. This means lifecycle hooks (`onMounted`, `onUnmounted`) fire on each toggle.
+
+**`v-show`** — always renders the element in the DOM, but toggles its `display` CSS property. The element is created once and never destroyed. Lifecycle hooks only fire once on initial mount.
+
+```vue
+<template>
+  <!-- Element is destroyed/created on each toggle -->
+  <HeavyComponent v-if="isVisible" />
+
+  <!-- Element stays in DOM, only display:none toggles -->
+  <HeavyComponent v-show="isVisible" />
+</template>
+```
+
+**When to use which:**
+
+- `v-show` is better when the condition toggles frequently and the element is expensive to re-create (e.g., a chart or rich editor).
+- `v-if` is better when the element rarely toggles or when you want to avoid mounting the component entirely until needed (lazy initialization). Also use `v-if` when the element contains resources that should not exist in the DOM (e.g., media players or subscriptions).
+
+**`v-if` has higher toggle cost; `v-show` has higher initial render cost.**
+
+## 🧠 Question 93
+
+**ID**: vue-093
+**Title**: How does Vue's virtual DOM diffing (patching) algorithm work?
+**Difficulty**: Hard
+**Category**: Rendering & Internals
+
+### Answer 📄
+
+Vue's patch algorithm compares two vnode trees and produces the minimal set of DOM operations needed to update the real DOM.
+
+**Key strategies:**
+
+1. **Same-level comparison only** — Vue never compares nodes across different levels. If a node's type changes (e.g., `<div>` → `<span>`), the old subtree is destroyed and a new one created.
+
+2. **Keyed lists** — when reconciling children with `key` attributes, Vue builds a key-to-index map and uses the **longest increasing subsequence (LIS)** algorithm to determine the minimum moves needed to reorder DOM nodes.
+
+3. **Patch flags (compiler optimization)** — the Vue template compiler annotates vnodes with bitwise patch flags indicating exactly what is dynamic (text content, class, style, props, etc.). The runtime uses these flags to skip static checks entirely.
+
+```js
+// Compiler output for <div class="static" :title="title">{{ msg }}</div>
+createElementVNode(
+  'div',
+  { class: 'static', title: title },
+  msg,
+  PatchFlags.CLASS | PatchFlags.TEXT, // only check class and text
+);
+```
+
+4. **Block tree** — the compiler groups dynamic nodes into "blocks". During patching, Vue only walks the flat list of dynamic nodes within a block, skipping all static structure.
+
+The result is that Vue's runtime patch is much faster than a naive tree diff because the compiler has already done the heavy lifting at build time.
+
+## 🧠 Question 94
+
+**ID**: vue-094
+**Title**: What is the `Options API` vs `Composition API` and when should you choose each?
+**Difficulty**: Easy
+**Category**: Vue Basics
+
+### Answer 📄
+
+Vue 3 supports two ways of writing component logic.
+
+**Options API** organizes code by option type — `data`, `computed`, `methods`, `watch`, `lifecycle hooks`. It is approachable for beginners and aligns with Vue 2.
+
+```js
+export default {
+  data() {
+    return { count: 0 };
+  },
+  computed: {
+    double() {
+      return this.count * 2;
+    },
+  },
+  methods: {
+    increment() {
+      this.count++;
+    },
+  },
+};
+```
+
+**Composition API** organizes code by logical concern. Related logic (state, computed, watchers) for one feature lives together rather than being split across options.
+
+```vue
+<script setup>
+import { ref, computed } from 'vue';
+
+const count = ref(0);
+const double = computed(() => count.value * 2);
+function increment() {
+  count.value++;
+}
+</script>
+```
+
+**When to choose:**
+
+|                  | Options API                 | Composition API            |
+| ---------------- | --------------------------- | -------------------------- |
+| New to Vue       | More approachable           | Steeper learning curve     |
+| Large components | Code spread across sections | Logic grouped by feature   |
+| Logic reuse      | Mixins (problematic)        | Composables (clean)        |
+| TypeScript       | More inference issues       | Excellent type inference   |
+| Team familiarity | Vue 2 teams                 | Preferred for new projects |
+
+Both APIs are fully supported in Vue 3 and can be mixed within the same project.
+
+## 🧠 Question 95
+
+**ID**: vue-095
+**Title**: How do you implement route-level code splitting with dynamic imports in Vue Router?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Route-level code splitting delays loading a route's component bundle until the user navigates to that route, reducing the initial JavaScript payload.
+
+Use a dynamic `import()` function as the component value in the route definition:
+
+```js
+const router = createRouter({
+  routes: [
+    {
+      path: '/',
+      component: () => import('./views/HomeView.vue'),
+    },
+    {
+      path: '/dashboard',
+      component: () => import('./views/DashboardView.vue'),
+    },
+    {
+      path: '/admin',
+      // Webpack/Vite magic comment to name the chunk
+      component: () =>
+        import(/* webpackChunkName: "admin" */ './views/AdminView.vue'),
+    },
+  ],
+});
+```
+
+Vite and Webpack both understand dynamic `import()` and produce separate JavaScript chunks for each route automatically.
+
+**Grouping related routes into one chunk:**
+
+```js
+// In Vite — use the same rollupOptions chunk
+component: () => import('./views/admin/Dashboard.vue'),
+component: () => import('./views/admin/Users.vue'),
+// Use vite.config.js rollupOptions.output.manualChunks to group
+```
+
+**Prefetching** — add `/* @vite-prefetch */` or configure `prefetch` in the router to proactively load chunks for likely-next routes.

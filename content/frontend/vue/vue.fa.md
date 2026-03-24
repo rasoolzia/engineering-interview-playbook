@@ -3139,3 +3139,212 @@ const attrs = useAttrs();
 ```
 
 Fragmentها نیاز به المنت `<div>` اضافی که صرفاً برای پاسخ به نیاز Vue 2 به single-root اضافه می‌شد را حذف می‌کنند.
+
+## 🧠 سوال 91
+
+**شناسه**: vue-091
+**عنوان**: `app.config.errorHandler` چیست و چگونه از آن برای خطاهای global استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`app.config.errorHandler` یک handler global ثبت می‌کند که خطاهای پرتاب‌شده در طول رندر کامپوننت، lifecycle hookها و event handlerهایی که توسط هوک‌های `onErrorCaptured` محلی گرفته نشده‌اند را catch می‌کند.
+
+سه آرگومان دریافت می‌کند: خطا، instance کامپوننت و یک رشته توضیح‌دهنده محل رخداد خطا.
+
+```js
+// main.js
+import { createApp } from 'vue';
+import App from './App.vue';
+
+const app = createApp(App);
+
+app.config.errorHandler = (error, instance, info) => {
+  // info یک رشته مثل 'setup function'، 'v-on handler' و غیره است
+  console.error('خطای global Vue:', error);
+  console.log('کامپوننت:', instance?.$options.name ?? 'نامشخص');
+  console.log('محل:', info);
+
+  // ارسال به سرویس ردیابی خطا
+  Sentry.captureException(error, { extra: { info } });
+};
+
+app.mount('#app');
+```
+
+**ترتیب propagation خطا:**
+
+1. `onErrorCaptured` روی کامپوننت‌های والد — می‌تواند با return کردن `false` suppress کند
+2. `app.config.errorHandler` — هر چیزی که suppress نشده را catch می‌کند
+
+`app.config.warnHandler` به طور مشابه کار می‌کند اما برای هشدارهای Vue (فقط در توسعه فعال است).
+
+## 🧠 سوال 92
+
+**شناسه**: vue-092
+**عنوان**: تفاوت `v-if` و `v-show` در سطح DOM چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Directive‌ها
+
+### پاسخ 📄
+
+`v-if` و `v-show` هر دو المنت‌ها را به‌صورت شرطی نمایش می‌دهند، اما در سطح DOM به روش‌های مختلف کار می‌کنند.
+
+**`v-if`** — المنت را کاملاً از DOM اضافه یا حذف می‌کند. وقتی false است، المنت (و کامپوننتش) destroy می‌شود. وقتی true است، تازه ساخته می‌شود. یعنی lifecycle hookها (`onMounted`، `onUnmounted`) در هر toggle اجرا می‌شوند.
+
+**`v-show`** — المنت را همیشه در DOM رندر می‌کند، اما property CSS `display` آن را toggle می‌کند. المنت یک‌بار ساخته شده و هرگز destroy نمی‌شود. Lifecycle hookها فقط یک‌بار در mount اولیه اجرا می‌شوند.
+
+```vue
+<template>
+  <!-- المنت در هر toggle destroy/create می‌شود -->
+  <HeavyComponent v-if="isVisible" />
+
+  <!-- المنت در DOM باقی می‌ماند، فقط display:none toggle می‌شود -->
+  <HeavyComponent v-show="isVisible" />
+</template>
+```
+
+**چه زمانی از کدام استفاده کنید:**
+
+- `v-show` بهتر است وقتی condition به‌طور مکرر toggle می‌شود و المنت re-create کردنش گران است.
+- `v-if` بهتر است وقتی المنت به‌ندرت toggle می‌شود یا می‌خواهید از mount شدن کامپوننت تا زمان نیاز جلوگیری کنید.
+
+**`v-if` هزینه toggle بالاتری دارد؛ `v-show` هزینه render اولیه بالاتری دارد.**
+
+## 🧠 سوال 93
+
+**شناسه**: vue-093
+**عنوان**: الگوریتم diffing (patching) virtual DOM در Vue چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رندرینگ و ساختار داخلی
+
+### پاسخ 📄
+
+الگوریتم patch Vue دو درخت vnode را مقایسه می‌کند و حداقل مجموعه عملیات DOM لازم برای به‌روزرسانی DOM واقعی را تولید می‌کند.
+
+**استراتژی‌های کلیدی:**
+
+1. **مقایسه فقط در همان سطح** — Vue هرگز nodeها را در سطوح مختلف مقایسه نمی‌کند. اگر نوع یک node تغییر کند (مثلاً `<div>` → `<span>`)، زیردرخت قدیمی destroy و یک جدید ساخته می‌شود.
+
+2. **لیست‌های Keyed** — هنگام reconcile کردن فرزندان با attribute `key`، Vue یک نقشه key-به-ایندکس می‌سازد و از الگوریتم **Longest Increasing Subsequence (LIS)** برای تعیین حداقل حرکت‌های لازم برای مرتب‌سازی مجدد nodeهای DOM استفاده می‌کند.
+
+3. **Patch flagها (بهینه‌سازی compiler)** — compiler template Vue vnodeها را با patch flagهای bitwise حاشیه‌نویسی می‌کند که دقیقاً مشخص می‌کند چه چیزی dynamic است. runtime از این flagها برای رد کردن کامل بررسی‌های static استفاده می‌کند.
+
+```js
+// خروجی compiler برای <div class="static" :title="title">{{ msg }}</div>
+createElementVNode(
+  'div',
+  { class: 'static', title: title },
+  msg,
+  PatchFlags.CLASS | PatchFlags.TEXT, // فقط class و text را بررسی کن
+);
+```
+
+4. **Block tree** — compiler nodeهای dynamic را در "block"ها گروه‌بندی می‌کند. در طول patching، Vue فقط لیست مسطح nodeهای dynamic درون یک block را پیمایش می‌کند و از کل ساختار static رد می‌شود.
+
+نتیجه این است که پچ زمان اجرای Vue بسیار سریع‌تر از یک diff درختی ساده است زیرا کامپایلر قبلاً کارهای سنگین را در زمان ساخت انجام داده است.
+
+## 🧠 سوال 94
+
+**شناسه**: vue-094
+**عنوان**: Options API در مقابل Composition API — چه زمانی کدام را انتخاب کنید؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: مبانی Vue
+
+### پاسخ 📄
+
+Vue 3 دو روش برای نوشتن منطق کامپوننت پشتیبانی می‌کند.
+
+**Options API** کد را بر اساس نوع گزینه سازماندهی می‌کند — `data`، `computed`، `methods`، `watch`، lifecycle hookها. برای مبتدیان قابل دسترس‌تر است و با Vue 2 هماهنگ است.
+
+```js
+export default {
+  data() {
+    return { count: 0 };
+  },
+  computed: {
+    double() {
+      return this.count * 2;
+    },
+  },
+  methods: {
+    increment() {
+      this.count++;
+    },
+  },
+};
+```
+
+**Composition API** کد را بر اساس concern منطقی سازماندهی می‌کند. منطق مرتبط (state، computed، watcherها) برای یک ویژگی کنار هم قرار می‌گیرد.
+
+```vue
+<script setup>
+import { ref, computed } from 'vue';
+
+const count = ref(0);
+const double = computed(() => count.value * 2);
+function increment() {
+  count.value++;
+}
+</script>
+```
+
+**چه زمانی کدام را انتخاب کنید:**
+
+|                   | Options API               | Composition API                       |
+| ----------------- | ------------------------- | ------------------------------------- |
+| تازه‌کار در Vue   | قابل دسترس‌تر             | منحنی یادگیری تندتر                   |
+| کامپوننت‌های بزرگ | کد در بخش‌ها پراکنده      | منطق گروه‌بندی‌شده                    |
+| reuse منطق        | Mixin (مشکل‌ساز)          | Composable (تمیز)                     |
+| TypeScript        | بیشتر نیاز به boilerplate | استنتاج type عالی                     |
+| آشنایی با تیم     | تیم‌های Vue 2             | برای پروژه‌های جدید ترجیح داده می‌شود |
+
+هر دو API به طور کامل در Vue 3 پشتیبانی می‌شوند و می‌توانند در یک پروژه با هم ترکیب شوند.
+
+## 🧠 سوال 95
+
+**شناسه**: vue-095
+**عنوان**: چگونه code splitting در سطح route با dynamic import در Vue Router پیاده‌سازی می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Routing
+
+### پاسخ 📄
+
+Code splitting در سطح route بارگذاری bundle کامپوننت route را تا زمانی که کاربر به آن route ناوبری کند به تأخیر می‌اندازد و payload اولیه JavaScript را کاهش می‌دهد.
+
+از یک تابع `import()` dynamic به عنوان مقدار کامپوننت در تعریف route استفاده کنید:
+
+```js
+const router = createRouter({
+  routes: [
+    {
+      path: '/',
+      component: () => import('./views/HomeView.vue'),
+    },
+    {
+      path: '/dashboard',
+      component: () => import('./views/DashboardView.vue'),
+    },
+    {
+      path: '/admin',
+      // magic comment برای نام‌گذاری chunk
+      component: () =>
+        import(/* webpackChunkName: "admin" */ './views/AdminView.vue'),
+    },
+  ],
+});
+```
+
+Vite و Webpack هر دو `import()` dynamic را درک کرده و به‌طور خودکار چانک‌های JavaScript جداگانه برای هر route تولید می‌کنند.
+
+**گروه‌بندی مسیرهای مرتبط در یک بخش:**
+
+```js
+// در Vite — از همان بخش rollupOptions استفاده کنید
+component: () => import('./views/admin/Dashboard.vue'),
+component: () => import('./views/admin/Users.vue'),
+// از vite.config.js rollupOptions.output.manualChunks برای گروه‌بندی استفاده کنید
+```
+
+**Prefetching** — magic commentهای Vite یا تنظیمات router را برای بارگذاری پیشگیرانه chunkهایی که احتمالاً بعداً نیاز می‌شوند، اضافه کنید.

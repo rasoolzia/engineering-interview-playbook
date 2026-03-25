@@ -3348,3 +3348,249 @@ component: () => import('./views/admin/Users.vue'),
 ```
 
 **Prefetching** — add `/* @vite-prefetch */` or configure `prefetch` in the router to proactively load chunks for likely-next routes.
+
+## 🧠 Question 96
+
+**ID**: vue-096
+**Title**: What is a computed setter in Vue and when would you use one?
+**Difficulty**: Medium
+**Category**: Reactivity System
+
+### Answer 📄
+
+Computed properties are read-only by default. A computed setter is a writable computed that updates underlying reactive state when assigned.
+
+```vue
+<script setup>
+import { ref, computed } from 'vue';
+
+const firstName = ref('Alice');
+const lastName = ref('Smith');
+
+const fullName = computed({
+  get() {
+    return `${firstName.value} ${lastName.value}`;
+  },
+  set(newValue) {
+    const parts = newValue.split(' ');
+    firstName.value = parts[0];
+    lastName.value = parts[1] ?? '';
+  },
+});
+</script>
+```
+
+Now `fullName.value = 'Bob Jones'` will update both `firstName` and `lastName`.
+
+**Common use cases:**
+
+- Two-way binding for a value derived from multiple sources
+- Building a local writable computed for a prop using `v-model` without emitting directly
+
+```js
+// Writable computed for a prop (common pattern)
+const internalValue = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val),
+});
+```
+
+## 🧠 Question 97
+
+**ID**: vue-097
+**Title**: How does `<KeepAlive>` work and what lifecycle hooks does it add?
+**Difficulty**: Medium
+**Category**: Performance
+
+### Answer 📄
+
+`<KeepAlive>` caches inactive component instances instead of destroying them when they are toggled out of the DOM. This preserves component state and avoids expensive re-initialization.
+
+```vue
+<template>
+  <KeepAlive>
+    <component :is="activeTab" />
+  </KeepAlive>
+</template>
+```
+
+**Additional lifecycle hooks** — components inside `<KeepAlive>` gain two hooks:
+
+- `onActivated` — fires when the component is inserted into the DOM from the cache (equivalent of `onMounted` for cached components)
+- `onDeactivated` — fires when the component is removed and placed in the cache (equivalent of `onUnmounted`)
+
+```vue
+<script setup>
+import { onActivated, onDeactivated } from 'vue';
+
+onActivated(() => {
+  console.log('Component activated (came from cache)');
+  startPolling();
+});
+
+onDeactivated(() => {
+  console.log('Component deactivated (went to cache)');
+  stopPolling();
+});
+</script>
+```
+
+**Fine-grained control:**
+
+- `include` — only cache components with matching names
+- `exclude` — exclude specific components
+- `max` — LRU cache limit, evicts least recently used
+
+```vue
+<KeepAlive :include="['TabA', 'TabB']" :max="5">
+  <component :is="currentTab" />
+</KeepAlive>
+```
+
+## 🧠 Question 98
+
+**ID**: vue-098
+**Title**: What is `onServerPrefetch` and how is it used in Vue SSR?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+`onServerPrefetch` is a lifecycle hook that only runs on the server during SSR. It tells Vue to wait for its async callback to resolve before serializing the component's HTML, ensuring that async data fetched inside it is available on first render.
+
+```vue
+<script setup>
+import { ref, onServerPrefetch } from 'vue';
+import { useStore } from './store';
+
+const store = useStore();
+const posts = ref([]);
+
+onServerPrefetch(async () => {
+  posts.value = await fetchPosts(); // runs on server, blocks HTML generation
+});
+</script>
+
+<template>
+  <ul>
+    <li v-for="post in posts" :key="post.id">{{ post.title }}</li>
+  </ul>
+</template>
+```
+
+On the client, `onServerPrefetch` is ignored. The client receives the server-rendered HTML with data already populated and hydrates it without re-fetching.
+
+This is the Vue primitive behind Nuxt 3's `useAsyncData` and `useFetch` composables, which abstract the pattern with automatic serialization of fetched state into the HTML payload (via `<script type="application/json">` or similar) so the client never re-fetches.
+
+## 🧠 Question 99
+
+**ID**: vue-099
+**Title**: How do you test Vue components with Vue Test Utils?
+**Difficulty**: Medium
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+Vue Test Utils (`@vue/test-utils`) is the official testing library for Vue components. It integrates with Vitest or Jest.
+
+**Basic mounting:**
+
+```js
+import { mount } from '@vue/test-utils';
+import MyButton from './MyButton.vue';
+
+test('renders slot content', () => {
+  const wrapper = mount(MyButton, {
+    slots: { default: 'Click me' },
+  });
+  expect(wrapper.text()).toBe('Click me');
+});
+```
+
+**Triggering events and testing reactive updates:**
+
+```js
+test('increments count on click', async () => {
+  const wrapper = mount(Counter);
+  expect(wrapper.find('.count').text()).toBe('0');
+
+  await wrapper.find('button').trigger('click');
+
+  expect(wrapper.find('.count').text()).toBe('1');
+});
+```
+
+**Stubbing child components:**
+
+```js
+const wrapper = mount(ParentComponent, {
+  global: {
+    stubs: { ChildComponent: true },
+  },
+});
+```
+
+**Testing props and emits:**
+
+```js
+const wrapper = mount(MyInput, {
+  props: { modelValue: 'hello' },
+});
+await wrapper.find('input').setValue('world');
+expect(wrapper.emitted('update:modelValue')).toEqual([['world']]);
+```
+
+Use `flushPromises()` from `@vue/test-utils` to wait for async operations before asserting.
+
+## 🧠 Question 100
+
+**ID**: vue-100
+**Title**: What strategies can you use to optimize a Vue application's performance?
+**Difficulty**: Hard
+**Category**: Performance
+
+### Answer 📄
+
+Vue applications can suffer from unnecessary re-renders, large bundle sizes, and slow initial loads. A systematic approach covers several layers.
+
+**Reducing re-renders:**
+
+- Use `v-memo` to skip re-rendering a subtree unless specific dependencies change
+- Wrap expensive child components in `shallowRef` so parent re-renders don't propagate
+- Use `markRaw` for non-reactive objects stored in reactive state
+- `<KeepAlive>` to preserve component state across route changes
+
+**Bundle size:**
+
+- Route-level code splitting with dynamic `import()`
+- Async components (`defineAsyncComponent`) for heavy components
+- Tree-shake unused Vue features using the ESM build
+
+**Rendering:**
+
+- `v-show` instead of `v-if` for frequently toggling components
+- Use `key` attribute correctly to help the differ reuse DOM nodes
+- Avoid binding large objects as props when only a few properties are needed
+- `v-once` for static content that never changes
+- `v-memo` for list items with stable dependencies
+
+**List virtualization** — for very long lists (1000+ items), use `vue-virtual-scroller` or a similar library to only render the visible items.
+
+**Profiling:**
+
+- Use Vue DevTools Performance tab to identify slow component renders
+- Chrome Performance tab for long tasks and layout thrashing
+- `app.config.performance = true` enables Vue internal timing marks in the browser DevTools
+
+```vue
+<template>
+  <!-- v-memo: only re-render list item when item.id or selected changes -->
+  <div
+    v-for="item in list"
+    :key="item.id"
+    v-memo="[item.id, selected === item.id]"
+  >
+    {{ item.text }}
+  </div>
+</template>
+```

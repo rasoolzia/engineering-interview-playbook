@@ -3348,3 +3348,249 @@ component: () => import('./views/admin/Users.vue'),
 ```
 
 **Prefetching** — magic commentهای Vite یا تنظیمات router را برای بارگذاری پیشگیرانه chunkهایی که احتمالاً بعداً نیاز می‌شوند، اضافه کنید.
+
+## 🧠 سوال 96
+
+**شناسه**: vue-096
+**عنوان**: computed setter در Vue چیست و چه زمانی از آن استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+computed propertyها به‌طور پیش‌فرض فقط خواندنی هستند. یک computed setter، یک computed قابل نوشتن است که هنگام انتساب، state reactive زیرین را به‌روز می‌کند.
+
+```vue
+<script setup>
+import { ref, computed } from 'vue';
+
+const firstName = ref('علی');
+const lastName = ref('محمدی');
+
+const fullName = computed({
+  get() {
+    return `${firstName.value} ${lastName.value}`;
+  },
+  set(newValue) {
+    const parts = newValue.split(' ');
+    firstName.value = parts[0];
+    lastName.value = parts[1] ?? '';
+  },
+});
+</script>
+```
+
+حالا `fullName.value = 'رضا احمدی'` هم `firstName` و هم `lastName` را به‌روز خواهد کرد.
+
+**موارد استفاده رایج:**
+
+- Two-way binding برای مقداری که از چندین منبع استخراج می‌شود
+- ساختن یک computed قابل نوشتن محلی برای یک prop با استفاده از `v-model`
+
+```js
+// Computed قابل نوشتن برای یک prop (الگوی رایج)
+const internalValue = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val),
+});
+```
+
+## 🧠 سوال 97
+
+**شناسه**: vue-097
+**عنوان**: `<KeepAlive>` چگونه کار می‌کند و چه lifecycle hookهایی اضافه می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+`<KeepAlive>` instance های کامپوننت غیرفعال را به جای destroy کردن آن‌ها هنگام toggle شدن از DOM، cache می‌کند. این state کامپوننت را حفظ کرده و از re-initialization گران جلوگیری می‌کند.
+
+```vue
+<template>
+  <KeepAlive>
+    <component :is="activeTab" />
+  </KeepAlive>
+</template>
+```
+
+**Lifecycle hookهای اضافی** — کامپوننت‌های داخل `<KeepAlive>` دو hook به دست می‌آورند:
+
+- `onActivated` — هنگامی که کامپوننت از cache در DOM درج می‌شود اجرا می‌شود (معادل `onMounted` برای کامپوننت‌های cached)
+- `onDeactivated` — هنگامی که کامپوننت حذف و در cache قرار می‌گیرد اجرا می‌شود (معادل `onUnmounted`)
+
+```vue
+<script setup>
+import { onActivated, onDeactivated } from 'vue';
+
+onActivated(() => {
+  console.log('کامپوننت فعال شد (از cache آمد)');
+  startPolling();
+});
+
+onDeactivated(() => {
+  console.log('کامپوننت غیرفعال شد (به cache رفت)');
+  stopPolling();
+});
+</script>
+```
+
+**کنترل دقیق:**
+
+- `include` — فقط کامپوننت‌هایی با نام‌های منطبق را cache کن
+- `exclude` — کامپوننت‌های خاص را exclude کن
+- `max` — محدودیت LRU cache، کمترین استفاده‌شده را evict می‌کند
+
+```vue
+<KeepAlive :include="['TabA', 'TabB']" :max="5">
+  <component :is="currentTab" />
+</KeepAlive>
+```
+
+## 🧠 سوال 98
+
+**شناسه**: vue-098
+**عنوان**: `onServerPrefetch` چیست و چگونه در Vue SSR استفاده می‌شود؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+`onServerPrefetch` یک lifecycle hook است که فقط روی سرور در طول SSR اجرا می‌شود. به Vue می‌گوید قبل از serialize کردن HTML کامپوننت، منتظر resolve شدن callback async آن باشد تا داده‌های async fetch شده در اولین render موجود باشند.
+
+```vue
+<script setup>
+import { ref, onServerPrefetch } from 'vue';
+import { useStore } from './store';
+
+const store = useStore();
+const posts = ref([]);
+
+onServerPrefetch(async () => {
+  posts.value = await fetchPosts(); // روی سرور اجرا می‌شود، تولید HTML را block می‌کند
+});
+</script>
+
+<template>
+  <ul>
+    <li v-for="post in posts" :key="post.id">{{ post.title }}</li>
+  </ul>
+</template>
+```
+
+روی client، `onServerPrefetch` نادیده گرفته می‌شود. client HTML server-rendered با داده‌های از پیش پر شده دریافت می‌کند و بدون re-fetch آن را hydrate می‌کند.
+
+این primitive Vue پشت `useAsyncData` و `useFetch` composableهای Nuxt 3 است که الگو را با serialization خودکار state fetch شده در payload HTML abstract می‌کنند.
+
+## 🧠 سوال 99
+
+**شناسه**: vue-099
+**عنوان**: چگونه کامپوننت‌های Vue را با Vue Test Utils تست می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+Vue Test Utils به نام `@vue/test-utils` کتابخانه تست رسمی برای کامپوننت‌های Vue است و با Vitest یا Jest یکپارچه می‌شود.
+
+**Mount پایه:**
+
+```js
+import { mount } from '@vue/test-utils';
+import MyButton from './MyButton.vue';
+
+test('محتوای slot را رندر می‌کند', () => {
+  const wrapper = mount(MyButton, {
+    slots: { default: 'روی من کلیک کن' },
+  });
+  expect(wrapper.text()).toBe('روی من کلیک کن');
+});
+```
+
+**Trigger کردن رویداد و تست به‌روزرسانی reactive:**
+
+```js
+test('count را با کلیک افزایش می‌دهد', async () => {
+  const wrapper = mount(Counter);
+  expect(wrapper.find('.count').text()).toBe('0');
+
+  await wrapper.find('button').trigger('click');
+
+  expect(wrapper.find('.count').text()).toBe('1');
+});
+```
+
+**Stub کردن کامپوننت‌های فرزند:**
+
+```js
+const wrapper = mount(ParentComponent, {
+  global: {
+    stubs: { ChildComponent: true },
+  },
+});
+```
+
+**تست props و emits:**
+
+```js
+const wrapper = mount(MyInput, {
+  props: { modelValue: 'hello' },
+});
+await wrapper.find('input').setValue('world');
+expect(wrapper.emitted('update:modelValue')).toEqual([['world']]);
+```
+
+از `flushPromises()` برای انتظار تا اتمام عملیات async قبل از assert استفاده کنید.
+
+## 🧠 سوال 100
+
+**شناسه**: vue-100
+**عنوان**: چه استراتژی‌هایی برای بهینه‌سازی عملکرد یک اپلیکیشن Vue وجود دارد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+اپلیکیشن‌های Vue ممکن است از re-renderهای غیرضروری، حجم bundle بزرگ و بارگذاری اولیه کند رنج ببرند. یک رویکرد سیستماتیک چندین لایه را پوشش می‌دهد.
+
+**کاهش re-renderها:**
+
+- از `v-memo` برای رد کردن re-render یک زیردرخت استفاده کنید مگر اینکه وابستگی‌های خاصی تغییر کنند
+- کامپوننت‌های فرزند گران را در `shallowRef` wrap کنید
+- از `markRaw` برای اشیاء غیر-reactive ذخیره‌شده در state reactive استفاده کنید
+- `<KeepAlive>` برای حفظ state کامپوننت در route‌های مختلف
+
+**حجم bundle:**
+
+- Code splitting در سطح route با `import()` dynamic
+- Async componentها (`defineAsyncComponent`) برای کامپوننت‌های سنگین
+- Tree-shaking ویژگی‌های استفاده‌نشده Vue با استفاده از ESM build
+
+**رندرینگ:**
+
+- `v-show` به جای `v-if` برای کامپوننت‌هایی که به‌طور مکرر toggle می‌شوند
+- استفاده صحیح از attribute `key` برای کمک به differ در reuse nodeهای DOM
+- از اتصال اشیاء بزرگ به عنوان props در مواقعی که فقط به چند ویژگی نیاز دارید، خودداری کنید.
+- `v-once` برای محتوای static که هرگز تغییر نمی‌کند
+- `v-memo` برای آیتم‌های لیست با وابستگی‌های stable
+
+**Virtualization لیست** — برای لیست‌های بسیار بلند (۱۰۰۰+ آیتم)، از `vue-virtual-scroller` یا کتابخانه مشابه استفاده کنید تا فقط آیتم‌های قابل مشاهده رندر شوند.
+
+**Profiling:**
+
+- از تب Performance در Vue DevTools برای شناسایی رندرهای کند کامپوننت استفاده کنید
+- تب Performance در Chrome برای کارهای طولانی و بارگذاری سریع layout
+- `app.config.performance = true` علائم زمان‌بندی داخلی Vue را در DevTools مرورگر فعال می‌کند
+
+```vue
+<template>
+  <!-- v-memo: آیتم لیست را فقط هنگامی re-render کن که item.id یا selected تغییر کند -->
+  <div
+    v-for="item in list"
+    :key="item.id"
+    v-memo="[item.id, selected === item.id]"
+  >
+    {{ item.text }}
+  </div>
+</template>
+```

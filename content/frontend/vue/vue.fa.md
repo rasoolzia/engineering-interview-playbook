@@ -3594,3 +3594,259 @@ expect(wrapper.emitted('update:modelValue')).toEqual([['world']]);
   </div>
 </template>
 ```
+
+## 🧠 سوال 101
+
+**شناسه**: vue-101
+**عنوان**: ماکرو `defineModel` چیست و چگونه two-way binding را ساده می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+`defineModel` (پایدار از Vue 3.4) یک compiler macro است که boilerplate اعلان دستی یک prop `modelValue` و emit `update:modelValue` را برای `v-model` کامپوننت حذف می‌کند.
+
+**قبل از `defineModel`:**
+
+```vue
+<script setup>
+const props = defineProps({ modelValue: String });
+const emit = defineEmits(['update:modelValue']);
+
+function handleInput(e) {
+  emit('update:modelValue', e.target.value);
+}
+</script>
+<template>
+  <input :value="props.modelValue" @input="handleInput" />
+</template>
+```
+
+**با `defineModel`:**
+
+```vue
+<script setup>
+const model = defineModel(); // یک ref قابل نوشتن برمی‌گرداند
+</script>
+<template>
+  <input v-model="model" />
+</template>
+```
+
+`defineModel()` یک `ref` قابل نوشتن برمی‌گرداند که با مقدار bound شده در والد sync است. خواندن `model.value` prop را می‌خواند؛ نوشتن روی `model.value` به‌صورت خودکار رویداد update را emit می‌کند.
+
+**مدل‌های نام‌گذاری‌شده و type شده:**
+
+```ts
+// مدل نام‌گذاری‌شده — با v-model:title استفاده می‌شود
+const title = defineModel<string>('title', { required: true });
+
+// با مقدار پیش‌فرض
+const count = defineModel<number>('count', { default: 0 });
+```
+
+والد از آن‌ها اینگونه استفاده می‌کند:
+
+```vue
+<MyForm v-model:title="postTitle" v-model:count="itemCount" />
+```
+
+## 🧠 سوال 102
+
+**شناسه**: vue-102
+**عنوان**: چندین binding `v-model` روی یک کامپوننت چگونه کار می‌کنند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+Vue 3 اجازه می‌دهد چندین binding `v-model` روی یک کامپوننت با استفاده از مدل‌های نام‌گذاری‌شده داشته باشید. هر `v-model` نام‌گذاری‌شده با یک جفت prop/emit جداگانه (یا یک فراخوانی `defineModel`) مطابقت دارد.
+
+```vue
+<!-- Parent -->
+<UserForm
+  v-model:firstName="user.firstName"
+  v-model:lastName="user.lastName"
+  v-model:age="user.age"
+/>
+```
+
+با `defineModel` (Vue 3.4+):
+
+```vue
+<!-- UserForm.vue -->
+<script setup>
+const firstName = defineModel < string > 'firstName';
+const lastName = defineModel < string > 'lastName';
+const age = defineModel < number > 'age';
+</script>
+
+<template>
+  <input v-model="firstName" placeholder="نام" />
+  <input v-model="lastName" placeholder="نام خانوادگی" />
+  <input v-model.number="age" type="number" placeholder="سن" />
+</template>
+```
+
+بدون `defineModel`، هر مدل نام‌گذاری‌شده به یک prop و emit جداگانه نیاز دارد:
+
+```ts
+defineProps({ firstName: String, lastName: String, age: Number });
+const emit = defineEmits(['update:firstName', 'update:lastName', 'update:age']);
+```
+
+`v-model` نام‌گذاری‌شده برای کامپوننت‌های فرم، dialog‌ها و ویرایشگرهایی که چندین piece مرتبط از state را که والد باید مالک آن‌ها باشد مدیریت می‌کنند، ایده‌آل است.
+
+## 🧠 سوال 103
+
+**شناسه**: vue-103
+**عنوان**: `customRef` چیست و چه زمانی از آن استفاده می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+`customRef` به شما اجازه می‌دهد یک `ref` reactive با کنترل دستی کامل بر زمان ردیابی dependency (`track`) و زمان اطلاع‌رسانی به subscriber‌ها (`trigger`) بسازید. این برای زمانی مفید است که نیاز به debounce، throttle یا اعتبارسنجی قبل از notify کردن watcher‌ها دارید.
+
+```js
+import { customRef } from 'vue';
+
+function useDebouncedRef(value, delay = 300) {
+  let timeout;
+  return customRef((track, trigger) => ({
+    get() {
+      track(); // effect فعلی را به عنوان subscriber ثبت کنید
+      return value;
+    },
+    set(newValue) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        value = newValue;
+        trigger(); // فقط بعد از تأخیر debounce به subscriber‌ها اطلاع دهید
+      }, delay);
+    },
+  }));
+}
+```
+
+```vue
+<script setup>
+const searchQuery = useDebouncedRef('', 400);
+</script>
+
+<template>
+  <input v-model="searchQuery" placeholder="جستجو..." />
+</template>
+```
+
+template و watcher‌های وابسته به `searchQuery` فقط 400 میلی‌ثانیه بعد از اینکه کاربر تایپ کردن را متوقف کند به‌روز می‌شوند و از API call‌های بیش از حد جلوگیری می‌شود.
+
+موارد استفاده دیگر:
+
+- sync کردن یک ref با `localStorage`
+- محدود کردن یا گرد کردن مقادیر در set
+- اعتبارسنجی async قبل از commit کردن
+
+## 🧠 سوال 104
+
+**شناسه**: vue-104
+**عنوان**: CSS `v-bind` در بلاک‌های `<style>` چیست و چگونه کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مبانی Vue
+
+### پاسخ 📄
+
+Vue SFCها از binding مستقیم مقادیر JavaScript reactive به CSS با استفاده از `v-bind()` داخل بلاک‌های `<style>` پشتیبانی می‌کنند. این نیاز به inline styleها یا computed class objectها برای styling dynamic را از بین می‌برد.
+
+```vue
+<script setup>
+import { ref } from 'vue';
+
+const color = ref('#42b883');
+const fontSize = ref(16);
+</script>
+
+<template>
+  <p class="text">سلام Vue!</p>
+</template>
+
+<style scoped>
+.text {
+  color: v-bind(color);
+  font-size: v-bind(fontSize + 'px');
+}
+</style>
+```
+
+**نحوه کار داخلی:** Vue از CSS custom property (متغیرهای CSS) استفاده می‌کند. در compile time، عبارت `v-bind()` با یک مرجع `var(--hash-propertyName)` جایگزین می‌شود. یک effect runtime هنگامی که مقدار reactive تغییر می‌کند، custom property روی المنت root کامپوننت را به‌روز می‌کند.
+
+عبارات پیچیده با دسترسی به property شیء هم کار می‌کنند:
+
+```vue
+<script setup>
+const theme = reactive({ primary: '#ff0000', radius: '8px' });
+</script>
+
+<style scoped>
+.card {
+  color: v-bind('theme.primary');
+  border-radius: v-bind('theme.radius');
+}
+</style>
+```
+
+## 🧠 سوال 105
+
+**شناسه**: vue-105
+**عنوان**: CSS Module‌ها در Vue SFCها چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مبانی Vue
+
+### پاسخ 📄
+
+CSS Module‌ها یک مکانیزم scoping CSS هستند که نام‌های class به‌صورت خودکار در build time به شناسه‌های hashed یکتا تبدیل می‌شوند و از تداخل نام‌گذاری global جلوگیری می‌کنند. در Vue SFCها، attribute `module` را به تگ `<style>` اضافه کنید.
+
+```vue
+<template>
+  <!-- در کامپوننت‌های <script setup>، $style به‌صورت خودکار تزریق می‌شود -->
+  <div :class="$style.container">
+    <p :class="[$style.text, $style.highlighted]">سلام</p>
+  </div>
+</template>
+
+<style module>
+.container {
+  padding: 1rem;
+}
+.text {
+  font-size: 1rem;
+}
+.highlighted {
+  color: #42b883;
+  font-weight: bold;
+}
+</style>
+```
+
+HTML تولید شده به جای `container` ساده، از یک کلاس هش شده مانند `container_3FI8Av` استفاده خواهد کرد.
+
+**ماژول‌های CSS نامگذاری شده** — چندین بلوک `<style module="name">` می‌توانند در یک SFC همزمان وجود داشته باشند:
+
+```vue
+<style module="typography">
+.heading {
+  font-size: 2rem;
+}
+</style>
+```
+
+```js
+// دسترسی از طریق useCssModule در داخل setup
+import { useCssModule } from 'vue';
+const typography = useCssModule('typography');
+```
+
+تفاوت با scoped style:
+
+- **Scoped style‌ها** یک attribute selector `data-v-xxxx` اضافه می‌کنند — نام class تغییر نمی‌کند.
+- **CSS Module‌ها** خود class را rename می‌کنند — بدون attribute selector، بدون overhead specificity.

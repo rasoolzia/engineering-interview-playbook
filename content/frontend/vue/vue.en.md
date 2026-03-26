@@ -3594,3 +3594,259 @@ Vue applications can suffer from unnecessary re-renders, large bundle sizes, and
   </div>
 </template>
 ```
+
+## 🧠 Question 101
+
+**ID**: vue-101
+**Title**: What is the `defineModel` macro and how does it simplify two-way binding?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+`defineModel` (stable in Vue 3.4) is a compiler macro that replaces the boilerplate of manually declaring a `modelValue` prop and an `update:modelValue` emit for component `v-model`.
+
+**Before `defineModel`:**
+
+```vue
+<script setup>
+const props = defineProps({ modelValue: String });
+const emit = defineEmits(['update:modelValue']);
+
+function handleInput(e) {
+  emit('update:modelValue', e.target.value);
+}
+</script>
+<template>
+  <input :value="props.modelValue" @input="handleInput" />
+</template>
+```
+
+**With `defineModel`:**
+
+```vue
+<script setup>
+const model = defineModel(); // returns a writable ref
+</script>
+<template>
+  <input v-model="model" />
+</template>
+```
+
+`defineModel()` returns a writable `ref` that is synced with the parent's bound value. Reading `model.value` reads the prop; writing to `model.value` emits the update event automatically.
+
+**Named and typed models:**
+
+```ts
+// Named model — used with v-model:title
+const title = defineModel<string>('title', { required: true });
+
+// With default
+const count = defineModel<number>('count', { default: 0 });
+```
+
+The parent uses these as:
+
+```vue
+<MyForm v-model:title="postTitle" v-model:count="itemCount" />
+```
+
+## 🧠 Question 102
+
+**ID**: vue-102
+**Title**: How do multiple `v-model` bindings work on a single component?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+Vue 3 allows multiple `v-model` bindings on the same component using named models. Each named `v-model` corresponds to a separate prop/emit pair (or a `defineModel` call).
+
+```vue
+<!-- Parent -->
+<UserForm
+  v-model:firstName="user.firstName"
+  v-model:lastName="user.lastName"
+  v-model:age="user.age"
+/>
+```
+
+Using `defineModel` (Vue 3.4+):
+
+```vue
+<!-- UserForm.vue -->
+<script setup>
+const firstName = defineModel < string > 'firstName';
+const lastName = defineModel < string > 'lastName';
+const age = defineModel < number > 'age';
+</script>
+
+<template>
+  <input v-model="firstName" placeholder="First name" />
+  <input v-model="lastName" placeholder="Last name" />
+  <input v-model.number="age" type="number" placeholder="Age" />
+</template>
+```
+
+Without `defineModel`, each named model requires a separate prop and emit:
+
+```ts
+defineProps({ firstName: String, lastName: String, age: Number });
+const emit = defineEmits(['update:firstName', 'update:lastName', 'update:age']);
+```
+
+Named `v-model` is ideal for form components, dialogs, and editors where a single component manages several related pieces of state that the parent needs to own.
+
+## 🧠 Question 103
+
+**ID**: vue-103
+**Title**: What is `customRef` and when would you use it?
+**Difficulty**: Hard
+**Category**: Reactivity System
+
+### Answer 📄
+
+`customRef` lets you create a reactive `ref` with full manual control over when dependency tracking happens (`track`) and when subscribers are notified (`trigger`). This is useful when you need to debounce, throttle, or validate before notifying watchers.
+
+```js
+import { customRef } from 'vue';
+
+function useDebouncedRef(value, delay = 300) {
+  let timeout;
+  return customRef((track, trigger) => ({
+    get() {
+      track(); // register the current effect as a subscriber
+      return value;
+    },
+    set(newValue) {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        value = newValue;
+        trigger(); // notify subscribers only after the debounce delay
+      }, delay);
+    },
+  }));
+}
+```
+
+```vue
+<script setup>
+const searchQuery = useDebouncedRef('', 400);
+</script>
+
+<template>
+  <input v-model="searchQuery" placeholder="Search..." />
+</template>
+```
+
+The template and watchers dependent on `searchQuery` will only update 400ms after the user stops typing, preventing excessive API calls.
+
+Other use cases include:
+
+- Syncing a ref with `localStorage` and only triggering on settled writes
+- Clamping or rounding values on set
+- Async validation before committing
+
+## 🧠 Question 104
+
+**ID**: vue-104
+**Title**: What is CSS `v-bind` in `<style>` blocks and how does it work?
+**Difficulty**: Medium
+**Category**: Vue Basics
+
+### Answer 📄
+
+Vue SFCs support binding reactive JavaScript values directly into CSS using `v-bind()` inside `<style>` blocks. This eliminates the need for inline styles or computed class objects for dynamic styling.
+
+```vue
+<script setup>
+import { ref } from 'vue';
+
+const color = ref('#42b883');
+const fontSize = ref(16);
+</script>
+
+<template>
+  <p class="text">Hello Vue!</p>
+</template>
+
+<style scoped>
+.text {
+  color: v-bind(color);
+  font-size: v-bind(fontSize + 'px');
+}
+</style>
+```
+
+**How it works internally:** Vue uses CSS custom properties (CSS variables) under the hood. At compile time, the `v-bind()` expression is replaced with a `var(--hash-propertyName)` reference. A runtime effect updates the custom property on the component's root element whenever the reactive value changes.
+
+This means the CSS stays declarative and scoped, while the dynamic values stay reactive. Complex expressions using object property access work too:
+
+```vue
+<script setup>
+const theme = reactive({ primary: '#ff0000', radius: '8px' });
+</script>
+
+<style scoped>
+.card {
+  color: v-bind('theme.primary');
+  border-radius: v-bind('theme.radius');
+}
+</style>
+```
+
+## 🧠 Question 105
+
+**ID**: vue-105
+**Title**: What are CSS Modules in Vue SFCs?
+**Difficulty**: Medium
+**Category**: Vue Basics
+
+### Answer 📄
+
+CSS Modules are a CSS scoping mechanism where class names are automatically converted to unique hashed identifiers at build time, preventing global naming collisions. In Vue SFCs, add the `module` attribute to a `<style>` tag.
+
+```vue
+<template>
+  <!-- $style is automatically injected in <script setup> components -->
+  <div :class="$style.container">
+    <p :class="[$style.text, $style.highlighted]">Hello</p>
+  </div>
+</template>
+
+<style module>
+.container {
+  padding: 1rem;
+}
+.text {
+  font-size: 1rem;
+}
+.highlighted {
+  color: #42b883;
+  font-weight: bold;
+}
+</style>
+```
+
+The generated HTML will use a hashed class like `container_3FI8Av` instead of plain `container`.
+
+**Named CSS Modules** — multiple `<style module="name">` blocks can coexist in one SFC:
+
+```vue
+<style module="typography">
+.heading {
+  font-size: 2rem;
+}
+</style>
+```
+
+```js
+// Access via useCssModule inside setup
+import { useCssModule } from 'vue';
+const typography = useCssModule('typography');
+```
+
+CSS Modules differ from scoped styles:
+
+- **Scoped styles** add a `data-v-xxxx` attribute selector — styles still use the original class name but are made specific.
+- **CSS Modules** rename the class itself — no attribute selector needed, zero specificity overhead.

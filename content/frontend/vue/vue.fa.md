@@ -3850,3 +3850,264 @@ const typography = useCssModule('typography');
 
 - **Scoped style‌ها** یک attribute selector `data-v-xxxx` اضافه می‌کنند — نام class تغییر نمی‌کند.
 - **CSS Module‌ها** خود class را rename می‌کنند — بدون attribute selector، بدون overhead specificity.
+
+## 🧠 سوال 106
+
+**شناسه**: vue-106
+**عنوان**: Scoped CSS در Vue از نظر داخلی چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رندرینگ و ساختار داخلی
+
+### پاسخ 📄
+
+وقتی یک بلاک `<style scoped>` در یک Vue SFC وجود دارد، compiler یک attribute یکتا `data-v-xxxxxxxx` به هر المنت در template کامپوننت در compile time اضافه می‌کند.
+
+سپس CSS selector‌ها تبدیل می‌شوند تا شامل یک attribute selector باشند که آن attribute یکتا را هدف می‌گیرد و اطمینان می‌دهد style‌ها فقط روی المنت‌های خود کامپوننت اعمال می‌شوند.
+
+**کامپایل template:**
+
+```html
+<!-- template اصلی -->
+<div class="card"><p>سلام</p></div>
+
+<!-- خروجی کامپایل‌شده -->
+<div class="card" data-v-7ba5bd90><p data-v-7ba5bd90>سلام</p></div>
+```
+
+**تبدیل CSS:**
+
+```css
+/* اصلی */
+.card {
+  background: white;
+}
+p {
+  color: black;
+}
+
+/* کامپایل‌شده */
+.card[data-v-7ba5bd90] {
+  background: white;
+}
+p[data-v-7ba5bd90] {
+  color: black;
+}
+```
+
+**`:deep()`** attribute selector را از بخش فرزند حذف می‌کند و اجازه می‌دهد style‌ها به DOM کامپوننت فرزند نفوذ کنند:
+
+```css
+/* تابع .inner را درون یک کامپوننت فرزند هدف قرار می‌دهد */
+:deep(.inner) {
+  color: red;
+}
+/* کامپایل می‌شود به: */
+[data-v-7ba5bd90] .inner {
+  color: red;
+}
+```
+
+**`:slotted()`** المنت‌های ارسال‌شده از طریق slot‌ها را هدف می‌گیرد (که attribute scope والد، نه فرزند را دارند):
+
+```css
+:slotted(p) {
+  font-style: italic;
+}
+```
+
+**`:global()`** از scoping کاملاً خارج می‌شود و selector را بدون هیچ محدودیت attributeای emit می‌کند.
+
+## 🧠 سوال 107
+
+**شناسه**: vue-107
+**عنوان**: directive `v-memo` چیست و چگونه رندرینگ را بهینه می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: عملکرد
+
+### پاسخ 📄
+
+`v-memo` یک directive داخلی است که یک زیردرخت template را memoize می‌کند. Vue رندر مجدد (و diffing) زیردرخت را کاملاً رد می‌کند وقتی تمام مقادیر در آرایه dependency یکسان باقی بمانند — با استفاده از برابری مرجع (`===`).
+
+```vue
+<template>
+  <div v-for="item in list" :key="item.id" v-memo="[item.id, item.selected]">
+    <!-- اگر item.id و item.selected تغییر نکرده‌اند این زیردرخت کامل رد می‌شود -->
+    <span>{{ item.label }}</span>
+    <HeavyChart :data="item.chartData" />
+  </div>
+</template>
+```
+
+**تفاوت با `computed`:** `computed` یک مقدار را memoize می‌کند؛ `v-memo` یک زیردرخت DOM را — ساخت vnode و patching کل بلاک را رد می‌کند.
+
+**موارد استفاده:**
+
+- لیست‌های بزرگ که فقط چند آیتم در هر به‌روزرسانی تغییر می‌کنند
+- آیتم‌هایی که کامپوننت‌های فرزند سنگین دارند اما به‌ندرت به‌روز می‌شوند
+
+**آرایه dependency خالی** معادل `v-once` است — یک‌بار رندر می‌شود و هرگز به‌روز نمی‌شود:
+
+```html
+<StaticBanner v-memo="[]" />
+```
+
+**نکات مهم:**
+
+- فقط وقتی profiling یک bottleneck را تأیید می‌کند استفاده کنید — در هر چرخه رندر overhead مقایسه اضافه می‌کند.
+- اگر هر آیتم در هر به‌روزرسانی تغییر می‌کند از آن اجتناب کنید.
+- زیردرخت همچنان در render اولیه شرکت می‌کند؛ فقط re-render‌های بعدی رد می‌شوند.
+
+## 🧠 سوال 108
+
+**شناسه**: vue-108
+**عنوان**: `defineAsyncComponent` چه گزینه‌هایی برای حالت‌های loading، error و timeout پشتیبانی می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+`defineAsyncComponent` یک تابع loader (فرم ساده) یا یک options object (فرم پیشرفته) می‌پذیرد که حالت loading، error fallback، تأخیر و timeout را پیکربندی می‌کند.
+
+```js
+import { defineAsyncComponent } from 'vue';
+
+const AsyncDashboard = defineAsyncComponent({
+  // الزامی: loader کامپوننت
+  loader: () => import('./Dashboard.vue'),
+
+  // کامپوننتی که در حین loading نمایش داده می‌شود
+  loadingComponent: LoadingSpinner,
+
+  // تأخیر قبل از نمایش loadingComponent (پیش‌فرض: 200ms)
+  // از flicker برای بارگذاری‌های سریع جلوگیری می‌کند
+  delay: 200,
+
+  // کامپوننتی که در صورت خطا نمایش داده می‌شود
+  errorComponent: ErrorDisplay,
+
+  // زمانی که بعد از آن بارگذاری ناموفق تلقی می‌شود
+  timeout: 5000,
+
+  // وقتی promise loader reject می‌شود فراخوانی می‌شود
+  onError(error, retry, fail, attempts) {
+    if (attempts <= 3) {
+      retry(); // بارگذاری را دوباره امتحان کنید
+    } else {
+      fail(); // تسلیم شوید و errorComponent را نمایش دهید
+    }
+  },
+});
+```
+
+گزینه `delay` برای UX مهم است: اگر کامپوننت در زیر 200ms بارگذاری شود، loading spinner هرگز نمایش داده نمی‌شود و از flash کوتاه حالت loading جلوگیری می‌کند.
+
+`onError` یک تابع `retry` دریافت می‌کند که loader را مجدداً فراخوانی می‌کند و پیاده‌سازی exponential backoff یا retry‌های شرطی را ممکن می‌سازد.
+
+هنگام استفاده داخل `<Suspense>`، prop‌های loading/error component نادیده گرفته می‌شوند — `<Suspense>` از طریق slot `#fallback` خود کنترل UI loading را به دست می‌گیرد.
+
+## 🧠 سوال 109
+
+**شناسه**: vue-109
+**عنوان**: تمام lifecycle hookهای موجود در یک directive سفارشی Vue کدامند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Directive‌ها
+
+### پاسخ 📄
+
+directive‌های سفارشی در Vue 3 به هفت lifecycle hook دسترسی دارند که lifecycle کامپوننت را آینه می‌کنند.
+
+```js
+const myDirective = {
+  // یک‌بار قبل از درج المنت در DOM فراخوانی می‌شود
+  created(el, binding, vnode) {},
+
+  // درست قبل از درج المنت در DOM
+  beforeMount(el, binding, vnode) {},
+
+  // بعد از mount شدن المنت و تمام فرزندانش
+  mounted(el, binding, vnode) {},
+
+  // قبل از re-render کامپوننت والد
+  beforeUpdate(el, binding, vnode, prevVnode) {},
+
+  // بعد از re-render کامپوننت والد و فرزندانش
+  updated(el, binding, vnode, prevVnode) {},
+
+  // قبل از unmount شدن کامپوننت والد
+  beforeUnmount(el, binding, vnode) {},
+
+  // بعد از unmount شدن کامپوننت والد — اینجا cleanup انجام دهید
+  unmounted(el, binding, vnode) {},
+};
+```
+
+شیء `binding` شامل:
+
+- `value` — مقدار فعلی directive (`v-my-dir="42"` → `42`)
+- `oldValue` — مقدار قبلی (فقط در `beforeUpdate` / `updated`)
+- `arg` — آرگومان (`v-my-dir:color` → `'color'`)
+- `modifiers` — شیء modifier (`v-my-dir.trim` → `{ trim: true }`)
+- `instance` — instance کامپوننتی که از directive استفاده می‌کند
+
+**Shorthand** — اگر directive فقط به `mounted` و `updated` نیاز دارد، مستقیماً یک تابع ارسال کنید:
+
+```js
+app.directive('focus', (el) => {
+  el.focus();
+});
+```
+
+## 🧠 سوال 110
+
+**شناسه**: vue-110
+**عنوان**: چگونه از `$patch`، `$subscribe` و `$onAction` در Pinia استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت state
+
+### پاسخ 📄
+
+این سه method روی instance یک Pinia store قابلیت‌های پیشرفته مدیریت state ارائه می‌دهند.
+
+**`$patch`** — چندین تغییر state را در یک batch اعمال می‌کند و فقط یک به‌روزرسانی trigger می‌کند:
+
+```js
+const store = useCounterStore();
+
+// Object patch — شیء را در state ادغام می‌کند
+store.$patch({ count: 10, name: 'علی' });
+
+// Function patch — دسترسی کامل به state برای mutation‌های پیچیده
+store.$patch((state) => {
+  state.items.push({ id: Date.now(), text: 'آیتم جدید' });
+  state.count++;
+});
+```
+
+**`$subscribe`** — برای هر تغییر state تماشا می‌کند:
+
+```js
+store.$subscribe(
+  (mutation, state) => {
+    // mutation.type: 'direct' | 'patch object' | 'patch function'
+    // در هر تغییر در localStorage ذخیره کنید
+    localStorage.setItem('counter', JSON.stringify(state));
+  },
+  { detached: true },
+); // detached: بعد از unmount کامپوننت باقی می‌ماند
+```
+
+**`$onAction`** — actionها را قبل و بعد از اجرا رهگیری می‌کند، برای logging یا مدیریت خطا مفید است:
+
+```js
+store.$onAction(({ name, args, after, onError }) => {
+  console.log(`Action "${name}" فراخوانی شد با`, args);
+
+  after((result) => {
+    console.log(`Action "${name}" با نتیجه تمام شد`, result);
+  });
+
+  onError((error) => {
+    console.error(`Action "${name}" با خطا مواجه شد:`, error);
+  });
+});
+```

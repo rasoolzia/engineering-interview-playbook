@@ -3850,3 +3850,264 @@ CSS Modules differ from scoped styles:
 
 - **Scoped styles** add a `data-v-xxxx` attribute selector — styles still use the original class name but are made specific.
 - **CSS Modules** rename the class itself — no attribute selector needed, zero specificity overhead.
+
+## 🧠 Question 106
+
+**ID**: vue-106
+**Title**: How does Vue's scoped CSS work internally?
+**Difficulty**: Hard
+**Category**: Rendering & Internals
+
+### Answer 📄
+
+When a `<style scoped>` block is present in a Vue SFC, the compiler adds a unique `data-v-xxxxxxxx` attribute to every element in the component's template at compile time.
+
+The CSS selectors are then transformed to include an attribute selector targeting that unique attribute, ensuring the styles only apply to the component's own elements.
+
+**Template compilation:**
+
+```html
+<!-- Source template -->
+<div class="card"><p>Hello</p></div>
+
+<!-- Compiled output -->
+<div class="card" data-v-7ba5bd90><p data-v-7ba5bd90>Hello</p></div>
+```
+
+**CSS transformation:**
+
+```css
+/* Source */
+.card {
+  background: white;
+}
+p {
+  color: black;
+}
+
+/* Compiled */
+.card[data-v-7ba5bd90] {
+  background: white;
+}
+p[data-v-7ba5bd90] {
+  color: black;
+}
+```
+
+**`:deep()`** removes the attribute selector from the descendant part, allowing styles to pierce into child component DOM:
+
+```css
+/* Targets .inner inside a child component */
+:deep(.inner) {
+  color: red;
+}
+/* Compiles to: */
+[data-v-7ba5bd90] .inner {
+  color: red;
+}
+```
+
+**`:slotted()`** targets elements passed in via slots (which carry the parent's scope attribute, not the child's):
+
+```css
+:slotted(p) {
+  font-style: italic;
+}
+```
+
+**`:global()`** escapes scoping entirely and emits the selector without any attribute restriction.
+
+## 🧠 Question 107
+
+**ID**: vue-107
+**Title**: What is the `v-memo` directive and how does it optimize rendering?
+**Difficulty**: Hard
+**Category**: Performance
+
+### Answer 📄
+
+`v-memo` is a built-in directive that memoizes a template subtree. Vue skips re-rendering (and diffing) the subtree entirely when all values in the dependency array remain the same — using reference equality (`===`).
+
+```vue
+<template>
+  <div v-for="item in list" :key="item.id" v-memo="[item.id, item.selected]">
+    <!-- This entire subtree is skipped if item.id and item.selected haven't changed -->
+    <span>{{ item.label }}</span>
+    <HeavyChart :data="item.chartData" />
+  </div>
+</template>
+```
+
+**How it differs from `computed`:** `computed` memoizes a value; `v-memo` memoizes a DOM subtree — it skips vnode creation and patching for the whole block.
+
+**Use cases:**
+
+- Large lists where only a few items change per update
+- Items that hold expensive child components but rarely update
+
+**Empty dependency array** is equivalent to `v-once` — renders once and never updates:
+
+```html
+<StaticBanner v-memo="[]" />
+```
+
+**Important caveats:**
+
+- Only use when profiling confirms a bottleneck — it adds comparison overhead on every render cycle.
+- Avoid if every item changes on every update — the comparison cost outweighs the benefit.
+- The subtree still participates in the initial render; only subsequent re-renders are skipped.
+
+## 🧠 Question 108
+
+**ID**: vue-108
+**Title**: What options does `defineAsyncComponent` support for loading, error, and timeout states?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+`defineAsyncComponent` accepts either a loader function (simple form) or an options object (advanced form) that configures loading state, error fallback, delays, and timeouts.
+
+```js
+import { defineAsyncComponent } from 'vue';
+
+const AsyncDashboard = defineAsyncComponent({
+  // Required: the component loader
+  loader: () => import('./Dashboard.vue'),
+
+  // Component shown while loading
+  loadingComponent: LoadingSpinner,
+
+  // Delay before showing the loading component (default: 200ms)
+  // Prevents flicker for fast loads
+  delay: 200,
+
+  // Component shown if loading fails
+  errorComponent: ErrorDisplay,
+
+  // Time after which loading is considered failed
+  timeout: 5000,
+
+  // Called when the loader promise rejects
+  onError(error, retry, fail, attempts) {
+    if (attempts <= 3) {
+      retry(); // retry the load
+    } else {
+      fail(); // give up and show errorComponent
+    }
+  },
+});
+```
+
+The `delay` option is important for UX: if the component loads in under 200ms, the loading spinner is never shown, preventing a brief flash of loading state.
+
+`onError` receives a `retry` function that re-invokes the loader, making it possible to implement exponential backoff or conditional retries.
+
+When used inside `<Suspense>`, the loading/error component props are ignored — `<Suspense>` takes control of the loading UI through its `#fallback` slot.
+
+## 🧠 Question 109
+
+**ID**: vue-109
+**Title**: What are all the lifecycle hooks available in a custom Vue directive?
+**Difficulty**: Medium
+**Category**: Directives
+
+### Answer 📄
+
+Custom directives in Vue 3 have access to seven lifecycle hooks that mirror the component lifecycle, letting the directive react at each stage of the element's life.
+
+```js
+const myDirective = {
+  // Called once before the element is inserted into the DOM
+  created(el, binding, vnode) {},
+
+  // Called right before the element is inserted into the DOM
+  beforeMount(el, binding, vnode) {},
+
+  // Called after the element and all its children are mounted
+  mounted(el, binding, vnode) {},
+
+  // Called before the parent component re-renders
+  beforeUpdate(el, binding, vnode, prevVnode) {},
+
+  // Called after the parent component and its children re-render
+  updated(el, binding, vnode, prevVnode) {},
+
+  // Called before the parent component is unmounted
+  beforeUnmount(el, binding, vnode) {},
+
+  // Called after the parent component is unmounted — do cleanup here
+  unmounted(el, binding, vnode) {},
+};
+```
+
+The `binding` object contains:
+
+- `value` — the current directive value (`v-my-dir="42"` → `42`)
+- `oldValue` — previous value (only in `beforeUpdate` / `updated`)
+- `arg` — argument (`v-my-dir:color` → `'color'`)
+- `modifiers` — modifier object (`v-my-dir.trim` → `{ trim: true }`)
+- `instance` — the component instance using the directive
+
+**Shorthand** — if the directive only needs `mounted` and `updated`, pass a function directly:
+
+```js
+app.directive('focus', (el) => {
+  el.focus();
+});
+```
+
+## 🧠 Question 110
+
+**ID**: vue-110
+**Title**: How do you use Pinia's `$patch`, `$subscribe`, and `$onAction`?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+These three methods on a Pinia store instance provide advanced state management capabilities.
+
+**`$patch`** — applies multiple state changes in a single batch, triggering only one update:
+
+```js
+const store = useCounterStore();
+
+// Object patch — merges the object into state
+store.$patch({ count: 10, name: 'Alice' });
+
+// Function patch — gives full access to state for complex mutations
+store.$patch((state) => {
+  state.items.push({ id: Date.now(), text: 'new item' });
+  state.count++;
+});
+```
+
+**`$subscribe`** — watches for any state change, similar to Vuex subscribe:
+
+```js
+store.$subscribe(
+  (mutation, state) => {
+    // mutation.type: 'direct' | 'patch object' | 'patch function'
+    // Persist to localStorage on every change
+    localStorage.setItem('counter', JSON.stringify(state));
+  },
+  { detached: true },
+); // detached: survives component unmount
+```
+
+**`$onAction`** — intercepts actions before and after they run, useful for logging or error handling:
+
+```js
+store.$onAction(({ name, args, after, onError }) => {
+  console.log(`Action "${name}" called with`, args);
+
+  after((result) => {
+    console.log(`Action "${name}" finished with`, result);
+  });
+
+  onError((error) => {
+    console.error(`Action "${name}" failed:`, error);
+  });
+});
+```

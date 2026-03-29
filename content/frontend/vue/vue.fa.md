@@ -4111,3 +4111,266 @@ store.$onAction(({ name, args, after, onError }) => {
   });
 });
 ```
+
+## 🧠 سوال 111
+
+**شناسه**: vue-111
+**عنوان**: چگونه Pinia storeها می‌توانند از storeهای دیگر استفاده کنند (ترکیب store)?
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت state
+
+### پاسخ 📄
+
+Pinia storeها می‌توانند آزادانه storeهای دیگر را داخل action‌ها و getter‌های خود import و استفاده کنند. هیچ module nestingی وجود ندارد — هر store مستقل و قابل ترکیب است.
+
+```js
+// userStore.js
+export const useUserStore = defineStore('user', {
+  state: () => ({ name: '', role: 'guest' }),
+});
+```
+
+```js
+// cartStore.js
+export const useCartStore = defineStore('cart', {
+  state: () => ({ items: [] }),
+
+  getters: {
+    checkoutLabel: () => {
+      const user = useUserStore();
+      return user.role === 'vip' ? 'پرداخت (VIP)' : 'پرداخت';
+    },
+  },
+
+  actions: {
+    async checkout() {
+      const user = useUserStore();
+      if (!user.name) throw new Error('باید وارد شده باشید');
+      // ...پردازش پرداخت
+    },
+  },
+});
+```
+
+**با setup storeها:**
+
+```js
+export const useCartStore = defineStore('cart', () => {
+  const user = useUserStore(); // reactive — به تغییرات user store واکنش نشان می‌دهد
+  const items = ref([]);
+
+  const checkoutLabel = computed(() =>
+    user.role === 'vip' ? 'پرداخت (VIP)' : 'پرداخت',
+  );
+
+  return { items, checkoutLabel };
+});
+```
+
+**مهم:** `useOtherStore()` را در سطح module خارج از تعریف store فراخوانی نکنید — Pinia باید فعال (mounted) باشد.
+
+## 🧠 سوال 112
+
+**شناسه**: vue-112
+**عنوان**: `isRef`، `isReactive`، `unref` و `toValue` چیستند و چه زمانی از آن‌ها استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: سیستم Reactivity
+
+### پاسخ 📄
+
+این‌ها توابع utility برای reactivity هستند که عمدتاً هنگام نوشتن composable‌ها یا کتابخانه‌هایی که باید هم ref و هم ورودی‌های non-ref را مدیریت کنند استفاده می‌شوند.
+
+**`isRef(val)`** — اگر `val` یک `ref` یا computed ref باشد `true` برمی‌گرداند:
+
+```js
+isRef(ref(0)); // true
+isRef(0); // false
+```
+
+**`isReactive(val)`** — اگر `val` یک reactive proxy باشد `true` برمی‌گرداند:
+
+```js
+isReactive(reactive({ x: 1 })); // true
+isReactive({}); // false
+```
+
+**`unref(val)`** — اگر `val` یک ref باشد `val.value` را برمی‌گرداند؛ در غیر این صورت خود `val` را برمی‌گرداند. برای نوشتن توابعی که هم ref و هم مقادیر ساده می‌پذیرند مفید است:
+
+```js
+function double(n) {
+  return unref(n) * 2; // با ref(3) یا عدد ساده 3 کار می‌کند
+}
+```
+
+**`toValue(val)`** (Vue 3.3+) — `unref` را گسترش می‌دهد تا توابع getter را هم فراخوانی کند. در composable‌هایی که `MaybeRefOrGetter<T>` می‌پذیرند ترجیح داده می‌شود:
+
+```js
+function useFeature(input) {
+  // ورودی می‌تواند یک مرجع، یک تابع دریافت‌کننده یا یک مقدار ساده باشد
+  watchEffect(() => {
+    console.log(toValue(input));
+  });
+}
+
+useFeature(ref(42)); // کار می‌کند
+useFeature(() => props.value); // کار می‌کند — getter را فراخوانی می‌کند
+useFeature(42); // کار می‌کند — مقدار ساده برمی‌گرداند
+```
+
+`toValue` روش توصیه‌شده برای مدیریت ورودی‌های reactive انعطاف‌پذیر در composable‌هاست زیرا هر سه حالت را پوشش می‌دهد: مقدار ساده، ref و computed/getter.
+
+## 🧠 سوال 113
+
+**شناسه**: vue-113
+**عنوان**: فیلدهای meta در Vue Router چیست و چگونه استفاده می‌شوند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Routing
+
+### پاسخ 📄
+
+فیلدهای route meta جفت‌های کلید-مقدار دلخواه هستند که از طریق property `meta` به یک route متصل می‌شوند. از طریق `route.meta` در کامپوننت‌ها و navigation guard‌ها در دسترس هستند.
+
+**موارد استفاده رایج:** نیاز به authentication، عنوان صفحه، نوع layout، breadcrumb.
+
+```js
+const routes = [
+  {
+    path: '/dashboard',
+    component: Dashboard,
+    meta: {
+      requiresAuth: true,
+      title: 'داشبورد',
+      layout: 'admin',
+    },
+  },
+  {
+    path: '/login',
+    component: Login,
+    meta: { requiresAuth: false, title: 'ورود' },
+  },
+];
+```
+
+**استفاده از meta در یک navigation guard global:**
+
+```js
+router.beforeEach((to, from) => {
+  document.title = to.meta.title ?? 'اپلیکیشن من';
+
+  if (to.meta.requiresAuth && !isAuthenticated()) {
+    return { path: '/login', query: { redirect: to.fullPath } };
+  }
+});
+```
+
+**TypeScript** — interface `RouteMeta` را برای type safety augment کنید:
+
+```ts
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth: boolean;
+    title?: string;
+    layout?: 'default' | 'admin' | 'minimal';
+  }
+}
+```
+
+route‌های فرزند فیلدهای `meta` والد را از طریق `route.matched` به ارث می‌برند — از `to.matched.some(r => r.meta.requiresAuth)` برای بررسی هر ancestor استفاده کنید.
+
+## 🧠 سوال 114
+
+**شناسه**: vue-114
+**عنوان**: چگونه scroll behavior در Vue Router را کنترل می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Routing
+
+### پاسخ 📄
+
+Vue Router یک تابع `scrollBehavior` را در `createRouter` می‌پذیرد که کنترل می‌کند بعد از هر navigation صفحه کجا scroll شود.
+
+```js
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    // ۱. بازیابی موقعیت native scroll مرورگر هنگام back/forward
+    if (savedPosition) {
+      return savedPosition;
+    }
+
+    // ۲. Scroll به anchor hash
+    if (to.hash) {
+      return { el: to.hash, behavior: 'smooth' };
+    }
+
+    // ۳. Scroll به بالا برای تمام navigationهای دیگر
+    return { top: 0, left: 0, behavior: 'smooth' };
+  },
+});
+```
+
+**Scroll با تأخیر** — برای انتظار تا پایان animation transition route مفید است:
+
+```js
+scrollBehavior(to, from, savedPosition) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({ top: 0, behavior: 'smooth' });
+    }, 400);
+  });
+}
+```
+
+مقدار بازگشتی می‌تواند باشد:
+
+- `{ top, left }` — موقعیت scroll مطلق
+- `{ el, top, left }` — scroll نسبت به یک المنت DOM یا CSS selector
+- `savedPosition` — موقعیت native history مرورگر را بازیابی می‌کند
+- `false` — بدون scroll
+- یک `Promise` که به هر یک از موارد بالا resolve می‌شود
+
+## 🧠 سوال 115
+
+**شناسه**: vue-115
+**عنوان**: SSR streaming در Vue چیست و چگونه عملکرد را بهبود می‌بخشد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+SSR سنتی Vue کل درخت کامپوننت را قبل از ارسال هر چیز به مرورگر به یک رشته رندر می‌کند. SSR streaming از Node.js streams (یا Web Streams) استفاده می‌کند تا HTML را به‌صورت تدریجی هنگامی که هر بخش از درخت کامپوننت رندر می‌شود ارسال کند.
+
+```js
+// Node.js — با استفاده از renderToNodeStream
+import { createSSRApp } from 'vue';
+import { renderToNodeStream } from 'vue/server-renderer';
+import App from './App.vue';
+
+app.get('/', (req, res) => {
+  const vueApp = createSSRApp(App);
+  const stream = renderToNodeStream(vueApp);
+
+  res.write('<html><body><div id="app">');
+  stream.pipe(res, { end: false });
+  stream.on('end', () => res.end('</div></body></html>'));
+});
+```
+
+**Web Streams API** (edge runtimeها — Cloudflare Workers، Deno):
+
+```js
+import { renderToWebStream } from 'vue/server-renderer';
+
+const stream = renderToWebStream(createSSRApp(App));
+return new Response(stream, {
+  headers: { 'Content-Type': 'text/html' },
+});
+```
+
+**مزایای streaming:**
+
+- **Time To First Byte (TTFB)** به‌طور چشمگیری کاهش می‌یابد — مرورگر بلافاصله HTML را دریافت و شروع به parse کردن می‌کند.
+- مرورگر می‌تواند دانلود CSS و JS را شروع کند در حالی که سرور هنوز در حال رندر است.
+- صفحات بزرگ با داده‌های async کند کل response را block نمی‌کنند.
+
+**`<Suspense>` + streaming** — Vue می‌تواند HTML را تا یک boundary `<Suspense>` stream کند، یک حالت loading flush کند و سپس محتوای resolved را stream کند. Nuxt 3 از این برای پیاده‌سازی fetching داده‌های async بدون block کردن streaming استفاده می‌کند.

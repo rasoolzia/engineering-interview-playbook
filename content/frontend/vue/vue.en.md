@@ -4111,3 +4111,266 @@ store.$onAction(({ name, args, after, onError }) => {
   });
 });
 ```
+
+## 🧠 Question 111
+
+**ID**: vue-111
+**Title**: How can Pinia stores use other stores (store composition)?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+Pinia stores can freely import and use other stores inside their actions and getters. There is no module nesting — each store is independent and composable.
+
+```js
+// userStore.js
+export const useUserStore = defineStore('user', {
+  state: () => ({ name: '', role: 'guest' }),
+});
+```
+
+```js
+// cartStore.js
+export const useCartStore = defineStore('cart', {
+  state: () => ({ items: [] }),
+
+  getters: {
+    checkoutLabel: () => {
+      const user = useUserStore();
+      return user.role === 'vip' ? 'Checkout (VIP)' : 'Checkout';
+    },
+  },
+
+  actions: {
+    async checkout() {
+      const user = useUserStore();
+      if (!user.name) throw new Error('Must be logged in');
+      // ...process checkout
+    },
+  },
+});
+```
+
+**With setup stores:**
+
+```js
+export const useCartStore = defineStore('cart', () => {
+  const user = useUserStore(); // reactive — reacts to user store changes
+  const items = ref([]);
+
+  const checkoutLabel = computed(() =>
+    user.role === 'vip' ? 'Checkout (VIP)' : 'Checkout',
+  );
+
+  return { items, checkoutLabel };
+});
+```
+
+**Important:** do not call `useOtherStore()` at the module's top level outside a store definition — Pinia must be active (mounted) before stores can be accessed.
+
+## 🧠 Question 112
+
+**ID**: vue-112
+**Title**: What are `isRef`, `isReactive`, `unref`, and `toValue` and when do you use them?
+**Difficulty**: Medium
+**Category**: Reactivity System
+
+### Answer 📄
+
+These are reactivity utility functions used primarily when writing composables or libraries that need to handle both ref and non-ref inputs.
+
+**`isRef(val)`** — returns `true` if `val` is a `ref` or computed ref:
+
+```js
+isRef(ref(0)); // true
+isRef(0); // false
+```
+
+**`isReactive(val)`** — returns `true` if `val` is a reactive proxy:
+
+```js
+isReactive(reactive({ x: 1 })); // true
+isReactive({}); // false
+```
+
+**`unref(val)`** — if `val` is a ref, returns `val.value`; otherwise returns `val` as-is. Useful for writing functions that accept both refs and plain values:
+
+```js
+function double(n) {
+  return unref(n) * 2; // works with ref(3) or plain 3
+}
+```
+
+**`toValue(val)`** (Vue 3.3+) — extends `unref` to also call getter functions. Preferred in composables that accept `MaybeRefOrGetter<T>`:
+
+```js
+function useFeature(input) {
+  // input can be a ref, a getter function, or a plain value
+  watchEffect(() => {
+    console.log(toValue(input));
+  });
+}
+
+useFeature(ref(42)); // works
+useFeature(() => props.value); // works — calls the getter
+useFeature(42); // works — returns plain value
+```
+
+`toValue` is the recommended way to handle flexible reactive inputs in composables because it covers all three cases: plain value, ref, and computed/getter.
+
+## 🧠 Question 113
+
+**ID**: vue-113
+**Title**: What are Vue Router route meta fields and how are they used?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Route meta fields are arbitrary key-value pairs attached to a route via the `meta` property. They are available on `route.meta` inside components and navigation guards, making them a clean way to attach per-route metadata without overloading the route path or component.
+
+**Common uses:** authentication requirements, page titles, layout types, breadcrumbs.
+
+```js
+const routes = [
+  {
+    path: '/dashboard',
+    component: Dashboard,
+    meta: {
+      requiresAuth: true,
+      title: 'Dashboard',
+      layout: 'admin',
+    },
+  },
+  {
+    path: '/login',
+    component: Login,
+    meta: { requiresAuth: false, title: 'Sign In' },
+  },
+];
+```
+
+**Using meta in a global navigation guard:**
+
+```js
+router.beforeEach((to, from) => {
+  document.title = to.meta.title ?? 'My App';
+
+  if (to.meta.requiresAuth && !isAuthenticated()) {
+    return { path: '/login', query: { redirect: to.fullPath } };
+  }
+});
+```
+
+**TypeScript** — augment the `RouteMeta` interface for type safety:
+
+```ts
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth: boolean;
+    title?: string;
+    layout?: 'default' | 'admin' | 'minimal';
+  }
+}
+```
+
+Child routes inherit parent `meta` fields through `route.matched` — use `to.matched.some(r => r.meta.requiresAuth)` to check any ancestor in the matched chain.
+
+## 🧠 Question 114
+
+**ID**: vue-114
+**Title**: How do you control scroll behavior in Vue Router?
+**Difficulty**: Medium
+**Category**: Routing
+
+### Answer 📄
+
+Vue Router accepts a `scrollBehavior` function in `createRouter` that controls where the page scrolls after each navigation.
+
+```js
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    // 1. Restore browser's native scroll position on back/forward
+    if (savedPosition) {
+      return savedPosition;
+    }
+
+    // 2. Scroll to anchor hash
+    if (to.hash) {
+      return { el: to.hash, behavior: 'smooth' };
+    }
+
+    // 3. Scroll to top for all other navigations
+    return { top: 0, left: 0, behavior: 'smooth' };
+  },
+});
+```
+
+**Delayed scroll** — useful when waiting for a route transition animation to finish:
+
+```js
+scrollBehavior(to, from, savedPosition) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({ top: 0, behavior: 'smooth' });
+    }, 400);
+  });
+}
+```
+
+The return value can be:
+
+- `{ top, left }` — absolute scroll position
+- `{ el, top, left }` — scroll relative to a DOM element or CSS selector
+- `savedPosition` — restores the browser's native history scroll
+- `false` — no scroll
+- A `Promise` resolving to any of the above
+
+## 🧠 Question 115
+
+**ID**: vue-115
+**Title**: What is SSR streaming in Vue and how does it improve performance?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Traditional Vue SSR renders the entire component tree to a string before sending anything to the browser. Streaming SSR uses Node.js streams (or Web Streams) to send HTML incrementally as each part of the component tree finishes rendering.
+
+```js
+// Node.js — using renderToNodeStream
+import { createSSRApp } from 'vue';
+import { renderToNodeStream } from 'vue/server-renderer';
+import App from './App.vue';
+
+app.get('/', (req, res) => {
+  const vueApp = createSSRApp(App);
+  const stream = renderToNodeStream(vueApp);
+
+  res.write('<html><body><div id="app">');
+  stream.pipe(res, { end: false });
+  stream.on('end', () => res.end('</div></body></html>'));
+});
+```
+
+**Web Streams API** (edge runtimes — Cloudflare Workers, Deno):
+
+```js
+import { renderToWebStream } from 'vue/server-renderer';
+
+const stream = renderToWebStream(createSSRApp(App));
+return new Response(stream, {
+  headers: { 'Content-Type': 'text/html' },
+});
+```
+
+**Benefits of streaming:**
+
+- **Time To First Byte (TTFB)** is dramatically reduced — the browser receives and starts parsing HTML immediately.
+- The browser can begin downloading CSS and JS while the server is still rendering.
+- Large pages with slow async data don't block the entire response.
+
+**`<Suspense>` + streaming** — Vue can stream HTML up to a `<Suspense>` boundary, flush a loading state, then stream the resolved content when the async data is ready. Nuxt 3 uses this with `useAsyncData` to implement async page data fetching without blocking streaming.

@@ -4374,3 +4374,249 @@ return new Response(stream, {
 - صفحات بزرگ با داده‌های async کند کل response را block نمی‌کنند.
 
 **`<Suspense>` + streaming** — Vue می‌تواند HTML را تا یک boundary `<Suspense>` stream کند، یک حالت loading flush کند و سپس محتوای resolved را stream کند. Nuxt 3 از این برای پیاده‌سازی fetching داده‌های async بدون block کردن streaming استفاده می‌کند.
+
+## 🧠 سوال 116
+
+**شناسه**: vue-116
+**عنوان**: `defineCustomElement` چیست و Vue چگونه از Web Component‌ها پشتیبانی می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`defineCustomElement` یک تعریف کامپوننت Vue را به یک کلاس Custom Element (Web Component) native تبدیل می‌کند که می‌توان آن را با `customElements.define` ثبت کرد و در هر صفحه HTML یا framework غیر-Vue استفاده کرد.
+
+```js
+import { defineCustomElement } from 'vue';
+
+const MyButtonElement = defineCustomElement({
+  props: { label: String },
+  emits: ['click'],
+  template: `<button @click="$emit('click')">{{ label }}</button>`,
+  styles: [`.btn { color: var(--brand) }`], // در Shadow DOM تزریق می‌شود
+});
+
+customElements.define('my-button', MyButtonElement);
+```
+
+```html
+<!-- در هر جایی به عنوان یک HTML custom element استاندارد استفاده می‌شود -->
+<my-button label="روی من کلیک کن"></my-button>
+```
+
+**با SFCها** — از قرارداد نام‌گذاری `.ce.vue` استفاده کنید (Vite آن را تشخیص می‌دهد):
+
+```js
+import MyButton from './MyButton.ce.vue';
+const MyButtonElement = defineCustomElement(MyButton);
+customElements.define('my-button', MyButtonElement);
+```
+
+**تفاوت‌های کلیدی با کامپوننت‌های Vue معمولی:**
+
+- Style‌ها در یک **Shadow DOM** تزریق می‌شوند — CSS encapsulation واقعی.
+- Propها از HTML attribute‌ها reflect می‌شوند.
+- رویدادها تبدیل به instance های native `CustomEvent` می‌شوند.
+- Composition API، `inject`/`provide` و Pinia همه درون shadow tree کار می‌کنند.
+
+این کامپوننت‌های Vue را در اپلیکیشن‌های غیر-Vue، design system‌ها یا معماری‌های micro-frontend قابل استفاده مجدد می‌کند.
+
+## 🧠 سوال 117
+
+**شناسه**: vue-117
+**عنوان**: `getCurrentInstance` چیست و چه زمانی باید از آن استفاده کرد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: الگوهای پیشرفته
+
+### پاسخ 📄
+
+`getCurrentInstance` instance داخلی کامپوننت در حال اجرا را در طول `setup()` برمی‌گرداند. machinery داخلی Vue را expose می‌کند و عمدتاً یک escape hatch سطح پایین برای نویسندگان کتابخانه است.
+
+```js
+import { getCurrentInstance } from 'vue';
+
+const instance = getCurrentInstance();
+// instance.proxy      — public component proxy (معادل `this` در Options API)
+// instance.appContext — دسترسی به app.config، app.provide و غیره
+// instance.emit       — emit رویداد
+// instance.props      — prop‌های resolved
+// instance.slots      — شیء slots
+// instance.uid        — شناسه عددی یکتا برای این instance
+```
+
+**موارد استفاده مشروع:**
+
+- نوشتن plugin‌ها یا کتابخانه‌های Vue که به app context نیاز دارند
+- دسترسی به `uid` کامپوننت برای تولید ID یکتا
+- قابلیت همکاری با کد Options API قدیمی از داخل یک composable
+
+**چه زمانی استفاده نکنید:**
+
+- برای دسترسی به props، slots، emits یا attrs — از `defineProps`، `defineEmits`، `useAttrs`، `useSlots` استفاده کنید
+- برای دسترسی برنامه‌نویسی به کامپوننت‌های فرزند — از `defineExpose` + template refs استفاده کنید
+- خارج از `setup()` — `getCurrentInstance()` خارج از setup مقدار `null` برمی‌گرداند
+
+```js
+// استفاده صحیح — کد کتابخانه که به app-level config دسترسی دارد
+export function useGlobalConfig() {
+  const instance = getCurrentInstance();
+  if (!instance) throw new Error('باید داخل setup() فراخوانی شود');
+  return instance.appContext.config.globalProperties;
+}
+```
+
+همیشه Composition API عمومی را ترجیح دهید. `getCurrentInstance` به internalهایی دسترسی دارد که ممکن است بین نسخه‌های Vue تغییر کنند.
+
+## 🧠 سوال 118
+
+**شناسه**: vue-118
+**عنوان**: `useTemplateRef` چیست و چه تفاوتی با استفاده از `ref` برای template refها دارد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Composition API
+
+### پاسخ 📄
+
+`useTemplateRef` (معرفی‌شده در Vue 3.5) API صریح برای اعلان template refها است که قرارداد ضمنی تطابق نام را جایگزین می‌کند.
+
+**رویکرد قدیمی (تطابق نام ضمنی):**
+
+```vue
+<script setup>
+import { ref } from 'vue';
+
+// کار می‌کند چون نام متغیر باید دقیقاً با ref="inputEl" در template مطابقت داشته باشد
+const inputEl = ref(null);
+</script>
+
+<template>
+  <input ref="inputEl" />
+</template>
+```
+
+**رویکرد جدید با `useTemplateRef`:**
+
+```vue
+<script setup>
+import { useTemplateRef, onMounted } from 'vue';
+
+const inputEl = useTemplateRef('myInput'); // رشته به ref="myInput" مرتبط می‌شود
+
+onMounted(() => {
+  inputEl.value?.focus();
+});
+</script>
+
+<template>
+  <input ref="myInput" />
+</template>
+```
+
+**مزایا:**
+
+- ارتباط بین script و template صریح است — تغییر نام متغیر دیگر به شکست ساکت binding منجر نمی‌شود.
+- پشتیبانی TypeScript: `useTemplateRef<HTMLInputElement>('myInput')` یک `Ref<HTMLInputElement | null>` با type درست برمی‌گرداند.
+- با `v-for` کار می‌کند — ref تبدیل به `Ref<Element[]>` می‌شود.
+
+```ts
+// Template ref با type
+const tableRef = useTemplateRef<HTMLTableElement>('dataTable');
+// tableRef.value از نوع HTMLTableElement | null است
+```
+
+## 🧠 سوال 119
+
+**شناسه**: vue-119
+**عنوان**: استراتژی‌های lazy hydration در Vue 3.5 کدامند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+Vue 3.5 استراتژی‌های lazy hydration داخلی را از طریق `defineAsyncComponent` معرفی کرد که hydration سمت client کامپوننت‌های server-rendered را تا زمانی که یک شرط خاص برقرار شود به تأخیر می‌اندازد و TTI (Time to Interactive) را بهبود می‌بخشد.
+
+چهار استراتژی داخلی ارائه شده:
+
+**`hydrateOnVisible`** — وقتی کامپوننت وارد viewport می‌شود hydrate می‌کند (`IntersectionObserver`):
+
+```js
+import { defineAsyncComponent, hydrateOnVisible } from 'vue';
+
+const LazyMap = defineAsyncComponent({
+  loader: () => import('./HeavyMap.vue'),
+  hydrate: hydrateOnVisible({ rootMargin: '200px' }),
+});
+```
+
+**`hydrateOnIdle`** — وقتی مرورگر بیکار است hydrate می‌کند (`requestIdleCallback`):
+
+```js
+import { hydrateOnIdle } from 'vue';
+hydrate: hydrateOnIdle(2000); // 2000ms timeout به عنوان fallback
+```
+
+**`hydrateOnInteraction`** — با یک تعامل خاص کاربر hydrate می‌کند:
+
+```js
+import { hydrateOnInteraction } from 'vue';
+hydrate: hydrateOnInteraction(['click', 'focus']);
+```
+
+**`hydrateOnMediaQuery`** — وقتی یک CSS media query منطبق می‌شود hydrate می‌کند:
+
+```js
+import { hydrateOnMediaQuery } from 'vue';
+hydrate: hydrateOnMediaQuery('(max-width: 768px)');
+```
+
+**نحوه کار:** سرور HTML کامل را فوری رندر می‌کند (FCP سریع). روی client، hydration (متصل کردن reactivity و event listenerهای Vue به DOM موجود) تا trigger شدن شرط استراتژی به تأخیر می‌افتد. این رویکرد **معماری islands** در سطح framework است — فقط بخش‌هایی که کاربر واقعاً به آن‌ها نیاز دارد زود hydrate می‌شوند.
+
+## 🧠 سوال 120
+
+**شناسه**: vue-120
+**عنوان**: چگونه slot‌ها را از یک کامپوننت والد به یک فرزند تودرتو forward می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+Slot forwarding الگویی است که slot‌های یک والد را از طریق یک کامپوننت میانی به یک فرزند منتقل می‌کند و slot API را در سطح بالا حفظ می‌کند.
+
+**Slot forwarding dynamic** — تمام slot‌های والد را به‌صورت generic به یک فرزند re-expose می‌کند:
+
+```vue
+<!-- LayoutWrapper.vue — یک wrapper شفاف -->
+<template>
+  <BaseLayout>
+    <!-- هر slot که والد ارسال کرده را forward کنید، شامل داده scoped slot -->
+    <template v-for="(_, name) in $slots" #[name]="slotProps">
+      <slot :name="name" v-bind="slotProps ?? {}" />
+    </template>
+  </BaseLayout>
+</template>
+```
+
+**نحوه کار:**
+
+- `v-for="(_, name) in $slots"` روی تمام نام‌های slot ارسال‌شده به `LayoutWrapper` iterate می‌کند.
+- `#[name]="slotProps"` از یک نام slot dynamic برای دریافت داده scoped slot از `BaseLayout` استفاده می‌کند.
+- `<slot :name="name" v-bind="slotProps" />` آن slot‌ها را به consumer `LayoutWrapper` re-expose می‌کند.
+
+**چرا اهمیت دارد:**
+
+- wrapperهای کتابخانه‌های UI (مثلاً یک wrapper `<DataTable>`) نیاز دارند slot‌های table درونی را بدون اعلان مجدد دستی هر کدام expose کنند.
+- Slot forwarding API عمومی را تمیز نگه می‌دارد و رندر واقعی را به یک کامپوننت پایه واگذار می‌کند.
+
+**Slot forwarding نام‌گذاری‌شده (صریح):**
+
+```vue
+<template>
+  <BaseDialog>
+    <template #header>
+      <slot name="header" />
+    </template>
+    <template #default="{ close }">
+      <slot :close="close" />
+    </template>
+  </BaseDialog>
+</template>
+```

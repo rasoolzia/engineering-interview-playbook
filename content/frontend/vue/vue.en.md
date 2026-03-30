@@ -4374,3 +4374,249 @@ return new Response(stream, {
 - Large pages with slow async data don't block the entire response.
 
 **`<Suspense>` + streaming** — Vue can stream HTML up to a `<Suspense>` boundary, flush a loading state, then stream the resolved content when the async data is ready. Nuxt 3 uses this with `useAsyncData` to implement async page data fetching without blocking streaming.
+
+## 🧠 Question 116
+
+**ID**: vue-116
+**Title**: What is `defineCustomElement` and how does Vue support Web Components?
+**Difficulty**: Hard
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`defineCustomElement` converts a Vue component definition into a native Custom Element (Web Component) class that can be registered with `customElements.define` and used in any HTML page or non-Vue framework.
+
+```js
+import { defineCustomElement } from 'vue';
+
+const MyButtonElement = defineCustomElement({
+  props: { label: String },
+  emits: ['click'],
+  template: `<button @click="$emit('click')">{{ label }}</button>`,
+  styles: [`.btn { color: var(--brand) }`], // injected into Shadow DOM
+});
+
+customElements.define('my-button', MyButtonElement);
+```
+
+```html
+<!-- Used as a standard HTML custom element anywhere -->
+<my-button label="Click me"></my-button>
+```
+
+**With SFCs** — use the `.ce.vue` naming convention (Vite detects it and switches to custom element mode):
+
+```js
+import MyButton from './MyButton.ce.vue';
+const MyButtonElement = defineCustomElement(MyButton);
+customElements.define('my-button', MyButtonElement);
+```
+
+**Key differences from regular Vue components:**
+
+- Styles are injected into a **Shadow DOM**, providing true CSS encapsulation.
+- Props are reflected from HTML attributes (strings auto-cast for declared props).
+- Events become native `CustomEvent` instances dispatched on the element.
+- Composition API, `inject`/`provide`, and Pinia all work within the shadow tree.
+
+This makes Vue components reusable in non-Vue applications, design systems, or micro-frontend architectures.
+
+## 🧠 Question 117
+
+**ID**: vue-117
+**Title**: What is `getCurrentInstance` and when should you use it?
+**Difficulty**: Hard
+**Category**: Advanced Patterns
+
+### Answer 📄
+
+`getCurrentInstance` returns the internal component instance of the currently executing component during `setup()`. It exposes Vue's internal machinery and is primarily a low-level escape hatch for library authors.
+
+```js
+import { getCurrentInstance } from 'vue';
+
+const instance = getCurrentInstance();
+// instance.proxy    — the public component proxy (equivalent to `this` in Options API)
+// instance.appContext — access to app.config, app.provide, etc.
+// instance.emit     — emit events
+// instance.props    — resolved props
+// instance.slots    — slots object
+// instance.uid      — unique numeric ID for this instance
+```
+
+**Legitimate use cases:**
+
+- Writing Vue plugins or libraries that need access to the app context
+- Accessing the component's `uid` for unique ID generation
+- Interoperability with legacy Options API code from within a composable
+
+**When NOT to use it:**
+
+- For accessing props, slots, emits, or attrs — use `defineProps`, `defineEmits`, `useAttrs`, `useSlots` instead
+- For programmatic access to child components — use `defineExpose` + template refs
+- Outside `setup()` — `getCurrentInstance()` returns `null` outside of setup
+
+```js
+// Correct use — library code accessing app-level config
+export function useGlobalConfig() {
+  const instance = getCurrentInstance();
+  if (!instance) throw new Error('Must be called inside setup()');
+  return instance.appContext.config.globalProperties;
+}
+```
+
+Always prefer the public Composition API. `getCurrentInstance` accesses internals that may change between Vue versions.
+
+## 🧠 Question 118
+
+**ID**: vue-118
+**Title**: What is `useTemplateRef` and how does it differ from using `ref` for template refs?
+**Difficulty**: Medium
+**Category**: Composition API
+
+### Answer 📄
+
+`useTemplateRef` (introduced in Vue 3.5) is the explicit API for declaring template refs, replacing the implicit name-matching convention.
+
+**Old approach (implicit name matching):**
+
+```vue
+<script setup>
+import { ref } from 'vue';
+
+// Works because the variable name must match ref="inputEl" exactly
+const inputEl = ref(null);
+</script>
+
+<template>
+  <input ref="inputEl" />
+</template>
+```
+
+**New approach with `useTemplateRef`:**
+
+```vue
+<script setup>
+import { useTemplateRef, onMounted } from 'vue';
+
+const inputEl = useTemplateRef('myInput'); // string ties to ref="myInput"
+
+onMounted(() => {
+  inputEl.value?.focus();
+});
+</script>
+
+<template>
+  <input ref="myInput" />
+</template>
+```
+
+**Advantages:**
+
+- The string key documents the binding explicitly — no silent failures from variable renaming.
+- TypeScript support: `useTemplateRef<HTMLInputElement>('myInput')` gives a properly typed `Ref<HTMLInputElement | null>`.
+- Works with `v-for` — the ref becomes `Ref<Element[]>` when used on a repeated element.
+
+```ts
+// Typed template ref
+const tableRef = useTemplateRef<HTMLTableElement>('dataTable');
+// tableRef.value is HTMLTableElement | null
+```
+
+## 🧠 Question 119
+
+**ID**: vue-119
+**Title**: What are Vue 3.5's lazy hydration strategies?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Vue 3.5 introduced built-in lazy hydration strategies via `defineAsyncComponent` that defer client-side hydration of server-rendered components until a specific condition is met, improving Time to Interactive (TTI) for SSR applications.
+
+Four built-in strategies are provided:
+
+**`hydrateOnVisible`** — hydrates when the component enters the viewport (`IntersectionObserver`):
+
+```js
+import { defineAsyncComponent, hydrateOnVisible } from 'vue';
+
+const LazyMap = defineAsyncComponent({
+  loader: () => import('./HeavyMap.vue'),
+  hydrate: hydrateOnVisible({ rootMargin: '200px' }),
+});
+```
+
+**`hydrateOnIdle`** — hydrates when the browser is idle (`requestIdleCallback`):
+
+```js
+import { hydrateOnIdle } from 'vue';
+hydrate: hydrateOnIdle(2000); // 2000ms timeout as fallback
+```
+
+**`hydrateOnInteraction`** — hydrates on a specific user interaction:
+
+```js
+import { hydrateOnInteraction } from 'vue';
+hydrate: hydrateOnInteraction(['click', 'focus']);
+```
+
+**`hydrateOnMediaQuery`** — hydrates when a CSS media query matches:
+
+```js
+import { hydrateOnMediaQuery } from 'vue';
+hydrate: hydrateOnMediaQuery('(max-width: 768px)');
+```
+
+**How it works:** the server renders full HTML immediately (fast FCP). On the client, hydration (attaching Vue's event listeners and reactivity to the existing DOM) is deferred until the strategy condition triggers. The component appears interactive (it's real HTML) but is not yet "owned" by Vue's runtime. This is the **islands architecture** applied at the framework level — only the parts the user actually needs get hydrated eagerly.
+
+## 🧠 Question 120
+
+**ID**: vue-120
+**Title**: How do you forward slots from a parent component to a deeply nested child?
+**Difficulty**: Hard
+**Category**: Components
+
+### Answer 📄
+
+Slot forwarding is the pattern of passing a parent's slots through an intermediate component to a child, maintaining the slot API at the top level.
+
+**Dynamic slot forwarding** — re-expose all parent slots to a child generically:
+
+```vue
+<!-- LayoutWrapper.vue — a transparent wrapper -->
+<template>
+  <BaseLayout>
+    <!-- Forward every slot the parent passed in, including scoped slot data -->
+    <template v-for="(_, name) in $slots" #[name]="slotProps">
+      <slot :name="name" v-bind="slotProps ?? {}" />
+    </template>
+  </BaseLayout>
+</template>
+```
+
+**How it works:**
+
+- `v-for="(_, name) in $slots"` iterates over all slot names passed to `LayoutWrapper`.
+- `#[name]="slotProps"` uses a dynamic slot name to receive scoped slot data from `BaseLayout`.
+- `<slot :name="name" v-bind="slotProps" />` re-exposes those slots to `LayoutWrapper`'s consumer.
+
+**Why this matters:**
+
+- UI component library wrappers (e.g., a `<DataTable>` wrapper) need to expose the inner table's slots without re-declaring each one by hand.
+- Slot forwarding keeps the public API clean while delegating actual rendering to a base component.
+
+**Named slot forwarding (explicit):**
+
+```vue
+<template>
+  <BaseDialog>
+    <template #header>
+      <slot name="header" />
+    </template>
+    <template #default="{ close }">
+      <slot :close="close" />
+    </template>
+  </BaseDialog>
+</template>
+```

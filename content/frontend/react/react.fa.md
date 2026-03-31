@@ -24,7 +24,8 @@ version: 1.0
 - SSR / Hydration
 - معماری و الگوها
 - داخلی‌های React
-- موارد لبه و تله‌ها
+- موارد- داخلیهای React
+- موارد لبه و تلهها
 
 ## سطح دشواری
 
@@ -227,3 +228,254 @@ function Button({ className, ...rest }) {
   return <button className={`btn ${className}`} {...rest} />;
 }
 ```
+
+## 🧠 سوال 6
+
+**شناسه**: react-006
+**عنوان**: State در React چیست و چه تفاوتی با props دارد؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Props و State
+
+### پاسخ 📄
+
+State داده‌های قابل تغییر است که درون یک کامپوننت مدیریت می‌شود. هنگامی که state تغییر می‌کند، React کامپوننت را برای نشان دادن state جدید دوباره رندر می‌کند. برخلاف props (که متعلق به والد است)، state متعلق به خود کامپوننت است و توسط آن کنترل می‌شود.
+
+```jsx
+import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0); // مقدار اولیه: 0
+
+  return (
+    <div>
+      <p>تعداد: {count}</p>
+      <button onClick={() => setCount((c) => c + 1)}>+</button>
+      <button onClick={() => setCount((c) => c - 1)}>-</button>
+    </div>
+  );
+}
+```
+
+**Props در مقابل State:**
+
+|                        | Props                             | State                              |
+| ---------------------- | --------------------------------- | ---------------------------------- |
+| مالک                   | کامپوننت والد                     | خود کامپوننت                       |
+| قابل تغییر؟            | خیر (فقط-خواندنی)                 | بله (از طریق setter)               |
+| باعث re-render می‌شود؟ | بله (زمانی که والد re-render کند) | بله (زمانی که setter فراخوانی شود) |
+| منتقل می‌شود از طریق   | آرگومان تابع                      | hook `useState`                    |
+
+**فرم به‌روزرسانی functional** — هنگامی که مقدار جدید به مقدار قبلی وابسته است، یک تابع به setter منتقل کنید. این برای صحت در callback های async یا به‌روزرسانی‌های دسته‌ای ضروری است:
+
+```js
+setCount((prev) => prev + 1); // ایمن — همیشه آخرین مقدار را می‌خواند
+setCount(count + 1); // ممکن است در concurrent mode قدیمی باشد
+```
+
+**State محلی و캡encapsulated است** — کامپوننت‌های همتا مستقیماً state را به اشتراک نمی‌گذارند. برای اشتراک‌گذاری state، آن را به نزدیک‌ترین جد مشترک انتقال دهید.
+
+## 🧠 سوال 7
+
+**شناسه**: react-007
+**عنوان**: React چگونه رویدادها را مدیریت می‌کند؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: فرم‌ها و رویدادها
+
+### پاسخ 📄
+
+React از یک **سیستم رویداد synthetic** استفاده می‌کند که رویدادهای بومی DOM مرورگر را در بر می‌گیرد. React یک event listener واحد را در ریشه درخت React نصب می‌کند (نه روی هر عنصر)، و رویدادها را از طریق event delegation به handler های صحیح ارسال می‌کند.
+
+```jsx
+function Form() {
+  function handleSubmit(event) {
+    event.preventDefault(); // مانند preventDefault بومی کار می‌کند
+    console.log('ارسال شد');
+  }
+
+  function handleChange(event) {
+    console.log(event.target.value); // SyntheticEvent — همان API بومی
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input onChange={handleChange} />
+    </form>
+  );
+}
+```
+
+**تفاوت‌های کلیدی با رویدادهای DOM:**
+
+- نام‌های event با camelCase نوشته می‌شوند: `onClick`، `onChange`، `onSubmit` (نه `onclick`).
+- شما یک تابع منتقل می‌کنید، نه یک رشته: `onClick={handler}` نه `onclick="handler()"`.
+- رویدادها bubble می‌کنند همانطور که انتظار می‌رود؛ از `event.stopPropagation()` برای متوقف کردن استفاده کنید. `event.persist()` در React 17+ ضروری نیست چون SyntheticEvents دیگر pooled نمی‌شوند.
+
+**انتشار رویداد** همانند رویدادهای بومی (حباب‌ها، مرحله ضبط) عمل می‌کند. می‌توانید با `event.stopPropagation()` انتشار را متوقف کنید.
+
+React 17 ریشه واگذاری رویداد را از `document` به کانتینر ریشه React تغییر داده است، که باعث می‌شود ترکیب میکرو-فرانت‌اند با نسخه‌های مختلف React ایمن‌تر شود.
+
+## 🧠 سوال 8
+
+**شناسه**: react-008
+**عنوان**: رندرینگ شرطی در React چگونه کار می‌کند؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: JSX و رندرینگ
+
+### پاسخ 📄
+
+React هیچ دستور ویژهای برای شرط ها ندارد — شما از عبارات جاوااسکریپت معمولی درون JSX استفاده میکنید.
+
+**عملگر سهگانه (Ternary)** — رایج ترین الگو:
+
+```jsx
+function Alert({ type, message }) {
+  return (
+    <div className={`alert alert-${type}`}>
+      {type === 'error' ? <ErrorIcon /> : <InfoIcon />}
+      <span>{message}</span>
+    </div>
+  );
+}
+```
+
+**اتصال کوتاه `&&`** — سمت راست را فقط زمانی رندر میکند که سمت چپ truthy باشد:
+
+```jsx
+{
+  isLoggedIn && <Dashboard />;
+}
+```
+
+**تله:** اگر سمت چپ `0` باشد، React عدد `0` را در DOM رندر میکند (چون `0` falsy است اما یک مقدار قابل رندر معتبر نیز هست). برای امنیت از `!!` یا ternary استفاده کنید:
+
+```jsx
+{
+  items.length > 0 && <List items={items} />;
+} // ایمن — boolean
+{
+  items.length && <List items={items} />;
+} // خطرناک — اگر خالی باشد "0" رندر میکند
+```
+
+**الگوی بازگشت زودهنگام:**
+
+```jsx
+function Profile({ user }) {
+  if (!user) return <p>Loading...</p>;
+  return <div>{user.name}</div>;
+}
+```
+
+**`null` برای رندر نکردن هیچ چیز:**
+
+```jsx
+function Banner({ visible, message }) {
+  if (!visible) return null;
+  return <div className="banner">{message}</div>;
+}
+```
+
+## 🧠 سوال 9
+
+**شناسه**: react-009
+**عنوان**: چگونه لیست‌ها را در React رندر می‌کنید و `key` چرا مهم است؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: JSX و رندرینگ
+
+### پاسخ 📄
+
+از `Array.map()` برای تبدیل آرایه‌های داده به عناصر React استفاده کنید. هر عنصر در یک لیست باید یک prop `key` منحصربه‌فرد داشته باشد:
+
+```jsx
+function TodoList({ todos }) {
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo.id}>
+          <span>{todo.text}</span>
+          {todo.done && <span>✓</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**چرا `key` مهم است:**
+
+وقتی React یک لیست را تطبیق می‌دهد، از `key` برای تطبیق عناصر بین رندر قبلی و جدید استفاده می‌کند. بدون کلیدهای پایدار، React به تطبیق مبتنی بر شاخص بازمی‌گردد، که باعث می‌شود هنگام مرتب‌سازی مجدد، درج یا حذف موارد، رفتار نادرستی رخ دهد:
+
+- حالت کامپوننت (مانند مقدار تایپ شده ورودی) به عنصر اشتباه متصل می‌شود.
+- جهش‌های غیرضروری DOM رخ می‌دهد.
+- انیمیشن‌ها و فوکوس مختل می‌شوند.
+
+**قوانین مربوط به کلیدها:**
+
+- باید در بین سایر موارد منحصر به فرد باشد\*\* (نه منحصر به فرد سراسری).
+- باید پایدار باشد\*\* - یک آیتم باید در رندرهای مختلف، کلید یکسانی داشته باشد.
+- باید یک شناسه پایدار از داده‌های شما باشد (شناسه پایگاه داده، UUID). از استفاده از اندیس آرایه خودداری کنید، مگر اینکه لیست ایستا باشد و هرگز تغییر ترتیب ندهد.
+
+```jsx
+// بد — index ناپایدار است هنگام مرتب‌سازی/فیلتر کردن
+{
+  items.map((item, i) => <Item key={i} {...item} />);
+}
+
+// خوب — ID های ثابت
+{
+  items.map((item) => <Item key={item.id} {...item} />);
+}
+```
+
+## 🧠 سوال 10
+
+**شناسه**: react-010
+**عنوان**: کامپوننت‌های controlled در مقابل uncontrolled چیستند؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: فرم‌ها و رویدادها
+
+### پاسخ 📄
+
+**Controlled components** مقدار فرم خود را از React state دریافت می‌کنند. React "منبع حقیقت" است:
+
+```jsx
+function ControlledInput() {
+  const [value, setValue] = useState('');
+
+  return (
+    <input
+      value={value} // React مقدار را کنترل می‌کند
+      onChange={(e) => setValue(e.target.value)}
+    />
+  );
+}
+```
+
+**Uncontrolled components** مقدار خود را در DOM ذخیره می‌کنند. شما با یک `ref` هنگام نیاز به آن، مقدار را می‌خوانید:
+
+```jsx
+function UncontrolledInput() {
+  const inputRef = useRef(null);
+
+  function handleSubmit() {
+    console.log(inputRef.current.value); //بنا به تقاضا بخوانید
+  }
+
+  return (
+    <>
+      <input ref={inputRef} defaultValue="پیش‌فرض" />
+      <button onClick={handleSubmit}>ارسال</button>
+    </>
+  );
+}
+```
+
+|                                          | Controlled                    | Uncontrolled               |
+| ---------------------------------------- | ----------------------------- | -------------------------- |
+| اعتبارسنجی در هر keystroke               | ✅ طبیعی                      | ❌ نیاز به polling با ref  |
+| بازخورد فوری (فرمت، غیرفعال کردن submit) | ✅                            | ❌                         |
+| ورودیهای فایل                            | ❌ نمیتوان مقدار را کنترل کرد | ✅ باید از ref استفاده شود |
+| فرمهای ساده، یکپارچهسازیهای شخص ثالث     | ❌ کد بیشتر                   | ✅ کد کمتر                 |
+
+اکثر فرم های React از کامپوننت های controlled استفاده میکنند. کتابخانه هایی مانند React Hook Form رویکرد ترکیبی دارند (uncontrolled در زیرساخت برای عملکرد، API شبیه controlled برای اعتبارسنجی).
+ا منطق وابسته به مقادیر.

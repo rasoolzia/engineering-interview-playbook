@@ -479,3 +479,249 @@ function UncontrolledInput() {
 | Simple forms, third-party integrations    | ❌ More boilerplate    | ✅ Less code            |
 
 Most React forms use controlled components. Libraries like React Hook Form take a hybrid approach (uncontrolled under the hood for performance, controlled-like API for validation).
+
+## 🧠 Question 11
+
+**ID**: react-011
+**Title**: What is a React Fragment and when should you use it?
+**Difficulty**: Easy
+**Category**: JSX & Rendering
+
+### Answer 📄
+
+A Fragment lets a component return multiple elements without adding an extra DOM node as a wrapper.
+
+```jsx
+// Without Fragment — adds an unnecessary <div>
+function Columns() {
+  return (
+    <div>
+      <td>Name</td>
+      <td>Age</td>
+    </div>
+  ); // invalid HTML — <div> inside <tr>
+}
+
+// With Fragment — no extra DOM node
+function Columns() {
+  return (
+    <>
+      <td>Name</td>
+      <td>Age</td>
+    </>
+  );
+}
+```
+
+**Two syntaxes:**
+
+```jsx
+// Shorthand — cannot accept props
+<>...</>;
+
+// Explicit — required when you need a key (e.g., mapping a list)
+function List({ items }) {
+  return items.map((item) => (
+    <React.Fragment key={item.id}>
+      <dt>{item.term}</dt>
+      <dd>{item.description}</dd>
+    </React.Fragment>
+  ));
+}
+```
+
+**Use cases:**
+
+- Returning multiple table cells (`<td>`) or rows (`<tr>`) from a component.
+- Grouping elements returned from a component without polluting the DOM.
+- Rendering a list where each item produces multiple sibling elements.
+
+Fragments produce no DOM output, so they have no impact on styling or layout.
+
+## 🧠 Question 12
+
+**ID**: react-012
+**Title**: What is the difference between class components and functional components?
+**Difficulty**: Easy
+**Category**: Components
+
+### Answer 📄
+
+Both types can produce the same output, but they differ significantly in syntax, API, and how they manage state and lifecycle.
+
+**Class components** use ES6 classes, have `this`, lifecycle methods, and `this.state`:
+
+```jsx
+class Counter extends React.Component {
+  state = { count: 0 };
+
+  componentDidMount() {
+    document.title = `Count: ${this.state.count}`;
+  }
+
+  componentDidUpdate() {
+    document.title = `Count: ${this.state.count}`;
+  }
+
+  render() {
+    return (
+      <button onClick={() => this.setState((s) => ({ count: s.count + 1 }))}>
+        {this.state.count}
+      </button>
+    );
+  }
+}
+```
+
+**Functional components** use hooks:
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    document.title = `Count: ${count}`;
+  });
+
+  return <button onClick={() => setCount((c) => c + 1)}>{count}</button>;
+}
+```
+
+**Key differences:**
+
+|                       | Class Components               | Functional Components             |
+| --------------------- | ------------------------------ | --------------------------------- |
+| State                 | `this.state` + `this.setState` | `useState`                        |
+| Lifecycle             | `componentDidMount`, etc.      | `useEffect`                       |
+| `this` binding        | Required                       | Not needed                        |
+| Code reuse            | Mixins (problematic)           | Custom hooks (clean)              |
+| Error boundaries      | Supported                      | Not yet (as of React 18)          |
+| React future features | Not prioritized                | All new features target functions |
+
+Class components are fully supported but are considered legacy. All new React APIs (Concurrent Mode, Server Components) are designed around functions.
+
+## 🧠 Question 13
+
+**ID**: react-013
+**Title**: What is reconciliation in React?
+**Difficulty**: Medium
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+Reconciliation is the process React uses to determine what changed in the UI between renders and update the DOM accordingly.
+
+When state or props change, React calls the component's render function and gets a new virtual DOM tree. It then **diffs** this new tree against the previous one using a heuristic algorithm with two key assumptions:
+
+1. **Different element types produce different trees.** If the root type changes (e.g., `<div>` → `<span>`), React tears down the entire old subtree and builds a new one from scratch — including unmounting all child components.
+
+2. **`key` identifies stable elements across renders.** When diffing lists, React uses the `key` prop to match elements between renders. Elements with the same key are treated as the same element (updated in place); missing/new keys trigger unmount/mount.
+
+```jsx
+// React assumes the root element changed — unmounts Foo, mounts Bar
+{
+  condition ? <Foo /> : <Bar />;
+}
+
+// React sees same root type — updates Foo's props (more efficient)
+{
+  condition ? <Foo color="red" /> : <Foo color="blue" />;
+}
+```
+
+**Why this matters for performance:** React's reconciler avoids expensive full-tree comparisons by applying these heuristics. The result is O(n) tree diffing rather than the naive O(n³) algorithm.
+
+The reconciler is separate from the renderer. React DOM, React Native, and React Three Fiber all share the same reconciler but target different output environments.
+
+## 🧠 Question 14
+
+**ID**: react-014
+**Title**: What is prop drilling and how do you solve it?
+**Difficulty**: Easy
+**Category**: Props & State
+
+### Answer 📄
+
+Prop drilling occurs when data must be passed through several layers of intermediate components that do not need the data themselves — they only pass it further down.
+
+```jsx
+// Prop drilling — theme must be threaded through App → Layout → Sidebar → Button
+function App() {
+  const [theme, setTheme] = useState('dark');
+  return <Layout theme={theme} setTheme={setTheme} />;
+}
+function Layout({ theme, setTheme }) {
+  return <Sidebar theme={theme} setTheme={setTheme} />;
+}
+function Sidebar({ theme, setTheme }) {
+  return <ThemeButton theme={theme} setTheme={setTheme} />;
+}
+function ThemeButton({ theme, setTheme }) {
+  return (
+    <button onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>
+      {theme}
+    </button>
+  );
+}
+```
+
+**Problems it causes:**
+
+- Intermediate components become tightly coupled to data they don't use.
+- Refactoring is painful — adding a prop requires updating every layer.
+- Components are harder to reuse in isolation.
+
+**Solutions:**
+
+1. **Context API** — provide data at a high level and consume it anywhere in the tree without threading:
+
+```jsx
+const ThemeContext = createContext('light');
+// Wrap the tree: <ThemeContext.Provider value={theme}>
+// Consume anywhere: const theme = useContext(ThemeContext);
+```
+
+2. **State management libraries** (Zustand, Redux, Jotai) — global store accessible from any component.
+
+3. **Component composition** — pass components as children or props to avoid drilling data:
+
+```jsx
+function Layout({ children }) {
+  return <div>{children}</div>;
+}
+// The parent controls what goes inside, so no drilling needed
+```
+
+## 🧠 Question 15
+
+**ID**: react-015
+**Title**: What is the `StrictMode` component and what does it do?
+**Difficulty**: Medium
+**Category**: React Basics
+
+### Answer 📄
+
+`<React.StrictMode>` is a development-only wrapper that activates additional warnings and behaviors to help you identify potential issues in your application.
+
+```jsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+```
+
+**What StrictMode does (development only — no production impact):**
+
+1. **Double-invokes render functions, state initializers, and reducers** — to detect side effects in functions that should be pure. If your component has accidental side effects (e.g., incrementing a counter in render), they become visible.
+
+2. **Mounts → unmounts → remounts every component once** (React 18+) — to verify that effects have proper cleanup. This simulates what happens when components are preserved/restored (e.g., navigating back in a React Native screen or future tab-suspend behavior).
+
+3. **Warns about deprecated APIs** — legacy lifecycle methods (`componentWillMount`, etc.), legacy string refs, `findDOMNode`, etc.
+
+4. **Detects accidental mutations of state** — helps surface bugs where state is mutated directly.
+
+StrictMode applies to the component subtree it wraps, so you can enable it selectively for specific parts of the app.

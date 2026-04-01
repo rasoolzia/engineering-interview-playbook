@@ -479,3 +479,249 @@ function UncontrolledInput() {
 
 اکثر فرم های React از کامپوننت های controlled استفاده میکنند. کتابخانه هایی مانند React Hook Form رویکرد ترکیبی دارند (uncontrolled در زیرساخت برای عملکرد، API شبیه controlled برای اعتبارسنجی).
 ا منطق وابسته به مقادیر.
+
+## 🧠 سوال 11
+
+**شناسه**: react-011
+**عنوان**: React Fragment چیست و چه زمانی باید از آن استفاده کنید؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: JSX و رندرینگ
+
+### پاسخ 📄
+
+Fragment به یک کامپوننت اجازه می‌دهد چندین عنصر را بدون اضافه کردن یک نود DOM اضافی به عنوان wrapper برگرداند.
+
+```jsx
+// بدون Fragment — یک <div> غیرضروری اضافه می‌شود
+function Columns() {
+  return (
+    <div>
+      <td>Name</td>
+      <td>Age</td>
+    </div>
+  ); // HTML نامعتبر — <div> داخل <tr>
+}
+
+// با Fragment — بدون نود DOM اضافه
+function Columns() {
+  return (
+    <>
+      <td>Name</td>
+      <td>Age</td>
+    </>
+  );
+}
+```
+
+**دو نحو برای آن وجود دارد:**
+
+```jsx
+// کوتاه‌نویسی — نمی‌تواند props بگیرد
+<>...</>;
+
+// صریح — وقتی به key نیاز دارید لازم است (مثلا در map روی یک لیست)
+function List({ items }) {
+  return items.map((item) => (
+    <React.Fragment key={item.id}>
+      <dt>{item.term}</dt>
+      <dd>{item.description}</dd>
+    </React.Fragment>
+  ));
+}
+```
+
+**موارد استفاده:**
+
+- برگرداندن چندین سلول جدول (`<td>`) یا سطر (`<tr>`) از یک کامپوننت
+- گروه‌بندی عناصری که از یک کامپوننت برمی‌گردند بدون شلوغ کردن DOM
+- رندر کردن لیستی که هر آیتم آن چندین عنصر هم‌سطح تولید می‌کند
+
+Fragment ها هیچ خروجی‌ای در DOM تولید نمی‌کنند، بنابراین روی استایل یا layout اثری ندارند.
+
+## 🧠 سوال 12
+
+**شناسه**: react-012
+**عنوان**: تفاوت بین class component و functional component چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+هر دو نوع می‌توانند خروجی یکسانی تولید کنند، اما از نظر syntax، API، و نحوه مدیریت state و lifecycle تفاوت‌های مهمی دارند.
+
+**Class component ها** از کلاس‌های ES6 استفاده می‌کنند، `this` دارند، متدهای lifecycle دارند و از `this.state` استفاده می‌کنند:
+
+```jsx
+class Counter extends React.Component {
+  state = { count: 0 };
+
+  componentDidMount() {
+    document.title = `Count: ${this.state.count}`;
+  }
+
+  componentDidUpdate() {
+    document.title = `Count: ${this.state.count}`;
+  }
+
+  render() {
+    return (
+      <button onClick={() => this.setState((s) => ({ count: s.count + 1 }))}>
+        {this.state.count}
+      </button>
+    );
+  }
+}
+```
+
+**Functional component ها** از hook ها استفاده می‌کنند:
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    document.title = `Count: ${count}`;
+  });
+
+  return <button onClick={() => setCount((c) => c + 1)}>{count}</button>;
+}
+```
+
+**تفاوت‌های کلیدی:**
+
+|                       | Class Components               | Functional Components              |
+| --------------------- | ------------------------------ | ---------------------------------- |
+| State                 | `this.state` + `this.setState` | `useState`                         |
+| Lifecycle             | `componentDidMount` و غیره     | `useEffect`                        |
+| اتصال `this`          | لازم است                       | لازم نیست                          |
+| استفاده مجدد از کد    | Mixins (مشکل‌دار)              | Custom hooks (تمیزتر)              |
+| Error boundary        | پشتیبانی می‌شود                | هنوز نه (تا React 18)              |
+| ویژگی‌های آینده React | در اولویت نیست                 | همه قابلیت‌های جدید برای توابع‌اند |
+
+Class component ها کاملا پشتیبانی می‌شوند، اما legacy محسوب می‌شوند. تمام API های جدید React مثل Concurrent Mode و Server Components حول توابع طراحی شده‌اند.
+
+## 🧠 سوال 13
+
+**شناسه**: react-013
+**عنوان**: Reconciliation در React چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+Reconciliation فرایندی است که React با آن تشخیص می‌دهد بین دو رندر چه چیزی در UI تغییر کرده و DOM را بر همان اساس به‌روزرسانی می‌کند.
+
+وقتی state یا props تغییر می‌کند، React تابع render کامپوننت را اجرا می‌کند و یک درخت virtual DOM جدید می‌سازد. سپس این درخت جدید را با درخت قبلی **diff** می‌کند. این کار با یک الگوریتم heuristic انجام می‌شود که دو فرض مهم دارد:
+
+1. **نوع‌های متفاوت عنصر، درخت‌های متفاوتی تولید می‌کنند.** اگر نوع ریشه عوض شود (مثلا `<div>` به `<span>`)، React کل زیر‌درخت قدیمی را حذف می‌کند و یکی جدید از صفر می‌سازد؛ یعنی همه child component ها هم unmount می‌شوند.
+
+2. **`key` عناصر پایدار را بین رندرها مشخص می‌کند.** هنگام diff کردن لیست‌ها، React از prop `key` استفاده می‌کند تا عناصر را بین دو رندر match کند. عناصری با key یکسان، همان عنصر در نظر گرفته می‌شوند و درجا update می‌شوند؛ key های حذف‌شده یا جدید باعث unmount/mount می‌شوند.
+
+```jsx
+// React فرض می‌کند عنصر ریشه عوض شده — Foo را unmount و Bar را mount می‌کند
+{
+  condition ? <Foo /> : <Bar />;
+}
+
+// React همان نوع ریشه را می‌بیند — فقط props های Foo را update می‌کند
+{
+  condition ? <Foo color="red" /> : <Foo color="blue" />;
+}
+```
+
+**چرا برای performance مهم است:** reconciler ری‌اکت با استفاده از این heuristic ها از مقایسه‌های گران‌قیمت کل درخت جلوگیری می‌کند. نتیجه، diff کردن درخت با پیچیدگی `O(n)` است، نه الگوریتم naive با پیچیدگی `O(n^3)`.
+
+Reconciler از renderer جدا است. React DOM، React Native و React Three Fiber همگی از یک reconciler مشترک استفاده می‌کنند، اما خروجی‌شان برای محیط‌های متفاوتی است.
+
+## 🧠 سوال 14
+
+**شناسه**: react-014
+**عنوان**: Prop drilling چیست و چگونه آن را حل می‌کنید؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Props و State
+
+### پاسخ 📄
+
+Prop drilling زمانی رخ می‌دهد که داده باید از چندین لایه از کامپوننت‌های میانی عبور کند، در حالی که آن کامپوننت‌های میانی خودشان به آن داده نیاز ندارند و فقط آن را به پایین‌تر پاس می‌دهند.
+
+```jsx
+// Prop drilling — theme باید از App → Layout → Sidebar → Button عبور کند
+function App() {
+  const [theme, setTheme] = useState('dark');
+  return <Layout theme={theme} setTheme={setTheme} />;
+}
+function Layout({ theme, setTheme }) {
+  return <Sidebar theme={theme} setTheme={setTheme} />;
+}
+function Sidebar({ theme, setTheme }) {
+  return <ThemeButton theme={theme} setTheme={setTheme} />;
+}
+function ThemeButton({ theme, setTheme }) {
+  return (
+    <button onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}>
+      {theme}
+    </button>
+  );
+}
+```
+
+**مشکلاتی که ایجاد می‌کند:**
+
+- کامپوننت‌های میانی به داده‌ای که استفاده نمی‌کنند وابسته می‌شوند
+- refactor کردن سخت می‌شود، چون اضافه شدن یک prop نیاز به تغییر همه لایه‌ها دارد
+- استفاده مجدد از کامپوننت‌ها به‌صورت مستقل سخت‌تر می‌شود
+
+**راه‌حل‌ها:**
+
+1. **Context API** — داده را در یک سطح بالا provide کنید و هرجا در درخت لازم بود consume کنید، بدون اینکه مجبور به پاس دادن آن از همه لایه‌ها باشید:
+
+```jsx
+const ThemeContext = createContext('light');
+// درخت را wrap کنید: <ThemeContext.Provider value={theme}>
+// هرجا لازم بود بخوانید: const theme = useContext(ThemeContext);
+```
+
+2. **کتابخانه‌های مدیریت state** مثل Zustand، Redux و Jotai — یک store سراسری که از هر کامپوننتی قابل دسترسی است
+
+3. **Component composition** — به‌جای drill کردن داده، کامپوننت‌ها را به‌صورت children یا props پاس بدهید:
+
+```jsx
+function Layout({ children }) {
+  return <div>{children}</div>;
+}
+// والد مشخص می‌کند داخل Layout چه چیزی قرار بگیرد، پس drilling لازم نیست
+```
+
+## 🧠 سوال 15
+
+**شناسه**: react-015
+**عنوان**: کامپوننت `StrictMode` چیست و چه کاری انجام می‌دهد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مبانی React
+
+### پاسخ 📄
+
+`<React.StrictMode>` یک wrapper مخصوص محیط توسعه است که warning ها و رفتارهای اضافی را فعال می‌کند تا به شما کمک کند مشکلات احتمالی اپلیکیشن را پیدا کنید.
+
+```jsx
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+```
+
+**StrictMode چه کارهایی انجام می‌دهد** (فقط در development و بدون اثر در production):
+
+1. **تابع‌های render، مقداردهی اولیه state، و reducer ها را دوبار اجرا می‌کند** — تا side effect هایی را پیدا کند که در توابع supposedly pure نباید وجود داشته باشند. مثلا اگر داخل render به‌اشتباه یک شمارنده را زیاد کنید، این مشکل آشکار می‌شود.
+
+2. **هر کامپوننت را یک‌بار mount → unmount → remount می‌کند** (در React 18+) — تا بررسی کند effect ها cleanup درست دارند. این رفتار شبیه‌سازی می‌کند که اگر یک کامپوننت حفظ و دوباره بازیابی شود چه اتفاقی می‌افتد.
+
+3. **درباره API های deprecated هشدار می‌دهد** — مثل lifecycle های قدیمی (`componentWillMount` و غیره)، string ref های قدیمی، `findDOMNode` و موارد مشابه
+
+4. **mutation ناخواسته state را آشکار می‌کند** — و کمک می‌کند باگ‌هایی که از تغییر مستقیم state به وجود می‌آیند دیده شوند
+
+StrictMode فقط روی زیر‌درختی اعمال می‌شود که آن را wrap کرده است، بنابراین می‌توانید آن را برای بخش‌های خاصی از اپلیکیشن به‌صورت انتخابی فعال کنید.

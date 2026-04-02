@@ -725,3 +725,276 @@ createRoot(document.getElementById('root')).render(
 4. **mutation ناخواسته state را آشکار می‌کند** — و کمک می‌کند باگ‌هایی که از تغییر مستقیم state به وجود می‌آیند دیده شوند
 
 StrictMode فقط روی زیر‌درختی اعمال می‌شود که آن را wrap کرده است، بنابراین می‌توانید آن را برای بخش‌های خاصی از اپلیکیشن به‌صورت انتخابی فعال کنید.
+
+## 🧠 سوال 16
+
+**شناسه**: react-016
+**عنوان**: `React.memo` چیست و چه زمانی کمک می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+`React.memo` یک higher-order component است که خروجی رندر یک functional component را memoize می‌کند. اگر props کامپوننت تغییر نکرده باشد (با shallow equality)، React از re-render شدن آن رد می‌شود و از خروجی قبلی استفاده می‌کند.
+
+```jsx
+const UserCard = React.memo(function UserCard({ name, age }) {
+  console.log('rendering UserCard');
+  return (
+    <div>
+      {name} — {age}
+    </div>
+  );
+});
+
+// اگر parent دوباره رندر شود اما name و age تغییر نکرده باشند،
+// UserCard دوباره رندر نمی‌شود.
+```
+
+**چه زمانی کمک می‌کند:**
+
+- وقتی parent زیاد re-render می‌شود ولی child از آن state پرنوسان استفاده نمی‌کند
+- وقتی خود کامپوننت رندر گرانی دارد، مثلا محاسبات پیچیده یا child node های زیاد
+- وقتی props پایدار هستند، مثل primitive ها یا object/function هایی که memoize شده‌اند
+
+**چه زمانی کمک نمی‌کند یا حتی ضرر دارد:**
+
+- وقتی props در هر رندر تغییر می‌کنند و shallow comparison فقط سربار اضافه می‌آورد
+- وقتی props شامل object یا function هایی هستند که در parent به‌صورت inline ساخته می‌شوند و هر بار reference جدید دارند
+
+```jsx
+// این memo را بی‌اثر می‌کند — در هر رندر parent یک reference جدید می‌سازد
+<UserCard style={{ color: 'red' }} onClick={() => doSomething()} />;
+
+// راه‌حل: object و function را در parent memoize کنید
+const style = useMemo(() => ({ color: 'red' }), []);
+const handleClick = useCallback(() => doSomething(), []);
+<UserCard style={style} onClick={handleClick} />;
+```
+
+**مقایسه سفارشی** — می‌توانید برای کنترل دقیق‌تر آرگومان دوم را هم بدهید:
+
+```jsx
+React.memo(MyComponent, (prevProps, nextProps) => {
+  return prevProps.id === nextProps.id; // true = رد شدن از re-render
+});
+```
+
+## 🧠 سوال 17
+
+**شناسه**: react-017
+**عنوان**: hook `useEffect` چیست و dependency array چگونه کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+`useEffect` به شما اجازه می‌دهد یک کامپوننت را بعد از commit شدن رندر به DOM، با یک سیستم خارجی هماهنگ کنید؛ مثل DOM API، درخواست شبکه، subscription یا timer.
+
+```jsx
+useEffect(() => {
+  // Side effect — به‌صورت پیش‌فرض بعد از هر رندر اجرا می‌شود
+  document.title = `You clicked ${count} times`;
+});
+```
+
+**Dependency array تعیین می‌کند effect چه زمانی اجرا شود:**
+
+```jsx
+// بدون dependency array — بعد از هر رندر اجرا می‌شود
+useEffect(() => { ... });
+
+// آرایه خالی — فقط یک‌بار بعد از mount اولیه اجرا می‌شود
+useEffect(() => { ... }, []);
+
+// با dependency — بعد از mount و هر بار که userId تغییر کند اجرا می‌شود
+useEffect(() => {
+  fetchUser(userId);
+}, [userId]);
+```
+
+**تابع cleanup** — از effect برگردانده می‌شود. قبل از اجرای دوباره effect و همچنین هنگام unmount شدن کامپوننت اجرا می‌شود:
+
+```jsx
+useEffect(() => {
+  const subscription = subscribe(userId, onMessage);
+  return () => subscription.unsubscribe(); // cleanup
+}, [userId]);
+```
+
+**React 18 + StrictMode** — در محیط توسعه، effect ها یک‌بار mount، cleanup و دوباره mount می‌شوند تا باگ‌های مربوط به cleanup آشکار شوند. این رفتار عمدی است.
+
+**قواعد مهم:**
+
+- هرگز `useEffect` را شرطی صدا نزنید؛ hook ها باید در همه رندرها با همان ترتیب فراخوانی شوند
+- تمام مقادیری را که داخل effect خوانده می‌شوند در dependency array بگذارید؛ قانون `react-hooks/exhaustive-deps` در ESLint این را enforce می‌کند
+- از `useEffect` برای event handler ها استفاده نکنید؛ handler ها باید مستقیم روی element قرار بگیرند
+
+## 🧠 سوال 18
+
+**شناسه**: react-018
+**عنوان**: `useState` چیست و به‌روزرسانی state چگونه کار می‌کند؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useState` پایه‌ای‌ترین hook برای اضافه کردن state محلی به یک functional component است. این hook یک جفت مقدار برمی‌گرداند: مقدار فعلی state و یک تابع setter.
+
+```jsx
+const [state, setState] = useState(initialValue);
+```
+
+**به‌روزرسانی‌های state async و batched هستند** — صدا زدن `setState` بلافاصله مقدار `state` را عوض نمی‌کند. React یک re-render را زمان‌بندی می‌کند و همه به‌روزرسانی‌های state در همان event handler را در یک batch اعمال می‌کند:
+
+```jsx
+function handleClick() {
+  setCount((c) => c + 1);
+  setCount((c) => c + 1);
+  // React آن‌ها را batch می‌کند — count بعد از یک re-render به اندازه 2 زیاد می‌شود
+}
+```
+
+**فرم functional update** — وقتی مقدار جدید به مقدار قبلی وابسته است، یک تابع به setter بدهید:
+
+```jsx
+setState((prev) => ({ ...prev, name: 'Alice' }));
+```
+
+هر زمان داخل callback های async، `useEffect` یا event handler هایی هستید که ممکن است مقدار state در آن‌ها stale شده باشد، از این فرم استفاده کنید.
+
+**مقداردهی اولیه state** — برای محاسبات گران، یک تابع پاس بدهید تا در هر رندر دوباره اجرا نشود:
+
+```jsx
+// بد — expensiveCalc() در هر رندر اجرا می‌شود، با اینکه فقط بار اول لازم است
+const [value, setValue] = useState(expensiveCalc());
+
+// خوب — فقط یک‌بار هنگام mount اولیه اجرا می‌شود
+const [value, setValue] = useState(() => expensiveCalc());
+```
+
+**Object و array ها** — React state شیء را به‌صورت خودکار merge نمی‌کند (برخلاف `this.setState` در class component ها). باید خودتان spread کنید:
+
+```jsx
+setState((prev) => ({ ...prev, age: 31 })); // درست
+setState({ age: 31 }); // غلط — بقیه فیلدها را حذف می‌کند
+```
+
+## 🧠 سوال 19
+
+**شناسه**: react-019
+**عنوان**: `useRef` چیست و چه زمانی باید از آن استفاده کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useRef` یک شیء `ref` قابل تغییر با property به نام `.current` برمی‌گرداند که بین رندرها حفظ می‌شود و با تغییرش re-render ایجاد نمی‌شود. این hook دو کاربرد اصلی دارد.
+
+**1. دسترسی مستقیم به عناصر DOM:**
+
+```jsx
+function AutoFocusInput() {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current.focus();
+  }, []);
+
+  return <input ref={inputRef} />;
+}
+```
+
+**2. نگه‌داری مقادیر mutable که نباید باعث re-render شوند:**
+
+```jsx
+function Timer() {
+  const intervalId = useRef(null);
+  const [seconds, setSeconds] = useState(0);
+
+  function start() {
+    intervalId.current = setInterval(() => {
+      setSeconds((s) => s + 1);
+    }, 1000);
+  }
+
+  function stop() {
+    clearInterval(intervalId.current);
+  }
+
+  return (
+    <>
+      <p>{seconds}s</p>
+      <button onClick={start}>Start</button>
+      <button onClick={stop}>Stop</button>
+    </>
+  );
+}
+```
+
+**ویژگی‌های مهم:**
+
+- تغییر `ref.current` باعث re-render نمی‌شود، برخلاف `useState`
+- شیء ref در تمام رندرها همان شیء قبلی باقی می‌ماند
+- برای نگه داشتن previous value، شناسه animation frame، نمونه WebSocket، یا context های canvas مفید است
+
+**مقایسه `useRef` و `useState`:**
+
+|                              | `useRef`                  | `useState`        |
+| ---------------------------- | ------------------------- | ----------------- |
+| باعث re-render می‌شود؟       | خیر                       | بله               |
+| مقدار بین رندرها حفظ می‌شود؟ | بله                       | بله               |
+| نحوه دسترسی                  | `.current`                | مستقیم            |
+| کاربرد اصلی                  | دسترسی DOM، ذخیره mutable | state رابط کاربری |
+
+## 🧠 سوال 20
+
+**شناسه**: react-020
+**عنوان**: `useMemo` چیست و چه زمانی باید از آن استفاده کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+`useMemo` نتیجه یک محاسبه گران را memoize می‌کند و فقط زمانی آن را دوباره محاسبه می‌کند که یکی از dependency ها تغییر کرده باشد.
+
+```jsx
+const expensiveValue = useMemo(() => {
+  return computeExpensiveValue(a, b);
+}, [a, b]);
+```
+
+در re-render هایی که `a` و `b` تغییری نکرده‌اند، React محاسبه را رد می‌کند و نتیجه cache شده را برمی‌گرداند.
+
+**چه زمانی از `useMemo` استفاده کنیم:**
+
+1. **محاسبات گران** — مثل sort، filter یا transform کردن مجموعه داده‌های بزرگ:
+
+```jsx
+const sortedUsers = useMemo(
+  () => [...users].sort((a, b) => a.name.localeCompare(b.name)),
+  [users],
+);
+```
+
+2. **پایدار نگه داشتن reference شیء یا آرایه** برای child component هایی که با `React.memo` پوشانده شده‌اند یا برای dependency array های `useEffect`:
+
+```jsx
+const config = useMemo(() => ({ theme, locale }), [theme, locale]);
+// reference مربوط به config پایدار می‌ماند و effect یا memo check را بی‌دلیل دوباره فعال نمی‌کند
+```
+
+**چه زمانی نباید از `useMemo` استفاده کرد:**
+
+- برای محاسبات ارزان، چون سربار memoization ممکن است از سودش بیشتر شود
+- وقتی dependency ها در هر رندر عوض می‌شوند و cache عملا هیچ‌وقت استفاده نمی‌شود
+- به‌عنوان بهینه‌سازی زودهنگام؛ اول profile بگیرید
+
+**تفاوت `useMemo` و `useCallback`:**
+
+```jsx
+useMemo(() => fn(), [deps]); // مقدار برگشتی fn را memoize می‌کند
+useCallback(fn, [deps]); // خود تابع fn را memoize می‌کند
+```
+
+React ممکن است تصمیم بگیرد مقدار cache شده `useMemo` را کنار بگذارد، مثلا تحت فشار حافظه. بنابراین برای درست کار کردن برنامه روی `useMemo` تکیه نکنید؛ فقط برای performance از آن استفاده کنید.

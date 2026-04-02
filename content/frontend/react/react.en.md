@@ -1,7 +1,7 @@
 ---
 topic: react
 language: en
-version: 1.2
+version: 1.3
 ---
 
 # React Interview Questions

@@ -998,3 +998,285 @@ useCallback(fn, [deps]); // خود تابع fn را memoize می‌کند
 ```
 
 React ممکن است تصمیم بگیرد مقدار cache شده `useMemo` را کنار بگذارد، مثلا تحت فشار حافظه. بنابراین برای درست کار کردن برنامه روی `useMemo` تکیه نکنید؛ فقط برای performance از آن استفاده کنید.
+
+## 🧠 سوال 21
+
+**شناسه**: react-021
+**عنوان**: `useCallback` چیست و چه زمانی باید از آن استفاده کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+`useCallback` یک نسخه memoized از یک تابع callback برمی‌گرداند. تا زمانی که dependency های آن تغییر نکنند، هویت تابع بین رندرها حفظ می‌شود.
+
+```jsx
+const handleClick = useCallback(() => {
+  doSomething(id);
+}, [id]);
+```
+
+بدون `useCallback`، در هر رندر یک reference جدید از تابع ساخته می‌شود. این موضوع وقتی دردسرساز می‌شود که تابع را به این موارد پاس دهید:
+
+- child component هایی که با `React.memo` پوشانده شده‌اند، چون shallow comparison را خراب می‌کند
+- dependency array های `useEffect`، چون effect را بی‌دلیل دوباره اجرا می‌کند
+
+**مثال عملی:**
+
+```jsx
+const MemoizedChild = React.memo(function Child({ onAction }) {
+  console.log('Child rendered');
+  return <button onClick={onAction}>Action</button>;
+});
+
+function Parent() {
+  const [count, setCount] = useState(0);
+
+  // بدون useCallback: در هر رندر یک تابع جدید ساخته می‌شود و Child همیشه re-render می‌شود
+  const handleAction = useCallback(() => {
+    console.log('action');
+  }, []); // reference پایدار — Child فقط یک‌بار رندر می‌شود
+
+  return (
+    <>
+      <button onClick={() => setCount((c) => c + 1)}>Count: {count}</button>
+      <MemoizedChild onAction={handleAction} />
+    </>
+  );
+}
+```
+
+**`useCallback(fn, deps)` معادل `useMemo(() => fn, deps)` است.**
+
+**چه زمانی نباید از آن استفاده کرد:**
+
+- وقتی child با `React.memo` پوشانده نشده و سودی ندارد
+- وقتی تابع به چیزی پاس داده نمی‌شود که به referential stability وابسته باشد
+- به‌عنوان بهینه‌سازی زودهنگام؛ قبل از استفاده profile بگیرید
+
+## 🧠 سوال 22
+
+**شناسه**: react-022
+**عنوان**: قوانین hook ها چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+React برای اینکه hook ها درست کار کنند، دو قانون اصلی را enforce می‌کند.
+
+**قانون 1: hook ها را فقط در بالاترین سطح صدا بزنید.**
+
+هیچ‌وقت hook را داخل شرط، حلقه یا تابع تو‌در‌تو صدا نزنید. React برای اینکه هر hook را به state درست خودش وصل کند، به یکسان بودن ترتیب فراخوانی hook ها در همه رندرها وابسته است.
+
+```jsx
+// ❌ اشتباه — hook داخل شرط
+function Component({ isLoggedIn }) {
+  if (isLoggedIn) {
+    const [user, setUser] = useState(null); // ترتیب hook ها را به‌هم می‌زند
+  }
+}
+
+// ✅ درست — شرط را در نحوه استفاده از hook اعمال کنید
+function Component({ isLoggedIn }) {
+  const [user, setUser] = useState(null);
+  if (!isLoggedIn) return null;
+  // use user...
+}
+```
+
+**قانون 2: hook ها را فقط از داخل توابع React صدا بزنید.**
+
+hook ها باید فقط از اینجاها صدا زده شوند:
+
+- functional component ها
+- custom hook ها
+
+هیچ‌وقت آن‌ها را از توابع معمولی جاوااسکریپت، class component ها یا مستقیم داخل event handler ها صدا نزنید.
+
+**چرا این قوانین وجود دارند:**
+
+React در داخل برای هر کامپوننت یک لیست از state های مربوط به hook ها را بر اساس ترتیب فراخوانی نگه می‌دارد. اگر یک hook شرطی صدا زده شود، ترتیب بین رندرها تغییر می‌کند و React state اشتباه را می‌خواند؛ نتیجه، باگ‌هایی است که پیدا کردنشان سخت است.
+
+پکیج `eslint-plugin-react-hooks` هر دو قانون را به‌صورت خودکار در زمان توسعه بررسی می‌کند.
+
+## 🧠 سوال 23
+
+**شناسه**: react-023
+**عنوان**: custom hook ها چیستند و چگونه آن‌ها را می‌نویسید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+یک custom hook یک تابع جاوااسکریپت است که نامش با `use` شروع می‌شود و می‌تواند hook های دیگر را صدا بزند. custom hook ها مهم‌ترین راه برای استخراج و اشتراک‌گذاری منطق stateful بین کامپوننت‌ها هستند و برای این کار جایگزین mixin ها و render prop ها شده‌اند.
+
+```jsx
+// useLocalStorage — state را در localStorage نگه می‌دارد
+function useLocalStorage(key, initialValue) {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  const setValue = useCallback(
+    (value) => {
+      try {
+        const valueToStore =
+          value instanceof Function ? value(storedValue) : value;
+        setStoredValue(valueToStore);
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [key, storedValue],
+  );
+
+  return [storedValue, setValue];
+}
+
+// استفاده — API آن شبیه useState است
+function App() {
+  const [theme, setTheme] = useLocalStorage('theme', 'light');
+  return (
+    <button onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}>
+      {theme}
+    </button>
+  );
+}
+```
+
+**بهترین روش‌ها:**
+
+- همیشه نام آن را با `use` شروع کنید تا قوانین ESLint مربوط به hook ها بتوانند آن را درست بررسی کنند
+- مقداری برگردانید که با الگوی hook ای که دور آن wrapper ساخته‌اید هماهنگ باشد، مثل tuple به شکل `[value, setter]` یا یک object
+- هر custom hook باید فقط یک مسئولیت مشخص و متمرکز داشته باشد
+- ورودی‌ها را به‌صورت آرگومان بگیرید و آن‌ها را hardcode نکنید تا hook قابل استفاده مجدد بماند
+- منطق hook را مستقل از رندر نگه دارید و داخل hook JSX ننویسید
+
+## 🧠 سوال 24
+
+**شناسه**: react-024
+**عنوان**: Context API چیست و چگونه از آن استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Context API
+
+### پاسخ 📄
+
+Context API راهی برای پاس دادن داده در درخت کامپوننت‌ها بدون prop drilling فراهم می‌کند. Context شبیه یک "کانال پخش" است که هر descendant می‌تواند در آن subscribe کند.
+
+**ساخت و provide کردن context:**
+
+```jsx
+import { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext('light'); // 'light' مقدار پیش‌فرض است
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+```
+
+**مصرف context با `useContext`:**
+
+```jsx
+function ThemeButton() {
+  const { theme, setTheme } = useContext(ThemeContext);
+
+  return (
+    <button onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}>
+      Current: {theme}
+    </button>
+  );
+}
+
+// در اپلیکیشن
+function App() {
+  return (
+    <ThemeProvider>
+      <ThemeButton />
+    </ThemeProvider>
+  );
+}
+```
+
+**نکته performance** — هر consumer یک context، وقتی value آن context تغییر کند دوباره رندر می‌شود. اگر value یک object باشد که inline ساخته شده، در هر رندر provider عوض می‌شود:
+
+```jsx
+// بد — در هر رندر یک object جدید ساخته می‌شود و همه consumer ها re-render می‌شوند
+<Context.Provider value={{ theme, setTheme }}>
+
+// بهتر — value را memoize کنید
+const value = useMemo(() => ({ theme, setTheme }), [theme]);
+<Context.Provider value={value}>
+```
+
+برای اپلیکیشن‌های بزرگ با state پرتغییر، برای داده‌های حساس به performance معمولا کتابخانه‌های مدیریت state انتخاب بهتری نسبت به Context هستند.
+
+## 🧠 سوال 25
+
+**شناسه**: react-025
+**عنوان**: `useReducer` چیست و چه زمانی باید به‌جای `useState` از آن استفاده کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useReducer` یک جایگزین برای `useState` در مدیریت منطق state پیچیده است. این hook از الگوی Redux الهام گرفته است: یک reducer تابعی، state فعلی و یک action را می‌گیرد و state بعدی را برمی‌گرداند.
+
+```jsx
+import { useReducer } from 'react';
+
+const initialState = { count: 0, step: 1 };
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'increment':
+      return { ...state, count: state.count + state.step };
+    case 'decrement':
+      return { ...state, count: state.count - state.step };
+    case 'setStep':
+      return { ...state, step: action.payload };
+    case 'reset':
+      return initialState;
+    default:
+      throw new Error(`Unknown action: ${action.type}`);
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  return (
+    <div>
+      <p>
+        Count: {state.count} (step: {state.step})
+      </p>
+      <button onClick={() => dispatch({ type: 'increment' })}>+</button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>-</button>
+      <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+    </div>
+  );
+}
+```
+
+**چه زمانی `useReducer` را به `useState` ترجیح دهیم:**
+
+- وقتی state چند زیرمقدار دارد که با هم تغییر می‌کنند
+- وقتی state بعدی به شکل‌های پیچیده‌ای به state قبلی وابسته است
+- وقتی منطق update آن‌قدر پیچیده است که بهتر است در یک reducer خالص و قابل تست قرار بگیرد
+- وقتی می‌خواهید همه transition های state را در یک جا متمرکز کنید
+- وقتی می‌خواهید `dispatch` را به child ها پاس بدهید و update ها را به‌صورت action محور و شفاف نگه دارید
+
+**تفاوت `useReducer` و Redux:** `useReducer` محلی است و داخل همان کامپوننت یا همراه با Context استفاده می‌شود. Redux یک store سراسری با middleware، DevTools و time-travel debugging فراهم می‌کند.

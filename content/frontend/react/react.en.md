@@ -998,3 +998,285 @@ useCallback(fn, [deps]); // memoizes the FUNCTION fn itself
 ```
 
 React may choose to discard cached `useMemo` values (e.g., under memory pressure) — do not rely on `useMemo` for correctness, only performance.
+
+## 🧠 Question 21
+
+**ID**: react-021
+**Title**: What is `useCallback` and when should you use it?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+`useCallback` returns a memoized version of a callback function. The function identity is preserved across renders as long as its dependencies do not change.
+
+```jsx
+const handleClick = useCallback(() => {
+  doSomething(id);
+}, [id]);
+```
+
+Without `useCallback`, a new function reference is created on every render, which can cause problems when passed to:
+
+- Child components wrapped in `React.memo` (breaks the shallow prop comparison).
+- `useEffect` dependency arrays (triggers the effect unnecessarily).
+
+**Practical example:**
+
+```jsx
+const MemoizedChild = React.memo(function Child({ onAction }) {
+  console.log('Child rendered');
+  return <button onClick={onAction}>Action</button>;
+});
+
+function Parent() {
+  const [count, setCount] = useState(0);
+
+  // Without useCallback: new function on every render → Child always re-renders
+  const handleAction = useCallback(() => {
+    console.log('action');
+  }, []); // stable reference — Child only renders once
+
+  return (
+    <>
+      <button onClick={() => setCount((c) => c + 1)}>Count: {count}</button>
+      <MemoizedChild onAction={handleAction} />
+    </>
+  );
+}
+```
+
+**`useCallback(fn, deps)` is equivalent to `useMemo(() => fn, deps)`.**
+
+**When NOT to use it:**
+
+- When the child isn't wrapped in `React.memo` — no benefit.
+- When the function is not passed to anything that depends on referential stability.
+- Premature optimization — profile before applying.
+
+## 🧠 Question 22
+
+**ID**: react-022
+**Title**: What are the rules of hooks?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+React enforces two fundamental rules for hooks to ensure they work correctly.
+
+**Rule 1: Only call hooks at the top level.**
+
+Never call hooks inside conditionals, loops, or nested functions. React relies on the order of hook calls being the same on every render to correctly associate each hook with its state slot.
+
+```jsx
+// ❌ Wrong — hook inside a condition
+function Component({ isLoggedIn }) {
+  if (isLoggedIn) {
+    const [user, setUser] = useState(null); // breaks hook order
+  }
+}
+
+// ✅ Correct — condition inside the hook's usage
+function Component({ isLoggedIn }) {
+  const [user, setUser] = useState(null);
+  if (!isLoggedIn) return null;
+  // use user...
+}
+```
+
+**Rule 2: Only call hooks from React functions.**
+
+Hooks must be called from:
+
+- Functional components
+- Custom hooks
+
+Never from regular JavaScript functions, class components, or event handlers directly.
+
+**Why these rules exist:**
+
+React internally maintains a linked list of hook states for each component, indexed by call order. If a hook is conditionally called, the order changes between renders, causing React to read the wrong state slot — leading to bugs that are very hard to debug.
+
+The `eslint-plugin-react-hooks` package enforces both rules automatically during development.
+
+## 🧠 Question 23
+
+**ID**: react-023
+**Title**: What are custom hooks and how do you write them?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+A custom hook is a JavaScript function whose name starts with `use` that can call other hooks. Custom hooks are the primary mechanism for extracting and sharing stateful logic between components — replacing mixins and render props for this purpose.
+
+```jsx
+// useLocalStorage — persists state to localStorage
+function useLocalStorage(key, initialValue) {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  const setValue = useCallback(
+    (value) => {
+      try {
+        const valueToStore =
+          value instanceof Function ? value(storedValue) : value;
+        setStoredValue(valueToStore);
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [key, storedValue],
+  );
+
+  return [storedValue, setValue];
+}
+
+// Usage — same API as useState
+function App() {
+  const [theme, setTheme] = useLocalStorage('theme', 'light');
+  return (
+    <button onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}>
+      {theme}
+    </button>
+  );
+}
+```
+
+**Best practices:**
+
+- Always prefix with `use` — this is what allows the ESLint hook rules to lint them correctly.
+- Return values that mirror the pattern of the hooks they wrap (tuple `[value, setter]` or an object).
+- A custom hook should have a single, focused responsibility.
+- Accept inputs as arguments instead of hardcoding values to make the hook reusable.
+- Keep hook logic independent of rendering (no JSX inside hooks).
+
+## 🧠 Question 24
+
+**ID**: react-024
+**Title**: What is the Context API and how do you use it?
+**Difficulty**: Medium
+**Category**: Context API
+
+### Answer 📄
+
+The Context API provides a way to pass data through the component tree without prop drilling. It creates a "broadcast channel" that any descendant component can subscribe to.
+
+**Creating and providing context:**
+
+```jsx
+import { createContext, useContext, useState } from 'react';
+
+const ThemeContext = createContext('light'); // 'light' is the default value
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+```
+
+**Consuming context with `useContext`:**
+
+```jsx
+function ThemeButton() {
+  const { theme, setTheme } = useContext(ThemeContext);
+
+  return (
+    <button onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}>
+      Current: {theme}
+    </button>
+  );
+}
+
+// In the app
+function App() {
+  return (
+    <ThemeProvider>
+      <ThemeButton />
+    </ThemeProvider>
+  );
+}
+```
+
+**Performance consideration** — every consumer of a context re-renders when the context value changes. If the context value is an object created inline, it changes on every provider re-render:
+
+```jsx
+// Bad — new object on every render → all consumers re-render
+<Context.Provider value={{ theme, setTheme }}>
+
+// Better — memoize the value
+const value = useMemo(() => ({ theme, setTheme }), [theme]);
+<Context.Provider value={value}>
+```
+
+For large applications with frequently changing state, prefer a dedicated state management library over Context for performance-sensitive data.
+
+## 🧠 Question 25
+
+**ID**: react-025
+**Title**: What is `useReducer` and when should you use it instead of `useState`?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+`useReducer` is an alternative to `useState` for managing complex state logic. It is modelled after the Redux pattern: a reducer function receives the current state and an action and returns the next state.
+
+```jsx
+import { useReducer } from 'react';
+
+const initialState = { count: 0, step: 1 };
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'increment':
+      return { ...state, count: state.count + state.step };
+    case 'decrement':
+      return { ...state, count: state.count - state.step };
+    case 'setStep':
+      return { ...state, step: action.payload };
+    case 'reset':
+      return initialState;
+    default:
+      throw new Error(`Unknown action: ${action.type}`);
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  return (
+    <div>
+      <p>
+        Count: {state.count} (step: {state.step})
+      </p>
+      <button onClick={() => dispatch({ type: 'increment' })}>+</button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>-</button>
+      <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+    </div>
+  );
+}
+```
+
+**When to prefer `useReducer` over `useState`:**
+
+- State has multiple sub-values that change together.
+- Next state depends on the previous state in complex ways.
+- The update logic is complex enough that it benefits from a pure, testable reducer function.
+- You want to centralize all state transitions in one place.
+- You're passing `dispatch` down to children and want action-based updates to stay explicit and centralized.
+
+**`useReducer` vs Redux:** `useReducer` is local to the component (or shared via Context). Redux is a global store with middleware, DevTools, and time-travel debugging.

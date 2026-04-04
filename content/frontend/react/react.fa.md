@@ -1280,3 +1280,290 @@ function Counter() {
 - وقتی می‌خواهید `dispatch` را به child ها پاس بدهید و update ها را به‌صورت action محور و شفاف نگه دارید
 
 **تفاوت `useReducer` و Redux:** `useReducer` محلی است و داخل همان کامپوننت یا همراه با Context استفاده می‌شود. Redux یک store سراسری با middleware، DevTools و time-travel debugging فراهم می‌کند.
+
+## 🧠 سوال 26
+
+**شناسه**: react-026
+**عنوان**: `useLayoutEffect` چیست و چه تفاوتی با `useEffect` دارد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+هر دو hook امضای یکسانی دارند، اما در زمان‌های متفاوتی از چرخه رندر اجرا می‌شوند.
+
+**`useEffect`** — به‌صورت async بعد از این اجرا می‌شود که مرورگر صفحه را paint کرده باشد. یعنی کامپوننت رندر می‌شود، خروجی بصری روی صفحه می‌آید و بعد effect اجرا می‌شود.
+
+**`useLayoutEffect`** — به‌صورت sync بعد از اینکه React تغییرات DOM را commit کرد اما قبل از paint شدن مرورگر اجرا می‌شود. تا وقتی effect تمام نشود، paint شدن صفحه متوقف می‌ماند.
+
+```
+React renders → React commits DOM mutations
+  → useLayoutEffect runs (synchronously)
+  → Browser paints
+  → useEffect runs (asynchronously)
+```
+
+**چه زمانی از `useLayoutEffect` استفاده کنیم:**
+
+- وقتی لازم است قبل از دیده شدن صفحه توسط کاربر، اندازه یا موقعیت DOM را بخوانید تا از flicker یا "نمایش اشتباه لحظه‌ای" جلوگیری شود
+
+```jsx
+function Tooltip({ targetRef, content }) {
+  const tooltipRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const targetRect = targetRef.current.getBoundingClientRect();
+    const tooltip = tooltipRef.current;
+    // قبل از paint مرورگر tooltip را در جای درست قرار بده
+    tooltip.style.top = `${targetRect.bottom}px`;
+    tooltip.style.left = `${targetRect.left}px`;
+  });
+
+  return (
+    <div ref={tooltipRef} className="tooltip">
+      {content}
+    </div>
+  );
+}
+```
+
+**چه زمانی بهتر است از `useEffect` استفاده کنید:**
+
+- برای هر چیزی که لازم نیست paint را block کند، مثل data fetching، subscription، analytics یا logging
+
+**نکته مربوط به server-side rendering:** `useLayoutEffect` روی سرور اجرا نمی‌شود، چون DOM وجود ندارد، و همین باعث warning می‌شود. برای کامپوننت‌های سازگار با SSR از `useEffect` استفاده کنید یا با `typeof window !== 'undefined'` آن را شرطی کنید.
+
+## 🧠 سوال 27
+
+**شناسه**: react-027
+**عنوان**: Error Boundary ها در React چیستند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+Error Boundary یک class component است که خطاهای جاوااسکریپتی در هرجای درخت child component هایش را می‌گیرد و به‌جای crash کردن کل اپلیکیشن، یک fallback UI نمایش می‌دهد.
+
+Error boundary ها خطاها را در این موارد می‌گیرند:
+
+- رندر
+- متدهای lifecycle
+- constructor های child component ها
+
+اما این خطاها را نمی‌گیرند:
+
+- event handler ها، که باید با `try/catch` مدیریت شوند
+- کدهای async مثل `setTimeout` یا promise ها
+- server-side rendering
+- خطاهایی که در خود error boundary رخ می‌دهند
+
+```jsx
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    // state را برای نمایش fallback UI به‌روزرسانی کن
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    // لاگ کردن در سرویس گزارش خطا
+    logError(error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? <h2>Something went wrong.</h2>;
+    }
+    return this.props.children;
+  }
+}
+
+// استفاده
+<ErrorBoundary fallback={<ErrorPage />}>
+  <Dashboard />
+</ErrorBoundary>;
+```
+
+خود Error Boundary ها همچنان در React به‌صورت class component پیاده‌سازی می‌شوند. در پروژه‌هایی که بیشتر با function component نوشته شده‌اند، خیلی از تیم‌ها از پکیج `react-error-boundary` برای داشتن wrapper آماده و الگوی سازگارتر با hook ها استفاده می‌کنند.
+
+بخش‌های مختلف UI را در Error Boundary های جداگانه بپیچید تا خراب شدن یک بخش باعث از کار افتادن کل اپلیکیشن نشود.
+
+## 🧠 سوال 28
+
+**شناسه**: react-028
+**عنوان**: Portal ها در React چیستند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+Portal فرزندان یک کامپوننت را در یک نود DOM متفاوت از نود والدش رندر می‌کند، در حالی که آن کامپوننت همچنان جای معمول خود را در درخت کامپوننت React حفظ می‌کند.
+
+```jsx
+import { createPortal } from 'react-dom';
+
+function Modal({ isOpen, onClose, children }) {
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body, // داخل document.body رندر می‌شود، نه داخل DOM والد
+  );
+}
+```
+
+**چرا Portal وجود دارد:**
+
+ویژگی‌های CSS مثل `overflow: hidden`، `z-index` و `transform` روی ancestor ها می‌توانند UI هایی را که باید از والد خود "بیرون بزنند" قطع کنند یا در لایه اشتباه قرار دهند؛ مثل modal، tooltip، dropdown و notification.
+
+**رفتارهای مهم:**
+
+- **درخت React، نه درخت DOM** — حباب‌سازی event ها از سلسله‌مراتب React پیروی می‌کند، نه از سلسله‌مراتب DOM. یعنی کلیک داخل portal با اینکه در DOM جای دیگری است، در React به ancestor های خودش bubble می‌کند
+- **Context کار می‌کند** — کامپوننت portal همچنان می‌تواند context را از والد React خودش بخواند
+- **Lifecycle به والد React وابسته است** — وقتی والد unmount شود، محتوای portal هم cleanup می‌شود
+
+```jsx
+// محتوای Portal در DOM داخل document.body رندر می‌شود
+// اما حباب‌سازی event در React از <Page> → <App> عبور می‌کند
+function App() {
+  return (
+    <Page>
+      <Modal>
+        {' '}
+        {/* والد React برابر Page است، والد DOM برابر body */}
+        <button onClick={handleClose}>Close</button>
+      </Modal>
+    </Page>
+  );
+}
+```
+
+## 🧠 سوال 29
+
+**شناسه**: react-029
+**عنوان**: `useImperativeHandle` چیست و چه زمانی به `forwardRef` نیاز دارید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`forwardRef` یک wrapper است که به کامپوننت والد اجازه می‌دهد یک `ref` را تا DOM element یک child component یا یک imperative handle سفارشی عبور دهد.
+
+به‌صورت پیش‌فرض، `ref` روی functional component ها کار نمی‌کند و ref فقط مستقیم به DOM element ها متصل می‌شود. `forwardRef` این امکان را می‌دهد که ref به functional component ها هم متصل شود.
+
+```jsx
+const FancyInput = forwardRef(function FancyInput(props, ref) {
+  return <input ref={ref} className="fancy-input" {...props} />;
+});
+
+// Parent
+function Form() {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current.focus(); // دسترسی مستقیم به DOM
+  }, []);
+
+  return <FancyInput ref={inputRef} />;
+}
+```
+
+**`useImperativeHandle`** مشخص می‌کند والد از طریق ref دقیقا چه چیزی را ببیند. یعنی به‌جای DOM element خام، یک API محدود و کنترل‌شده در اختیار والد قرار می‌گیرد:
+
+```jsx
+const VideoPlayer = forwardRef(function VideoPlayer(props, ref) {
+  const videoRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    play() {
+      videoRef.current.play();
+    },
+    pause() {
+      videoRef.current.pause();
+    },
+    seek(time) {
+      videoRef.current.currentTime = time;
+    },
+    // خود videoRef.current با تمام DOM API آن مستقیما expose نمی‌شود
+  }));
+
+  return <video ref={videoRef} src={props.src} />;
+});
+
+// والد فقط { play, pause, seek } را می‌بیند
+playerRef.current.play();
+```
+
+**چه زمانی استفاده کنیم:** با احتیاط. expose کردن یک API دستوری معمولا در مدل declarative ری‌اکت یک anti-pattern محسوب می‌شود. اولویت با پاس دادن state و callback از طریق props است. از `useImperativeHandle` زمانی استفاده کنید که واقعا لازم باشد والد عملی را به‌صورت imperative اجرا کند؛ مثل مدیریت focus، پخش media یا animation.
+
+## 🧠 سوال 30
+
+**شناسه**: react-030
+**عنوان**: `React.lazy` چیست و همراه با `Suspense` چگونه کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+`React.lazy` امکان code splitting در سطح کامپوننت را فراهم می‌کند. این API یک `import()` پویا را wrap می‌کند و کامپوننتی lazy برمی‌گرداند که React فقط زمانی آن را بارگیری می‌کند که برای اولین بار رندر شود.
+
+```jsx
+import { lazy, Suspense } from 'react';
+
+// باندل کامپوننت فقط وقتی Dashboard رندر شود دانلود می‌شود
+const Dashboard = lazy(() => import('./Dashboard'));
+const Settings = lazy(() => import('./Settings'));
+
+function App() {
+  const [page, setPage] = useState('dashboard');
+
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      {page === 'dashboard' ? <Dashboard /> : <Settings />}
+    </Suspense>
+  );
+}
+```
+
+**نحوه کار:**
+
+1. `React.lazy(() => import('./Dashboard'))` کامپوننتی می‌سازد که یک Promise را نگه می‌دارد
+2. وقتی React برای اولین بار بخواهد آن lazy component را رندر کند، Promise را می‌خواند
+3. اگر Promise هنوز pending باشد، React آن Promise را "throw" می‌کند و `<Suspense>` آن را می‌گیرد و fallback را نشان می‌دهد
+4. وقتی Promise resolve شود و chunk دانلود شود، React دوباره رندر می‌کند
+
+**نیازمندی‌ها:**
+
+- `import()` پویا باید به ماژولی resolve شود که یک **default export** داشته باشد و آن export یک React component باشد
+- باید در جایی بالاتر از lazy component یک مرز `<Suspense>` وجود داشته باشد
+
+**ترکیب با React Router** برای route-level splitting:
+
+```jsx
+const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+
+<Routes>
+  <Route
+    path="/"
+    element={
+      <Suspense fallback={<Spinner />}>
+        <Home />
+      </Suspense>
+    }
+  />
+  <Route
+    path="/about"
+    element={
+      <Suspense fallback={<Spinner />}>
+        <About />
+      </Suspense>
+    }
+  />
+</Routes>;
+```

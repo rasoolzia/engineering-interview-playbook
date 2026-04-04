@@ -1280,3 +1280,290 @@ function Counter() {
 - You're passing `dispatch` down to children and want action-based updates to stay explicit and centralized.
 
 **`useReducer` vs Redux:** `useReducer` is local to the component (or shared via Context). Redux is a global store with middleware, DevTools, and time-travel debugging.
+
+## 🧠 Question 26
+
+**ID**: react-026
+**Title**: What is `useLayoutEffect` and how does it differ from `useEffect`?
+**Difficulty**: Hard
+**Category**: Effects & Lifecycle
+
+### Answer 📄
+
+Both hooks take the same signature, but they fire at different times in the rendering cycle.
+
+**`useEffect`** — runs asynchronously **after** the browser has painted the screen. The component renders, the browser updates the visual output, and then the effect runs.
+
+**`useLayoutEffect`** — runs synchronously **after** React has computed the DOM mutations but **before** the browser paints. It blocks the paint until the effect finishes.
+
+```
+React renders → React commits DOM mutations
+  → useLayoutEffect runs (synchronously)
+  → Browser paints
+  → useEffect runs (asynchronously)
+```
+
+**When to use `useLayoutEffect`:**
+
+- Reading DOM measurements (scroll position, element dimensions) before the user sees the screen, to avoid a visible flicker or "flash of wrong content":
+
+```jsx
+function Tooltip({ targetRef, content }) {
+  const tooltipRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const targetRect = targetRef.current.getBoundingClientRect();
+    const tooltip = tooltipRef.current;
+    // Position tooltip before the browser paints — no flicker
+    tooltip.style.top = `${targetRect.bottom}px`;
+    tooltip.style.left = `${targetRect.left}px`;
+  });
+
+  return (
+    <div ref={tooltipRef} className="tooltip">
+      {content}
+    </div>
+  );
+}
+```
+
+**When to stick with `useEffect`:**
+
+- Anything that doesn't need to block painting: data fetching, subscriptions, analytics, logging.
+
+**Server-side rendering caveat:** `useLayoutEffect` does not run on the server (there is no DOM), which causes a warning. Use `useEffect` for SSR-compatible components, or conditionally guard with `typeof window !== 'undefined'`.
+
+## 🧠 Question 27
+
+**ID**: react-027
+**Title**: What are Error Boundaries in React?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+An Error Boundary is a class component that catches JavaScript errors anywhere in its child component tree and displays a fallback UI instead of crashing the whole application.
+
+Error boundaries catch errors during:
+
+- Rendering
+- Lifecycle methods
+- Constructors of child components
+
+They do **not** catch errors in:
+
+- Event handlers (use try/catch)
+- Asynchronous code (`setTimeout`, promises)
+- Server-side rendering
+- Errors in the error boundary itself
+
+```jsx
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    // Update state to show fallback UI
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    // Log to error reporting service
+    logError(error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? <h2>Something went wrong.</h2>;
+    }
+    return this.props.children;
+  }
+}
+
+// Usage
+<ErrorBoundary fallback={<ErrorPage />}>
+  <Dashboard />
+</ErrorBoundary>;
+```
+
+Error boundaries themselves are still class components in React. In function-component-heavy codebases, many teams use the `react-error-boundary` package to get a reusable wrapper and hooks-friendly integration.
+
+Wrap distinct sections of the UI in separate Error Boundaries so a crash in one section does not take down the entire application.
+
+## 🧠 Question 28
+
+**ID**: react-028
+**Title**: What are Portals in React?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+A Portal renders a component's children into a different DOM node than the component's parent — while keeping the component in its normal position in the React component tree.
+
+```jsx
+import { createPortal } from 'react-dom';
+
+function Modal({ isOpen, onClose, children }) {
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>,
+    document.body, // render into document.body, not the parent DOM node
+  );
+}
+```
+
+**Why Portals exist:**
+
+CSS properties like `overflow: hidden`, `z-index`, and `transform` on ancestor elements can clip or incorrectly stack UI that needs to visually "escape" the parent — modals, tooltips, dropdowns, and notifications.
+
+**Key behaviors:**
+
+- **React tree, not DOM tree** — event bubbling follows the React component hierarchy, not the DOM hierarchy. A click inside a portal bubbles up through React ancestors even though the DOM ancestors are different.
+- **Context works** — the portal component can still consume context from its React parent.
+- **Lifecycle is tied to the React parent** — when the parent unmounts, the portal content is also cleaned up.
+
+```jsx
+// Portal content is rendered in document.body in the DOM
+// but event bubbling goes through <Page> → <App> in React
+function App() {
+  return (
+    <Page>
+      <Modal>
+        {' '}
+        {/* React parent is Page, DOM parent is body */}
+        <button onClick={handleClose}>Close</button>
+      </Modal>
+    </Page>
+  );
+}
+```
+
+## 🧠 Question 29
+
+**ID**: react-029
+**Title**: What is `useImperativeHandle` and when do you need `forwardRef`?
+**Difficulty**: Hard
+**Category**: Hooks
+
+### Answer 📄
+
+`forwardRef` is a wrapper that lets a parent component pass a `ref` through to a child component's DOM element or a custom imperative handle.
+
+By default, `ref` on a functional component does not work — refs can only be attached to DOM elements. `forwardRef` enables attaching refs to functional components.
+
+```jsx
+const FancyInput = forwardRef(function FancyInput(props, ref) {
+  return <input ref={ref} className="fancy-input" {...props} />;
+});
+
+// Parent
+function Form() {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current.focus(); // direct DOM access
+  }, []);
+
+  return <FancyInput ref={inputRef} />;
+}
+```
+
+**`useImperativeHandle`** customizes what the parent sees through the ref — instead of the raw DOM element, the parent gets a controlled API:
+
+```jsx
+const VideoPlayer = forwardRef(function VideoPlayer(props, ref) {
+  const videoRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    play() {
+      videoRef.current.play();
+    },
+    pause() {
+      videoRef.current.pause();
+    },
+    seek(time) {
+      videoRef.current.currentTime = time;
+    },
+    // The raw videoRef.current (with its full DOM API) is NOT exposed
+  }));
+
+  return <video ref={videoRef} src={props.src} />;
+});
+
+// Parent only sees { play, pause, seek }
+playerRef.current.play();
+```
+
+**When to use:** use sparingly. Exposing an imperative API is generally an anti-pattern in React's declarative model. Prefer passing state and callbacks via props. Use `useImperativeHandle` when the parent truly needs to trigger actions imperatively — focus management, media playback, animations.
+
+## 🧠 Question 30
+
+**ID**: react-030
+**Title**: What is `React.lazy` and how does it work with `Suspense`?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+`React.lazy` enables code splitting at the component level. It wraps a dynamic `import()` and returns a lazy component that React loads only when it is first rendered.
+
+```jsx
+import { lazy, Suspense } from 'react';
+
+// The component bundle is only downloaded when Dashboard is rendered
+const Dashboard = lazy(() => import('./Dashboard'));
+const Settings = lazy(() => import('./Settings'));
+
+function App() {
+  const [page, setPage] = useState('dashboard');
+
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      {page === 'dashboard' ? <Dashboard /> : <Settings />}
+    </Suspense>
+  );
+}
+```
+
+**How it works:**
+
+1. `React.lazy(() => import('./Dashboard'))` creates a component that holds a Promise.
+2. When React tries to render the lazy component for the first time, it reads the Promise.
+3. If the Promise is pending, React "throws" the Promise — `<Suspense>` catches it and shows the fallback.
+4. Once the Promise resolves (chunk downloaded), React re-renders the component.
+
+**Requirements:**
+
+- The dynamic import must resolve to a module with a **default export** that is a React component.
+- A `<Suspense>` boundary must exist somewhere above the lazy component in the tree.
+
+**Combining with React Router** for route-level splitting:
+
+```jsx
+const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+
+<Routes>
+  <Route
+    path="/"
+    element={
+      <Suspense fallback={<Spinner />}>
+        <Home />
+      </Suspense>
+    }
+  />
+  <Route
+    path="/about"
+    element={
+      <Suspense fallback={<Spinner />}>
+        <About />
+      </Suspense>
+    }
+  />
+</Routes>;
+```

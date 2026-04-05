@@ -1567,3 +1567,248 @@ const About = lazy(() => import('./pages/About'));
   />
 </Routes>;
 ```
+
+## 🧠 Question 31
+
+**ID**: react-031
+**Title**: How does React batch state updates?
+**Difficulty**: Hard
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+Batching is React's optimization of grouping multiple state updates from the same event into a single re-render.
+
+**React 17 and earlier:** only batched updates inside React event handlers. Updates inside `setTimeout`, `Promise.then`, or native event listeners were NOT batched — each triggered a separate re-render.
+
+**React 18:** introduced **Automatic Batching** — ALL state updates, regardless of where they originate, are batched by default:
+
+```jsx
+// React 18 — all three updates batched into ONE re-render
+setTimeout(() => {
+  setCount((c) => c + 1);
+  setFlag((f) => !f);
+  setData((d) => [...d, 1]);
+  // Only ONE re-render happens
+}, 1000);
+
+// Also batched inside Promise.then, native event listeners, etc.
+fetch('/api').then(() => {
+  setLoading(false);
+  setData(result);
+  // ONE re-render
+});
+```
+
+**Opting out of batching with `flushSync`:**
+
+```jsx
+import { flushSync } from 'react-dom';
+
+function handleClick() {
+  flushSync(() => {
+    setCount((c) => c + 1); // triggers immediate re-render
+  });
+  // DOM is updated here — useful for reading DOM measurements between updates
+  flushSync(() => {
+    setFlag((f) => !f);
+  });
+}
+```
+
+Use `flushSync` sparingly — it forces synchronous rendering which reduces performance and can cause issues with Concurrent Mode features.
+
+## 🧠 Question 32
+
+**ID**: react-032
+**Title**: What is `useTransition` and when should you use it?
+**Difficulty**: Hard
+**Category**: Concurrent React
+
+### Answer 📄
+
+`useTransition` is a Concurrent React hook that marks a state update as "non-urgent" (a transition). React keeps the UI responsive during the transition, deferring the expensive update if a higher-priority update (like a keystroke) comes in.
+
+```jsx
+import { useTransition, useState } from 'react';
+
+function SearchPage() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    setQuery(e.target.value); // urgent — updates input immediately
+
+    startTransition(() => {
+      // Non-urgent — React may defer this and keep the input responsive
+      setResults(searchDatabase(e.target.value));
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />}
+      <ResultsList results={results} />
+    </>
+  );
+}
+```
+
+**How it works internally:**
+
+- React renders the transition update at a lower priority.
+- If a new urgent update (e.g., another keystroke) arrives before the transition finishes, React discards the in-progress transition render and starts fresh.
+- `isPending` is `true` while the transition is in progress — use it to show loading indicators.
+
+**`useTransition` vs `useDeferredValue`:**
+
+- `useTransition` wraps a state setter — you control which update is deferred.
+- `useDeferredValue` wraps a value — useful when you receive the value from a prop or another component and can't control the update timing.
+
+## 🧠 Question 33
+
+**ID**: react-033
+**Title**: What is `useDeferredValue` and how does it differ from debouncing?
+**Difficulty**: Hard
+**Category**: Concurrent React
+
+### Answer 📄
+
+`useDeferredValue` accepts a value and returns a deferred version of it. During a re-render, if there is a higher-priority update pending, the deferred value lags behind — React reuses the old value to keep the UI responsive and re-renders with the new value when the browser is idle.
+
+```jsx
+import { useDeferredValue, memo } from 'react';
+
+function SearchPage({ query }) {
+  const deferredQuery = useDeferredValue(query);
+
+  return (
+    <>
+      <p>Showing results for: {query}</p> {/* always current */}
+      <Results query={deferredQuery} /> {/* may lag behind */}
+    </>
+  );
+}
+
+// Wrap the expensive component in memo so it only re-renders
+// when deferredQuery actually changes
+const Results = memo(function Results({ query }) {
+  // Expensive computation / rendering
+  const items = searchItems(query);
+  return (
+    <ul>
+      {items.map((i) => (
+        <li key={i.id}>{i.name}</li>
+      ))}
+    </ul>
+  );
+});
+```
+
+**Difference from debouncing:**
+
+- **Debouncing** delays the update by a fixed timer — always introduces latency, even on fast devices.
+- **`useDeferredValue`** is adaptive — on fast devices with no competing updates, it renders immediately. The deferral only kicks in when there is contention.
+
+**Difference from `useTransition`:**
+
+- `useTransition` wraps the state setter — use when you control where the state update happens.
+- `useDeferredValue` wraps the received value — use when you receive a value as a prop or from a context and cannot control when it updates.
+
+## 🧠 Question 34
+
+**ID**: react-034
+**Title**: What are React Server Components?
+**Difficulty**: Hard
+**Category**: Server Components
+
+### Answer 📄
+
+React Server Components (RSC) are components that render exclusively on the server and are never sent to the client as JavaScript. They can directly access server-side resources (databases, file systems, internal APIs) without API round trips.
+
+**Key properties:**
+
+- Zero JavaScript bundle impact — their code never reaches the browser.
+- Can use `async/await` directly in the component body.
+- Cannot use state (`useState`), effects (`useEffect`), or browser-only APIs.
+- Cannot handle user interactions directly.
+
+```jsx
+// app/users/page.jsx (Next.js App Router)
+// This component runs ONLY on the server — no JS sent to client
+
+async function UsersPage() {
+  // Direct database access — no API fetch needed
+  const users = await db.query('SELECT * FROM users');
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>
+          <UserCard user={user} /> {/* also a server component */}
+          <InteractiveButton userId={user.id} /> {/* client component */}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Server Components vs Client Components:**
+
+|                          | Server Components | Client Components         |
+| ------------------------ | ----------------- | ------------------------- |
+| Renders on               | Server only       | Server (initial) + Client |
+| Bundle size              | Zero              | Added to JS bundle        |
+| State/Effects            | ❌                | ✅                        |
+| Direct DB/FS access      | ✅                | ❌                        |
+| `async/await` in body    | ✅                | ❌                        |
+| `"use client"` directive | Not needed        | Required                  |
+
+**The interleaving model** — server and client components can be nested. A server component can import client components, but a client component cannot import a server component (it can receive server components as children via props).
+
+## 🧠 Question 35
+
+**ID**: react-035
+**Title**: What is hydration in React SSR and what causes hydration mismatches?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+**Server-Side Rendering (SSR)** generates the full HTML on the server and sends it to the browser. The browser can display it immediately without waiting for JavaScript.
+
+**Hydration** is the process where React "takes over" the server-rendered HTML on the client — attaching event listeners and making the static HTML interactive. React re-renders the component tree and reconciles it with the existing DOM instead of creating nodes from scratch.
+
+```jsx
+// Server: renders to HTML string
+// Client: hydrates the existing DOM
+import { hydrateRoot } from 'react-dom/client';
+
+hydrateRoot(document.getElementById('root'), <App />);
+```
+
+**Hydration mismatches** occur when the HTML the server produces differs from what React renders on the client. React logs a warning and falls back to client-side re-rendering for the mismatched subtree.
+
+**Common causes:**
+
+1. **Non-deterministic rendering** — `Date.now()`, `Math.random()`, `new Date()` produce different values server vs client.
+2. **Browser-only APIs** — `window`, `localStorage`, `navigator` used during render (they don't exist on the server).
+3. **Conditional rendering based on `typeof window`** — renders different content server vs client.
+4. **Invalid HTML** — a `<p>` inside another `<p>` which browsers auto-correct differently.
+5. **Third-party browser extensions** — inject DOM nodes that React doesn't expect.
+
+**Fixes:**
+
+```jsx
+// Guard browser APIs with useEffect or client-only rendering
+const [isMounted, setIsMounted] = useState(false);
+useEffect(() => setIsMounted(true), []);
+
+return isMounted ? <ClientOnlyComponent /> : null;
+
+// Or use suppressHydrationWarning for intentional differences
+<time suppressHydrationWarning>{new Date().toLocaleString()}</time>;
+```

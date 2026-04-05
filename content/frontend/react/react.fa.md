@@ -1567,3 +1567,248 @@ const About = lazy(() => import('./pages/About'));
   />
 </Routes>;
 ```
+
+## 🧠 سوال 31
+
+**شناسه**: react-031
+**عنوان**: React چگونه به‌روزرسانی‌های state را batch می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+Batching یکی از بهینه‌سازی‌های React است که چندین به‌روزرسانی state را از یک event یکجا در یک re-render گروه‌بندی می‌کند.
+
+**React 17 و قبل‌تر:** فقط update هایی که داخل React event handler ها بودند batch می‌شدند. update هایی که داخل `setTimeout`، `Promise.then` یا native event listener ها بودند batch نمی‌شدند و هرکدام یک re-render جدا ایجاد می‌کردند.
+
+**React 18:** مفهوم **Automatic Batching** را معرفی کرد. یعنی به‌صورت پیش‌فرض همه update های state، فارغ از اینکه از کجا آمده باشند، batch می‌شوند:
+
+```jsx
+// React 18 — هر سه update در یک re-render واحد batch می‌شوند
+setTimeout(() => {
+  setCount((c) => c + 1);
+  setFlag((f) => !f);
+  setData((d) => [...d, 1]);
+  // فقط یک re-render رخ می‌دهد
+}, 1000);
+
+// داخل Promise.then، native event listener ها و غیره هم batch می‌شوند
+fetch('/api').then(() => {
+  setLoading(false);
+  setData(result);
+  // یک re-render
+});
+```
+
+**خارج شدن از batching با `flushSync`:**
+
+```jsx
+import { flushSync } from 'react-dom';
+
+function handleClick() {
+  flushSync(() => {
+    setCount((c) => c + 1); // بلافاصله re-render می‌شود
+  });
+  // DOM اینجا به‌روزرسانی شده و برای خواندن اندازه‌ها مفید است
+  flushSync(() => {
+    setFlag((f) => !f);
+  });
+}
+```
+
+از `flushSync` با احتیاط استفاده کنید، چون رندر sync را تحمیل می‌کند، performance را کاهش می‌دهد و ممکن است با قابلیت‌های Concurrent React تداخل داشته باشد.
+
+## 🧠 سوال 32
+
+**شناسه**: react-032
+**عنوان**: `useTransition` چیست و چه زمانی باید از آن استفاده کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`useTransition` یکی از hook های Concurrent React است که یک update را به‌عنوان "غیرفوری" یا transition علامت‌گذاری می‌کند. React در طول transition رابط کاربری را responsive نگه می‌دارد و اگر update مهم‌تری مثل تایپ کاربر برسد، update سنگین را به تعویق می‌اندازد.
+
+```jsx
+import { useTransition, useState } from 'react';
+
+function SearchPage() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    setQuery(e.target.value); // فوری — input بلافاصله آپدیت می‌شود
+
+    startTransition(() => {
+      // غیرفوری — React می‌تواند آن را عقب بیندازد تا input روان بماند
+      setResults(searchDatabase(e.target.value));
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />}
+      <ResultsList results={results} />
+    </>
+  );
+}
+```
+
+**از نظر داخلی چه اتفاقی می‌افتد:**
+
+- React update مربوط به transition را با اولویت پایین‌تر رندر می‌کند
+- اگر قبل از کامل شدن transition یک update فوری جدید برسد، React رندر نیمه‌کاره transition را کنار می‌گذارد و از اول با اطلاعات جدید شروع می‌کند
+- تا وقتی transition در حال انجام است، `isPending` برابر `true` است و می‌توانید برای نمایش loading indicator از آن استفاده کنید
+
+**تفاوت `useTransition` و `useDeferredValue`:**
+
+- `useTransition` یک state setter را wrap می‌کند؛ یعنی خودتان مشخص می‌کنید کدام update با تاخیر انجام شود
+- `useDeferredValue` یک value را wrap می‌کند؛ وقتی value را از prop یا context می‌گیرید و کنترل مستقیمی روی زمان update ندارید، مناسب‌تر است
+
+## 🧠 سوال 33
+
+**شناسه**: react-033
+**عنوان**: `useDeferredValue` چیست و چه تفاوتی با debouncing دارد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`useDeferredValue` یک value می‌گیرد و نسخه deferred شده آن را برمی‌گرداند. اگر هنگام re-render یک update با اولویت بالاتر در صف باشد، مقدار deferred موقتاً عقب می‌ماند و React برای responsive ماندن UI از مقدار قدیمی استفاده می‌کند. بعداً وقتی مرورگر فرصت پیدا کند، دوباره با مقدار جدید رندر می‌شود.
+
+```jsx
+import { useDeferredValue, memo } from 'react';
+
+function SearchPage({ query }) {
+  const deferredQuery = useDeferredValue(query);
+
+  return (
+    <>
+      <p>Showing results for: {query}</p> {/* همیشه به‌روز */}
+      <Results query={deferredQuery} /> {/* ممکن است کمی عقب‌تر باشد */}
+    </>
+  );
+}
+
+// برای اینکه فقط وقتی deferredQuery عوض شد دوباره رندر شود،
+// کامپوننت گران را با memo بپیچید
+const Results = memo(function Results({ query }) {
+  // محاسبه / رندر سنگین
+  const items = searchItems(query);
+  return (
+    <ul>
+      {items.map((i) => (
+        <li key={i.id}>{i.name}</li>
+      ))}
+    </ul>
+  );
+});
+```
+
+**تفاوت با debouncing:**
+
+- **Debouncing** update را با یک timer ثابت به تاخیر می‌اندازد و همیشه latency ایجاد می‌کند، حتی روی دستگاه‌های سریع
+- **`useDeferredValue`** تطبیقی است؛ روی دستگاه سریع و بدون رقابت، ممکن است تقریباً فوری رندر شود. تاخیر فقط وقتی اعمال می‌شود که رقابت بین update ها وجود داشته باشد
+
+**تفاوت با `useTransition`:**
+
+- `useTransition` state setter را wrap می‌کند و وقتی مناسب است که خودتان محل update را کنترل می‌کنید
+- `useDeferredValue` روی خود value اعمال می‌شود و وقتی مناسب است که value را از prop یا context دریافت می‌کنید و نمی‌توانید زمان update آن را کنترل کنید
+
+## 🧠 سوال 34
+
+**شناسه**: react-034
+**عنوان**: React Server Components چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Server Components
+
+### پاسخ 📄
+
+React Server Components یا RSC کامپوننت‌هایی هستند که فقط روی سرور رندر می‌شوند و کد جاوااسکریپت آن‌ها هرگز به کلاینت ارسال نمی‌شود. این کامپوننت‌ها می‌توانند مستقیم به منابع سمت سرور مثل دیتابیس، فایل‌سیستم یا API های داخلی دسترسی داشته باشند، بدون نیاز به رفت‌وبرگشت API از سمت مرورگر.
+
+**ویژگی‌های کلیدی:**
+
+- روی حجم باندل جاوااسکریپت مرورگر اثری ندارند، چون کدشان اصلاً به browser نمی‌رسد
+- می‌توانند مستقیم داخل بدنه کامپوننت از `async/await` استفاده کنند
+- نمی‌توانند از state (`useState`)، effect (`useEffect`) یا API های مخصوص مرورگر استفاده کنند
+- نمی‌توانند مستقیماً تعاملات کاربر را مدیریت کنند
+
+```jsx
+// app/users/page.jsx (Next.js App Router)
+// این کامپوننت فقط روی سرور اجرا می‌شود — هیچ JS ای به کلاینت نمی‌رود
+
+async function UsersPage() {
+  // دسترسی مستقیم به دیتابیس — بدون نیاز به fetch از API
+  const users = await db.query('SELECT * FROM users');
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>
+          <UserCard user={user} /> {/* این هم server component است */}
+          <InteractiveButton userId={user.id} /> {/* client component */}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**تفاوت Server Component و Client Component:**
+
+|                        | Server Components | Client Components        |
+| ---------------------- | ----------------- | ------------------------ |
+| محل رندر               | فقط سرور          | سرور (اولیه) + کلاینت    |
+| حجم باندل              | صفر               | به باندل JS اضافه می‌شود |
+| State/Effects          | ❌                | ✅                       |
+| دسترسی مستقیم به DB/FS | ✅                | ❌                       |
+| `async/await` در بدنه  | ✅                | ❌                       |
+| دستور `"use client"`   | لازم نیست         | لازم است                 |
+
+**مدل interleaving** — server component و client component می‌توانند تو‌در‌تو باشند. یک server component می‌تواند client component را import کند، اما یک client component نمی‌تواند server component را import کند؛ البته می‌تواند آن را از طریق props یا `children` دریافت کند.
+
+## 🧠 سوال 35
+
+**شناسه**: react-035
+**عنوان**: Hydration در React SSR چیست و چه چیزی باعث hydration mismatch می‌شود؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+**Server-Side Rendering یا SSR** کل HTML را روی سرور تولید می‌کند و آن را به مرورگر می‌فرستد. مرورگر می‌تواند این HTML را بدون صبر برای جاوااسکریپت فوراً نمایش دهد.
+
+**Hydration** فرایندی است که در آن React روی کلاینت کنترل HTML رندرشده توسط سرور را به دست می‌گیرد، event listener ها را وصل می‌کند و آن HTML ایستا را interactive می‌سازد. React درخت کامپوننت را دوباره رندر می‌کند و آن را با DOM موجود reconcile می‌کند، نه اینکه همه نودها را از صفر بسازد.
+
+```jsx
+// Server: به HTML string رندر می‌کند
+// Client: DOM موجود را hydrate می‌کند
+import { hydrateRoot } from 'react-dom/client';
+
+hydrateRoot(document.getElementById('root'), <App />);
+```
+
+**Hydration mismatch** زمانی رخ می‌دهد که HTML تولیدشده در سرور با چیزی که React در کلاینت رندر می‌کند متفاوت باشد. در این حالت React هشدار می‌دهد و برای آن subtree به client-side rendering fallback می‌کند.
+
+**دلایل رایج:**
+
+1. **رندر غیرقطعی** — مثل `Date.now()`، `Math.random()` یا `new Date()` که در سرور و کلاینت مقدارهای متفاوتی می‌دهند
+2. **API های مخصوص مرورگر** — مثل `window`، `localStorage` یا `navigator` که هنگام render روی سرور وجود ندارند
+3. **رندر شرطی بر اساس `typeof window`** — باعث می‌شود محتوای سرور و کلاینت فرق کند
+4. **HTML نامعتبر** — مثل قرار دادن یک `<p>` داخل `<p>` دیگر که مرورگرها آن را به‌طور متفاوتی اصلاح می‌کنند
+5. **افزونه‌های مرورگر شخص ثالث** — که نودهایی به DOM تزریق می‌کنند و React انتظارشان را ندارد
+
+**راه‌حل‌ها:**
+
+```jsx
+// API های مرورگر را با useEffect یا رندر مخصوص کلاینت محافظت کنید
+const [isMounted, setIsMounted] = useState(false);
+useEffect(() => setIsMounted(true), []);
+
+return isMounted ? <ClientOnlyComponent /> : null;
+
+// یا برای تفاوت‌های عمدی از suppressHydrationWarning استفاده کنید
+<time suppressHydrationWarning>{new Date().toLocaleString()}</time>;
+```

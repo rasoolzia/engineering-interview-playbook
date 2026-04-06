@@ -1812,3 +1812,237 @@ return isMounted ? <ClientOnlyComponent /> : null;
 // Or use suppressHydrationWarning for intentional differences
 <time suppressHydrationWarning>{new Date().toLocaleString()}</time>;
 ```
+
+## 🧠 Question 36
+
+**ID**: react-036
+**Title**: What is React Fiber?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+React Fiber is the complete rewrite of React's core reconciliation algorithm, introduced in React 16. It replaced the old synchronous "stack reconciler" with an incremental, interruptible architecture.
+
+**The problem with the old reconciler:**
+
+The original React reconciler used a recursive tree traversal that could not be paused. Once React started rendering a large tree, it had to finish — blocking the main thread and causing dropped frames and unresponsive UI.
+
+**What Fiber enables:**
+
+1. **Incremental rendering** — break rendering work into small units ("fibers"). React can pause after each unit, yield to the browser (paint, handle events), and resume.
+2. **Priority scheduling** — assign different priorities to different updates. A typing animation is higher priority than a background data refetch.
+3. **Concurrent rendering** — work on multiple versions of the UI simultaneously (Concurrent Mode).
+4. **Suspense** — "pause" rendering when data is not ready and resume when it is.
+
+**What a Fiber is:**
+
+A Fiber is a JavaScript object representing a unit of work for one component instance. It contains:
+
+- Component type, props, and state
+- References to parent, sibling, and child fibers (a linked list, not a tree)
+- Effect flags describing what DOM mutations to make
+
+```
+FiberNode {
+  type: Counter,
+  stateNode: { count: 0 },
+  return: <parentFiber>,
+  child: <childFiber>,
+  sibling: <siblingFiber>,
+  effectTag: UPDATE,
+  ...
+}
+```
+
+React maintains two Fiber trees: the **current tree** (what is on screen) and the **work-in-progress tree** (being built). When work completes, React swaps them — this is the "double buffering" commit.
+
+## 🧠 Question 37
+
+**ID**: react-037
+**Title**: What is the difference between the render phase and the commit phase in React?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+React's update cycle is divided into two distinct phases with different characteristics.
+
+**Render Phase (Reconciliation)**
+
+- React calls component functions and builds a new virtual DOM tree.
+- React diffs the new tree against the current tree to determine what changed.
+- **Asynchronous and interruptible** — React can pause, abort, or restart this work. It may call component functions multiple times (this is why component functions must be pure — no side effects in render).
+- No DOM mutations happen here.
+- `useState`, `useMemo`, `useReducer`, and `useCallback` operate here.
+
+**Commit Phase**
+
+- React applies the computed changes to the real DOM.
+- **Synchronous and uninterruptible** — React processes all mutations in one shot to avoid partial UI states.
+- Three sub-phases:
+  1. **Before mutation** — `getSnapshotBeforeUpdate` (class), reads DOM before changes.
+  2. **Mutation** — insert, update, and delete DOM nodes.
+  3. **Layout** — `useLayoutEffect` and `componentDidMount/Update` run synchronously here.
+- After the browser paints, `useEffect` cleanup and setup run.
+
+```
+Render Phase (interruptible):
+  → Component functions called
+  → Virtual DOM diffed
+
+Commit Phase (synchronous):
+  → DOM mutations applied
+  → useLayoutEffect runs
+  → Browser paints
+  → useEffect runs
+```
+
+**Why this matters:** Side effects that read or write the DOM must go in `useLayoutEffect` or `useEffect`, not in the component body — the render phase may be called multiple times before any commit occurs.
+
+## 🧠 Question 38
+
+**ID**: react-038
+**Title**: What is Concurrent React and what does it enable?
+**Difficulty**: Hard
+**Category**: Concurrent React
+
+### Answer 📄
+
+Concurrent React is a behind-the-scenes change to how React renders component trees, introduced as stable in React 18. It makes React's rendering interruptible, allowing it to work on multiple tasks concurrently and prioritize the most important work.
+
+**The core capability:** React can now start rendering a new tree, pause partway through to handle a higher-priority update (like a keystroke), discard the in-progress work, and restart.
+
+**What it enables:**
+
+1. **`useTransition` / `startTransition`** — mark updates as low-priority so React keeps the UI responsive during heavy renders.
+
+2. **`useDeferredValue`** — defer re-rendering a subtree until the browser is free, similar to debouncing but adaptive.
+
+3. **Automatic batching** — all state updates are batched by default, not just those in event handlers.
+
+4. **Streaming SSR** — React can stream HTML progressively from the server, flushing content as it becomes ready.
+
+5. **Suspense for data fetching** — React can suspend a component, show a fallback, and seamlessly reveal the component when its data is ready.
+
+**Opting in to Concurrent Mode:**
+
+```jsx
+// React 18 — concurrent rendering is enabled by default with createRoot
+import { createRoot } from 'react-dom/client';
+createRoot(document.getElementById('root')).render(<App />);
+
+// Legacy mode — no concurrent features
+ReactDOM.render(<App />, document.getElementById('root'));
+```
+
+**Important:** concurrent rendering is an opt-in architecture change. Existing apps using `ReactDOM.render` continue to work in legacy mode without concurrent features.
+
+## 🧠 Question 39
+
+**ID**: react-039
+**Title**: What is `Suspense` in React and how does it work?
+**Difficulty**: Hard
+**Category**: Concurrent React
+
+### Answer 📄
+
+`<Suspense>` is a built-in React component that lets you "wait" for something (a lazy-loaded component, async data) and display a fallback UI while waiting.
+
+```jsx
+<Suspense fallback={<LoadingSpinner />}>
+  <LazyComponent />
+</Suspense>
+```
+
+**The mechanism — throwing a Promise:**
+
+When a component is not ready to render (its data or code is still loading), it throws a Promise. React's Suspense boundary catches the thrown Promise, shows the `fallback`, and re-renders the component when the Promise resolves.
+
+```jsx
+// Simplified internal mechanism
+function LazyComponent() {
+  const resource = cache.read(); // throws a Promise if loading
+  return <div>{resource.data}</div>;
+}
+```
+
+**Use cases:**
+
+1. **Code splitting** with `React.lazy`:
+
+```jsx
+const Chart = lazy(() => import('./Chart'));
+<Suspense fallback={<Spinner />}>
+  <Chart />
+</Suspense>;
+```
+
+2. **Data fetching** with frameworks (Next.js, Remix) or libraries (TanStack Query with Suspense mode):
+
+```jsx
+// Next.js Server Component — async component suspends automatically
+async function UserProfile({ id }) {
+  const user = await fetchUser(id);
+  return <div>{user.name}</div>;
+}
+```
+
+**Nested Suspense boundaries** handle loading states independently:
+
+```jsx
+<Suspense fallback={<PageSkeleton />}>
+  <Header />
+  <Suspense fallback={<FeedSkeleton />}>
+    <NewsFeed />
+  </Suspense>
+</Suspense>
+```
+
+The inner boundary shows `<FeedSkeleton />` while the feed loads, while the header is already visible.
+
+## 🧠 Question 40
+
+**ID**: react-040
+**Title**: What is the `key` prop and what happens when you use index as a key?
+**Difficulty**: Medium
+**Category**: JSX & Rendering
+
+### Answer 📄
+
+The `key` prop is a special hint React uses during list reconciliation to identify which items changed, were added, or were removed between renders.
+
+**Why index as a key is problematic:**
+
+When you use array index as the key, React maps each index to a component. If the array is reordered, filtered, or items are prepended, the indices shift — React thinks the element at index 0 is the "same" element even though it's now a different item.
+
+This causes:
+
+- **Incorrect state** — a controlled input at index 0 keeps its typed value even though a different item is now at that position.
+- **Wrong animations** — transition effects apply to the wrong elements.
+- **Stale component state** — `useEffect` cleanup doesn't run between "different" items that happen to share an index.
+
+```jsx
+// Bug demonstration
+const [items, setItems] = useState(['Alice', 'Bob', 'Carol']);
+
+// After prepending 'Zara':
+// Index 0 was 'Alice', now it's 'Zara' — React thinks it just updated props
+// React does NOT unmount/remount — old component instance reused
+{
+  items.map((name, index) => (
+    <input key={index} defaultValue={name} /> // will show wrong values
+  ));
+}
+
+// Fix — use stable IDs
+{
+  items.map((item) => <input key={item.id} defaultValue={item.name} />);
+}
+```
+
+**When index as key is acceptable:**
+
+- The list is static and never reordered.
+- Items are never added to or removed from the middle of the list.
+- No item has stateful children (inputs, animations).

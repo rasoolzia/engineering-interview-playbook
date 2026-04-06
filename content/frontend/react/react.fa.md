@@ -1812,3 +1812,237 @@ return isMounted ? <ClientOnlyComponent /> : null;
 // یا برای تفاوت‌های عمدی از suppressHydrationWarning استفاده کنید
 <time suppressHydrationWarning>{new Date().toLocaleString()}</time>;
 ```
+
+## 🧠 سوال 36
+
+**شناسه**: react-036
+**عنوان**: React Fiber چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+React Fiber بازنویسی کامل الگوریتم اصلی reconciliation در React است که در React 16 معرفی شد. Fiber جای reconciler قدیمی و sync مبتنی بر stack را با یک معماری incremental و interruptible عوض کرد.
+
+**مشکل reconciler قدیمی:**
+
+reconciler اولیه React از پیمایش بازگشتی درخت استفاده می‌کرد و امکان pause شدن نداشت. وقتی React رندر یک درخت بزرگ را شروع می‌کرد، مجبور بود آن را تا انتها تمام کند و این موضوع main thread را block می‌کرد، باعث افت فریم و UI غیرresponsive می‌شد.
+
+**Fiber چه چیزی را ممکن می‌کند:**
+
+1. **رندر incremental** — کار رندر به واحدهای کوچک‌تری به نام fiber شکسته می‌شود. React می‌تواند بعد از هر واحد مکث کند، کنترل را به مرورگر بدهد و بعداً ادامه دهد
+2. **زمان‌بندی بر اساس اولویت** — update های مختلف می‌توانند اولویت‌های متفاوت داشته باشند. مثلا تایپ کاربر مهم‌تر از refetch شدن داده در پس‌زمینه است
+3. **Concurrent rendering** — امکان کار روی چند نسخه از UI به‌صورت هم‌زمان
+4. **Suspense** — امکان "مکث" در رندر تا زمانی که داده آماده شود و سپس ادامه رندر
+
+**Fiber چیست:**
+
+Fiber یک شیء جاوااسکریپتی است که یک واحد کار برای یک نمونه از کامپوننت را نمایش می‌دهد. این شیء شامل موارد زیر است:
+
+- نوع کامپوننت، props و state
+- ارجاع به fiber والد، sibling و child به‌صورت linked list
+- effect flag هایی که مشخص می‌کنند چه تغییراتی باید روی DOM اعمال شود
+
+```
+FiberNode {
+  type: Counter,
+  stateNode: { count: 0 },
+  return: <parentFiber>,
+  child: <childFiber>,
+  sibling: <siblingFiber>,
+  effectTag: UPDATE,
+  ...
+}
+```
+
+React دو درخت Fiber نگه می‌دارد: **current tree** که الان روی صفحه است، و **work-in-progress tree** که در حال ساخته شدن است. وقتی کار کامل شد، React این دو را جابه‌جا می‌کند. این الگو را double buffering می‌گویند.
+
+## 🧠 سوال 37
+
+**شناسه**: react-037
+**عنوان**: تفاوت بین render phase و commit phase در React چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+چرخه update در React به دو phase مجزا تقسیم می‌شود که ویژگی‌های متفاوتی دارند.
+
+**Render Phase (Reconciliation)**
+
+- React تابع کامپوننت‌ها را صدا می‌زند و یک درخت virtual DOM جدید می‌سازد
+- React درخت جدید را با درخت فعلی diff می‌کند تا تغییرات را پیدا کند
+- **Async و interruptible است** — React می‌تواند این کار را pause، abort یا restart کند. به همین دلیل ممکن است تابع کامپوننت چند بار صدا زده شود و به همین خاطر باید pure باشد
+- در این مرحله هیچ تغییری روی DOM واقعی اعمال نمی‌شود
+- `useState`، `useMemo`، `useReducer` و `useCallback` در این phase عمل می‌کنند
+
+**Commit Phase**
+
+- React تغییرات محاسبه‌شده را روی DOM واقعی اعمال می‌کند
+- **Sync و غیرقابل قطع است** — React همه mutation ها را یکجا اعمال می‌کند تا UI در وضعیت نیمه‌کاره نماند
+- سه زیرمرحله دارد:
+  1. **Before mutation** — متد `getSnapshotBeforeUpdate` در class component ها DOM را قبل از تغییر می‌خواند
+  2. **Mutation** — نودهای DOM اضافه، حذف یا update می‌شوند
+  3. **Layout** — `useLayoutEffect` و `componentDidMount/Update` اینجا به‌صورت sync اجرا می‌شوند
+- بعد از paint شدن مرورگر، cleanup و setup مربوط به `useEffect` اجرا می‌شود
+
+```
+Render Phase (interruptible):
+  → Component functions called
+  → Virtual DOM diffed
+
+Commit Phase (synchronous):
+  → DOM mutations applied
+  → useLayoutEffect runs
+  → Browser paints
+  → useEffect runs
+```
+
+**چرا مهم است:** side effect هایی که DOM را می‌خوانند یا می‌نویسند باید داخل `useLayoutEffect` یا `useEffect` باشند، نه در بدنه کامپوننت، چون render phase ممکن است چند بار اجرا شود بدون اینکه اصلاً commit ای رخ دهد.
+
+## 🧠 سوال 38
+
+**شناسه**: react-038
+**عنوان**: Concurrent React چیست و چه چیزی را ممکن می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+Concurrent React یک تغییر زیرساختی در نحوه رندر درخت کامپوننت‌ها توسط React است که به‌صورت پایدار در React 18 معرفی شد. این مدل رندر React را interruptible می‌کند، یعنی React می‌تواند هم‌زمان روی چند کار مختلف کار کند و مهم‌ترین کار را در اولویت قرار دهد.
+
+**قابلیت اصلی:** React حالا می‌تواند رندر یک درخت جدید را شروع کند، در میانه راه برای رسیدگی به یک update با اولویت بالاتر مثل تایپ کاربر مکث کند، کار نیمه‌تمام را کنار بگذارد و دوباره از نو شروع کند.
+
+**چیزهایی که ممکن می‌کند:**
+
+1. **`useTransition` / `startTransition`** — update ها را کم‌اولویت علامت‌گذاری می‌کنند تا هنگام رندرهای سنگین، UI responsive بماند
+
+2. **`useDeferredValue`** — رندر یک subtree را تا زمانی که مرورگر آزاد شود عقب می‌اندازد؛ شبیه debouncing اما به‌صورت تطبیقی
+
+3. **Automatic batching** — همه update های state به‌طور پیش‌فرض batch می‌شوند، نه فقط آن‌هایی که در event handler هستند
+
+4. **Streaming SSR** — React می‌تواند HTML را به‌صورت تدریجی از سرور stream کند و هر بخش را به‌محض آماده شدن بفرستد
+
+5. **Suspense برای data fetching** — React می‌تواند یک کامپوننت را suspend کند، fallback نشان دهد و وقتی داده آماده شد، آن را بدون پرش‌های عجیب نمایش دهد
+
+**نحوه opt-in به Concurrent Mode:**
+
+```jsx
+// React 18 — با createRoot رندر concurrent به‌صورت پیش‌فرض فعال است
+import { createRoot } from 'react-dom/client';
+createRoot(document.getElementById('root')).render(<App />);
+
+// Legacy mode — بدون قابلیت‌های concurrent
+ReactDOM.render(<App />, document.getElementById('root'));
+```
+
+**مهم:** concurrent rendering یک تغییر معماری opt-in است. اپلیکیشن‌های قدیمی که از `ReactDOM.render` استفاده می‌کنند همچنان در legacy mode کار می‌کنند و قابلیت‌های concurrent را ندارند.
+
+## 🧠 سوال 39
+
+**شناسه**: react-039
+**عنوان**: `Suspense` در React چیست و چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`<Suspense>` یک کامپوننت داخلی React است که به شما اجازه می‌دهد برای چیزی مثل یک lazy-loaded component یا داده async "منتظر" بمانید و در این فاصله یک fallback UI نشان دهید.
+
+```jsx
+<Suspense fallback={<LoadingSpinner />}>
+  <LazyComponent />
+</Suspense>
+```
+
+**مکانیزم اصلی — throw کردن Promise:**
+
+وقتی یک کامپوننت آماده رندر نیست، مثلا کد یا داده آن هنوز در حال بارگیری است، یک Promise را throw می‌کند. مرز Suspense این Promise را می‌گیرد، `fallback` را نمایش می‌دهد و وقتی Promise resolve شد، کامپوننت را دوباره رندر می‌کند.
+
+```jsx
+// نسخه ساده‌شده از مکانیزم داخلی
+function LazyComponent() {
+  const resource = cache.read(); // اگر هنوز در حال بارگیری باشد Promise throw می‌کند
+  return <div>{resource.data}</div>;
+}
+```
+
+**موارد استفاده:**
+
+1. **Code splitting** با `React.lazy`:
+
+```jsx
+const Chart = lazy(() => import('./Chart'));
+<Suspense fallback={<Spinner />}>
+  <Chart />
+</Suspense>;
+```
+
+2. **Data fetching** با framework هایی مثل Next.js و Remix یا کتابخانه‌هایی مثل TanStack Query در حالت Suspense:
+
+```jsx
+// Next.js Server Component — کامپوننت async به‌صورت خودکار suspend می‌شود
+async function UserProfile({ id }) {
+  const user = await fetchUser(id);
+  return <div>{user.name}</div>;
+}
+```
+
+**مرزهای تو‌در‌توی Suspense** وضعیت‌های loading را مستقل از هم مدیریت می‌کنند:
+
+```jsx
+<Suspense fallback={<PageSkeleton />}>
+  <Header />
+  <Suspense fallback={<FeedSkeleton />}>
+    <NewsFeed />
+  </Suspense>
+</Suspense>
+```
+
+مرز داخلی در حالی که feed بارگیری می‌شود، `<FeedSkeleton />` را نشان می‌دهد، در حالی که header از قبل قابل مشاهده است.
+
+## 🧠 سوال 40
+
+**شناسه**: react-040
+**عنوان**: prop `key` چیست و وقتی از index به‌عنوان key استفاده می‌کنید چه اتفاقی می‌افتد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: JSX و رندرینگ
+
+### پاسخ 📄
+
+prop `key` یک hint ویژه است که React هنگام reconciliation لیست‌ها از آن استفاده می‌کند تا بفهمد کدام آیتم‌ها بین دو رندر تغییر کرده‌اند، اضافه شده‌اند یا حذف شده‌اند.
+
+**چرا استفاده از index به‌عنوان key مشکل‌ساز است:**
+
+وقتی از اندیس آرایه به‌عنوان key استفاده می‌کنید، React هر اندیس را به یک کامپوننت وصل می‌کند. اگر آرایه reorder شود، filter شود یا آیتمی به اول آن اضافه شود، اندیس‌ها جابه‌جا می‌شوند و React فکر می‌کند عنصر index 0 همان عنصر قبلی است، در حالی که حالا آیتم دیگری آنجا قرار دارد.
+
+نتیجه این کار می‌تواند این‌ها باشد:
+
+- **state اشتباه** — مثلا یک input کنترل‌شده یا حتی uncontrolled ممکن است مقدار واردشده را برای آیتم اشتباه نگه دارد
+- **animation اشتباه** — transition ها روی عنصر اشتباه اعمال می‌شوند
+- **state قدیمی کامپوننت** — cleanup های `useEffect` بین آیتم‌های واقعاً متفاوت اجرا نمی‌شود، چون React آن‌ها را یکسان فرض کرده است
+
+```jsx
+// نمایش باگ
+const [items, setItems] = useState(['Alice', 'Bob', 'Carol']);
+
+// بعد از اضافه کردن 'Zara' به ابتدای لیست:
+// قبلا index 0 برابر 'Alice' بود، حالا 'Zara' است
+// React فکر می‌کند فقط props همان عنصر قبلی عوض شده و آن را unmount/remount نمی‌کند
+{
+  items.map((name, index) => (
+    <input key={index} defaultValue={name} /> // ممکن است مقادیر اشتباه نشان دهد
+  ));
+}
+
+// راه‌حل — از ID پایدار استفاده کنید
+{
+  items.map((item) => <input key={item.id} defaultValue={item.name} />);
+}
+```
+
+**چه زمانی استفاده از index به‌عنوان key قابل قبول است:**
+
+- لیست ایستا باشد و هرگز reorder نشود
+- از وسط لیست آیتمی اضافه یا حذف نشود
+- آیتم‌ها child های stateful مثل input یا animation نداشته باشند

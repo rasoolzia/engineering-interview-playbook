@@ -2046,3 +2046,223 @@ const [items, setItems] = useState(['Alice', 'Bob', 'Carol']);
 - The list is static and never reordered.
 - Items are never added to or removed from the middle of the list.
 - No item has stateful children (inputs, animations).
+
+## 🧠 Question 41
+
+**ID**: react-041
+**Title**: What is `useId` and when do you need it?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+`useId` (React 18) generates a unique, stable ID that is consistent between server and client renders. It solves the problem of generating IDs for accessibility attributes (`htmlFor`, `aria-describedby`, `aria-labelledby`) in SSR-safe way.
+
+```jsx
+import { useId } from 'react';
+
+function PasswordField() {
+  const id = useId(); // e.g., ":r3:"
+
+  return (
+    <div>
+      <label htmlFor={id}>Password</label>
+      <input id={id} type="password" aria-describedby={`${id}-hint`} />
+      <p id={`${id}-hint`}>Must be at least 8 characters.</p>
+    </div>
+  );
+}
+```
+
+**Why not use `Math.random()` or a counter?**
+
+- `Math.random()` produces a different value on every render — including between server and client — causing a hydration mismatch.
+- A module-level counter increments differently on server and client (server renders multiple requests; client renders only once per session).
+
+`useId` generates IDs deterministically based on the component's position in the React tree, which is identical on server and client.
+
+**Important:** do not use `useId` as a list key — it generates one ID per hook call per component instance, not per list item.
+
+## 🧠 Question 42
+
+**ID**: react-042
+**Title**: What is `useSyncExternalStore` and when should you use it?
+**Difficulty**: Hard
+**Category**: Hooks
+
+### Answer 📄
+
+`useSyncExternalStore` (React 18) is the recommended hook for subscribing to external stores — any mutable data source outside of React's state system. It ensures consistency in Concurrent Mode where React may render the same component multiple times before committing.
+
+```jsx
+import { useSyncExternalStore } from 'react';
+
+// Subscribing to the browser's online status
+function useOnlineStatus() {
+  return useSyncExternalStore(
+    // subscribe: called when React needs to subscribe
+    (callback) => {
+      window.addEventListener('online', callback);
+      window.addEventListener('offline', callback);
+      return () => {
+        window.removeEventListener('online', callback);
+        window.removeEventListener('offline', callback);
+      };
+    },
+    // getSnapshot: returns current value (must be pure, fast, and return same ref if unchanged)
+    () => navigator.onLine,
+    // getServerSnapshot: returns the server-side value for SSR
+    () => true,
+  );
+}
+
+function Status() {
+  const isOnline = useOnlineStatus();
+  return <p>{isOnline ? '🟢 Online' : '🔴 Offline'}</p>;
+}
+```
+
+**Why not just `useEffect` + `useState`?**
+
+In Concurrent Mode, React may render a component multiple times before committing. Between renders, an external store could change — causing a "tearing" inconsistency where different parts of the UI show different values from the same store. `useSyncExternalStore` prevents this by synchronizing reads.
+
+All major state management libraries (Zustand, Redux, Valtio) use `useSyncExternalStore` internally.
+
+## 🧠 Question 43
+
+**ID**: react-043
+**Title**: What is `useInsertionEffect` and when is it used?
+**Difficulty**: Hard
+**Category**: Hooks
+
+### Answer 📄
+
+`useInsertionEffect` fires synchronously before React makes any DOM mutations. It was introduced in React 18 specifically for CSS-in-JS library authors who need to inject styles into the DOM before any layout reads happen.
+
+```jsx
+// Intended for CSS-in-JS libraries — not for general application code
+useInsertionEffect(() => {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = `.btn-${hash} { color: red; }`;
+  document.head.appendChild(styleElement);
+  return () => document.head.removeChild(styleElement);
+}, [hash]);
+```
+
+**Execution order:**
+
+```
+React computes DOM mutations (render phase complete)
+  → useInsertionEffect (CSS injected — no layout yet)
+  → React applies DOM mutations (commit mutation phase)
+  → useLayoutEffect (layout can be read)
+  → Browser paints
+  → useEffect
+```
+
+**Why it exists:** CSS-in-JS libraries (styled-components, Emotion) need to inject styles before `useLayoutEffect` runs — because `useLayoutEffect` reads layout metrics (like `getBoundingClientRect`), and those metrics must reflect the correct styles. Without `useInsertionEffect`, libraries had to use `useLayoutEffect`, which caused bugs when styles were not yet injected.
+
+**Application developers should never use `useInsertionEffect` directly.** It is exclusively for CSS-in-JS library internals.
+
+## 🧠 Question 44
+
+**ID**: react-044
+**Title**: What is `useDebugValue` and how is it used?
+**Difficulty**: Easy
+**Category**: Hooks
+
+### Answer 📄
+
+`useDebugValue` adds a label to a custom hook that is visible in React DevTools. It is useful for libraries and shared custom hooks to make them easier to inspect during debugging.
+
+```jsx
+function useOnlineStatus() {
+  const isOnline = useSyncExternalStore(subscribe, getSnapshot);
+
+  // Shows "Online: true" or "Online: false" in React DevTools
+  useDebugValue(isOnline ? 'Online' : 'Offline');
+
+  return isOnline;
+}
+```
+
+**Deferred formatting** — pass a second argument (a format function) if generating the debug value is expensive. React calls it only when DevTools are open:
+
+```jsx
+function useUser(id) {
+  const user = fetchUserFromCache(id);
+
+  // Format function is only called when DevTools inspects this hook
+  useDebugValue(user, (u) => `${u.name} (${u.role})`);
+
+  return user;
+}
+```
+
+**Guidelines:**
+
+- Only add `useDebugValue` to custom hooks that are shared across many components.
+- Do not add it to every hook — the overhead adds up and the DevTools panel becomes noisy.
+- It has no effect in production builds.
+
+## 🧠 Question 45
+
+**ID**: react-045
+**Title**: What is the difference between `createElement` and JSX?
+**Difficulty**: Easy
+**Category**: JSX & Rendering
+
+### Answer 📄
+
+JSX is syntactic sugar for `React.createElement` (or the JSX transform's `jsx` function). They produce identical output.
+
+```jsx
+// JSX
+const element = (
+  <div className="container">
+    <h1>Hello</h1>
+    <p>{message}</p>
+  </div>
+);
+
+// Equivalent without JSX — verbose but identical result
+const element = React.createElement(
+  'div',
+  { className: 'container' },
+  React.createElement('h1', null, 'Hello'),
+  React.createElement('p', null, message),
+);
+```
+
+Both produce the same React element object:
+
+```js
+{
+  type: 'div',
+  props: {
+    className: 'container',
+    children: [
+      { type: 'h1', props: { children: 'Hello' } },
+      { type: 'p', props: { children: message } }
+    ]
+  }
+}
+```
+
+**The new JSX transform (React 17+):**
+
+The automatic JSX runtime (`react/jsx-runtime`) was introduced to avoid importing React in every file. The transpiler inserts the import automatically.
+
+```jsx
+// Before React 17 — required manual import
+import React from 'react';
+
+// React 17+ with automatic transform — no manual import needed
+// Transpiler injects: import { jsx as _jsx } from 'react/jsx-runtime';
+```
+
+You would write `React.createElement` directly only when:
+
+- Dynamically creating elements where the type is determined at runtime.
+- Working in an environment that does not support JSX.
+- Building low-level utilities or renderers.

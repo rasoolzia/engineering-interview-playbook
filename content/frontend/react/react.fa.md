@@ -2046,3 +2046,223 @@ const [items, setItems] = useState(['Alice', 'Bob', 'Carol']);
 - لیست ایستا باشد و هرگز reorder نشود
 - از وسط لیست آیتمی اضافه یا حذف نشود
 - آیتم‌ها child های stateful مثل input یا animation نداشته باشند
+
+## 🧠 سوال 41
+
+**شناسه**: react-041
+**عنوان**: `useId` چیست و چه زمانی به آن نیاز دارید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useId` در React 18 یک ID یکتا و پایدار تولید می‌کند که بین رندر سمت سرور و سمت کلاینت سازگار می‌ماند. این hook مشکل تولید ID برای ویژگی‌های دسترس‌پذیری مثل `htmlFor`، `aria-describedby` و `aria-labelledby` را به‌شکلی سازگار با SSR حل می‌کند.
+
+```jsx
+import { useId } from 'react';
+
+function PasswordField() {
+  const id = useId(); // مثلا ":r3:"
+
+  return (
+    <div>
+      <label htmlFor={id}>Password</label>
+      <input id={id} type="password" aria-describedby={`${id}-hint`} />
+      <p id={`${id}-hint`}>Must be at least 8 characters.</p>
+    </div>
+  );
+}
+```
+
+**چرا از `Math.random()` یا شمارنده استفاده نکنیم؟**
+
+- `Math.random()` در هر رندر مقدار متفاوتی می‌دهد، از جمله بین سرور و کلاینت، و باعث hydration mismatch می‌شود
+- شمارنده‌ای که در سطح ماژول تعریف شده باشد در سرور و کلاینت به شکل متفاوتی افزایش پیدا می‌کند
+
+`useId` بر اساس جایگاه کامپوننت در درخت React، ID ها را به‌صورت deterministic تولید می‌کند؛ اگر ساختار درخت یکسان باشد، ID سمت سرور و کلاینت هم یکسان خواهد بود.
+
+**مهم:** از `useId` به‌عنوان key لیست استفاده نکنید. این hook برای هر فراخوانی hook در هر instance کامپوننت یک ID می‌سازد، نه برای هر آیتم لیست.
+
+## 🧠 سوال 42
+
+**شناسه**: react-042
+**عنوان**: `useSyncExternalStore` چیست و چه زمانی باید از آن استفاده کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useSyncExternalStore` در React 18 hook توصیه‌شده برای subscribe شدن به store های خارجی است؛ یعنی هر منبع داده mutable که خارج از سیستم state خود React قرار دارد. این hook در Concurrent React سازگاری را حفظ می‌کند، چون ممکن است React قبل از commit چند بار یک کامپوننت را رندر کند.
+
+```jsx
+import { useSyncExternalStore } from 'react';
+
+// subscribe شدن به وضعیت آنلاین بودن مرورگر
+function useOnlineStatus() {
+  return useSyncExternalStore(
+    // subscribe: وقتی React بخواهد subscribe کند صدا زده می‌شود
+    (callback) => {
+      window.addEventListener('online', callback);
+      window.addEventListener('offline', callback);
+      return () => {
+        window.removeEventListener('online', callback);
+        window.removeEventListener('offline', callback);
+      };
+    },
+    // getSnapshot: مقدار فعلی را برمی‌گرداند
+    () => navigator.onLine,
+    // getServerSnapshot: مقدار سمت سرور برای SSR
+    () => true,
+  );
+}
+
+function Status() {
+  const isOnline = useOnlineStatus();
+  return <p>{isOnline ? '🟢 Online' : '🔴 Offline'}</p>;
+}
+```
+
+**چرا نه فقط `useEffect` + `useState`؟**
+
+در Concurrent React ممکن است React پیش از commit چند بار کامپوننت را رندر کند. اگر بین این رندرها یک store خارجی تغییر کند، بخش‌های مختلف UI ممکن است نسخه‌های متفاوتی از یک داده را نشان دهند. به این مشکل tearing می‌گویند. `useSyncExternalStore` با همگام‌سازی خواندن داده این مشکل را حل می‌کند.
+
+تقریباً همه کتابخانه‌های بزرگ مدیریت state مثل Zustand، Redux و Valtio از `useSyncExternalStore` در پیاده‌سازی داخلی خود استفاده می‌کنند.
+
+## 🧠 سوال 43
+
+**شناسه**: react-043
+**عنوان**: `useInsertionEffect` چیست و چه زمانی استفاده می‌شود؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useInsertionEffect` به‌صورت synchronous قبل از اینکه React هرگونه mutation روی DOM انجام دهد اجرا می‌شود. این hook در React 18 به‌طور خاص برای نویسندگان کتابخانه‌های CSS-in-JS معرفی شد؛ کسانی که باید style ها را قبل از هرگونه layout read به DOM تزریق کنند.
+
+```jsx
+// برای کتابخانه‌های CSS-in-JS طراحی شده، نه کد معمول اپلیکیشن
+useInsertionEffect(() => {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = `.btn-${hash} { color: red; }`;
+  document.head.appendChild(styleElement);
+  return () => document.head.removeChild(styleElement);
+}, [hash]);
+```
+
+**ترتیب اجرا:**
+
+```
+React computes DOM mutations (render phase complete)
+  → useInsertionEffect (CSS injected — no layout yet)
+  → React applies DOM mutations (commit mutation phase)
+  → useLayoutEffect (layout can be read)
+  → Browser paints
+  → useEffect
+```
+
+**چرا وجود دارد:** کتابخانه‌های CSS-in-JS مثل Emotion یا styled-components باید style ها را قبل از اجرای `useLayoutEffect` وارد DOM کنند، چون `useLayoutEffect` ممکن است اندازه‌ها و layout را بخواند و این اندازه‌ها باید با style درست محاسبه شوند. بدون `useInsertionEffect` این کتابخانه‌ها مجبور بودند از `useLayoutEffect` استفاده کنند و این موضوع می‌توانست باعث باگ شود.
+
+**توسعه‌دهندگان معمول اپلیکیشن نباید مستقیماً از `useInsertionEffect` استفاده کنند.** این hook تقریباً مخصوص لایه داخلی کتابخانه‌های CSS-in-JS است.
+
+## 🧠 سوال 44
+
+**شناسه**: react-044
+**عنوان**: `useDebugValue` چیست و چگونه استفاده می‌شود؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useDebugValue` یک برچسب برای custom hook شما به React DevTools اضافه می‌کند. این قابلیت برای کتابخانه‌ها و custom hook های مشترک مفید است تا هنگام دیباگ، بررسی آن‌ها راحت‌تر شود.
+
+```jsx
+function useOnlineStatus() {
+  const isOnline = useSyncExternalStore(subscribe, getSnapshot);
+
+  // در React DevTools چیزی مثل "Online" یا "Offline" نمایش می‌دهد
+  useDebugValue(isOnline ? 'Online' : 'Offline');
+
+  return isOnline;
+}
+```
+
+**فرمت‌دهی با تاخیر** — اگر ساختن مقدار debug پرهزینه است، می‌توانید آرگومان دوم را به‌صورت تابع formatter بدهید. React فقط وقتی DevTools باز باشد آن را صدا می‌زند:
+
+```jsx
+function useUser(id) {
+  const user = fetchUserFromCache(id);
+
+  // این formatter فقط هنگام inspect شدن این hook در DevTools اجرا می‌شود
+  useDebugValue(user, (u) => `${u.name} (${u.role})`);
+
+  return user;
+}
+```
+
+**راهنماها:**
+
+- فقط به custom hook هایی `useDebugValue` اضافه کنید که در بخش‌های زیادی استفاده می‌شوند
+- آن را به هر hook کوچکی اضافه نکنید، چون هم سربار ایجاد می‌کند و هم DevTools را شلوغ می‌کند
+- در build های production اثری ندارد
+
+## 🧠 سوال 45
+
+**شناسه**: react-045
+**عنوان**: تفاوت بین `createElement` و JSX چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: JSX و رندرینگ
+
+### پاسخ 📄
+
+JSX در اصل syntax sugar برای `React.createElement` یا تابع `jsx` در JSX transform جدید است. هر دو خروجی یکسانی تولید می‌کنند.
+
+```jsx
+// JSX
+const element = (
+  <div className="container">
+    <h1>Hello</h1>
+    <p>{message}</p>
+  </div>
+);
+
+// معادل بدون JSX — طولانی‌تر ولی از نظر نتیجه یکسان
+const element = React.createElement(
+  'div',
+  { className: 'container' },
+  React.createElement('h1', null, 'Hello'),
+  React.createElement('p', null, message),
+);
+```
+
+هر دو در نهایت یک شیء React element مشابه تولید می‌کنند:
+
+```js
+{
+  type: 'div',
+  props: {
+    className: 'container',
+    children: [
+      { type: 'h1', props: { children: 'Hello' } },
+      { type: 'p', props: { children: message } }
+    ]
+  }
+}
+```
+
+**JSX transform جدید در React 17+:**
+
+runtime خودکار JSX در `react/jsx-runtime` معرفی شد تا دیگر لازم نباشد در هر فایل `React` را به‌صورت دستی import کنید. transpiler این import را خودش اضافه می‌کند.
+
+```jsx
+// قبل از React 17 — import دستی لازم بود
+import React from 'react';
+
+// در React 17+ با automatic transform — import دستی لازم نیست
+// transpiler چیزی شبیه این را تزریق می‌کند: import { jsx as _jsx } from 'react/jsx-runtime';
+```
+
+مستقیماً `React.createElement` را معمولاً فقط در این حالت‌ها می‌نویسید:
+
+- وقتی نوع element در runtime تعیین می‌شود و می‌خواهید آن را پویا بسازید
+- وقتی در محیطی هستید که JSX را پشتیبانی نمی‌کند
+- وقتی ابزارها یا renderer های سطح پایین می‌سازید

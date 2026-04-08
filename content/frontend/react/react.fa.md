@@ -2266,3 +2266,309 @@ import React from 'react';
 - وقتی نوع element در runtime تعیین می‌شود و می‌خواهید آن را پویا بسازید
 - وقتی در محیطی هستید که JSX را پشتیبانی نمی‌کند
 - وقتی ابزارها یا renderer های سطح پایین می‌سازید
+
+## 🧠 سوال 46
+
+**شناسه**: react-046
+**عنوان**: prop `children` چیست و چه الگوهایی می‌توان با آن داشت؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+`children` یک prop داخلی React است که محتوای قرارگرفته بین تگ باز و بسته یک کامپوننت را در خود نگه می‌دارد. این محتوا می‌تواند یک element، چند element، رشته، تابع یا هر مقدار قابل رندر دیگری باشد.
+
+```jsx
+function Card({ title, children }) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      <div className="card-body">{children}</div>
+    </div>
+  );
+}
+
+// children = <p>Content</p>
+<Card title="Info">
+  <p>Content</p>
+</Card>;
+```
+
+**الگوهای رایج:**
+
+**کامپوننت‌های layout یا wrapper:**
+
+```jsx
+<Layout>
+  <Sidebar />
+  <MainContent />
+</Layout>
+```
+
+**Render props** یعنی پاس دادن تابع به‌عنوان `children`:
+
+```jsx
+<DataFetcher url="/api/users">
+  {({ data, loading }) => (loading ? <Spinner /> : <UserList users={data} />)}
+</DataFetcher>;
+
+// کامپوننت children را به‌صورت تابع صدا می‌زند
+function DataFetcher({ url, children }) {
+  const { data, loading } = useFetch(url);
+  return children({ data, loading });
+}
+```
+
+**ابزارهای `React.Children`** برای بررسی یا تبدیل children:
+
+```jsx
+React.Children.count(children);
+React.Children.map(children, (child) => cloneElement(child, { theme }));
+React.Children.toArray(children).filter(Boolean);
+```
+
+**Named slot ها با prop های اضافه** برای ناحیه‌های مختلف محتوا:
+
+```jsx
+<Modal header={<h2>Title</h2>} footer={<Button>Close</Button>}>
+  <p>Modal body content</p>
+</Modal>
+```
+
+## 🧠 سوال 47
+
+**شناسه**: react-047
+**عنوان**: Higher-Order Component یا HOC چیست و چه زمانی استفاده می‌شود؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+Higher-Order Component یا HOC تابعی است که یک کامپوننت را می‌گیرد و یک کامپوننت جدید و تقویت‌شده برمی‌گرداند. این یک الگو برای استفاده مجدد از منطق کامپوننت است و بر پایه composition کار می‌کند، نه inheritance.
+
+```jsx
+// withAuth — یک HOC که کاربران بدون احراز هویت را redirect می‌کند
+function withAuth(WrappedComponent) {
+  return function AuthenticatedComponent(props) {
+    const { isAuthenticated, user } = useAuth();
+
+    if (!isAuthenticated) {
+      return <Navigate to="/login" />;
+    }
+
+    return <WrappedComponent {...props} user={user} />;
+  };
+}
+
+// استفاده
+const ProtectedDashboard = withAuth(Dashboard);
+```
+
+**موارد استفاده رایج HOC:**
+
+- بررسی authentication یا authorization
+- logging و analytics
+- تزریق داده یا context به کامپوننت‌ها
+- اضافه کردن رفتارهایی مثل error boundary
+
+**قراردادهای مهم هنگام نوشتن HOC:**
+
+- همه prop های نامرتبط را با `{...props}` عبور دهید
+- برای debugging یک `displayName` معنادار تنظیم کنید
+- کامپوننت wrapped شده را mutate نکنید؛ یک کامپوننت جدید برگردانید
+- HOC را داخل کامپوننت دیگری تعریف نکنید، چون هر بار inner component دوباره ساخته می‌شود
+
+**تفاوت HOC و custom hook:**
+
+در React مدرن، custom hook ها جای بسیاری از کاربردهای HOC را گرفته‌اند. hook ها ساده‌ترند، node اضافه به درخت UI نمی‌کنند و مشکل تداخل نام prop ندارند. با این حال HOC هنوز برای سازگاری با class component ها یا افزودن wrapper های سطح JSX مفید است.
+
+## 🧠 سوال 48
+
+**شناسه**: react-048
+**عنوان**: الگوی render prop چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+الگوی render prop تکنیکی است که در آن یک کامپوننت تابعی را به‌عنوان prop یا به‌عنوان `children` می‌گیرد و آن را صدا می‌زند تا مسئولیت رندر را به مصرف‌کننده واگذار کند. این الگو امکان اشتراک‌گذاری منطق بین کامپوننت‌ها را بدون HOC یا تکرار کد فراهم می‌کند.
+
+```jsx
+// دنبال‌کننده ماوس با render prop
+function MouseTracker({ render }) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  function handleMouseMove(e) {
+    setPosition({ x: e.clientX, y: e.clientY });
+  }
+
+  return (
+    <div onMouseMove={handleMouseMove} style={{ height: '100vh' }}>
+      {render(position)}
+    </div>
+  );
+}
+
+// مصرف‌کننده مشخص می‌کند با داده موقعیت چه چیزی رندر شود
+<MouseTracker
+  render={({ x, y }) => (
+    <div>
+      Mouse at ({x}, {y})
+    </div>
+  )}
+/>;
+
+// همان کامپوننت با رندر متفاوت
+<MouseTracker render={({ x, y }) => <Circle cx={x} cy={y} r={10} />} />;
+```
+
+**`children` به‌عنوان render prop** همان الگو با syntax متفاوت:
+
+```jsx
+<MouseTracker>{({ x, y }) => <div>({x}, {y})</div>}</MouseTracker>
+
+// پیاده‌سازی children را مثل یک تابع صدا می‌زند
+function MouseTracker({ children }) {
+  // ...
+  return <div onMouseMove={...}>{children(position)}</div>;
+}
+```
+
+**تفاوت render prop و custom hook:**
+
+custom hook ها تا حد زیادی جای render prop را برای اشتراک‌گذاری منطق گرفته‌اند، چون تمیزتر هستند و node اضافه در درخت UI ایجاد نمی‌کنند. اما render prop هنوز وقتی مفید است که رفتار مشترک ذاتاً به خود رندر وابسته باشد.
+
+## 🧠 سوال 49
+
+**شناسه**: react-049
+**عنوان**: state colocation چیست و چرا مهم است؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+State colocation یعنی state را تا حد ممکن نزدیک به کامپوننت‌هایی نگه دارید که واقعاً از آن استفاده می‌کنند و آن را بی‌دلیل به سطوح بالاتر درخت منتقل نکنید.
+
+**چرا مهم است:**
+
+وقتی state بیش از حد بالا در درخت نگه داشته شود، هر تغییر آن باعث re-render شدن کل زیر‌درخت می‌شود، حتی کامپوننت‌هایی که اصلاً به آن state نیازی ندارند:
+
+```jsx
+// بد — state مربوط به جستجو داخل App نگه داشته شده
+function App() {
+  const [searchQuery, setSearchQuery] = useState('');
+  return (
+    <>
+      <Header /> {/* با هر تایپ دوباره رندر می‌شود */}
+      <Sidebar /> {/* با هر تایپ دوباره رندر می‌شود */}
+      <SearchBox query={searchQuery} onChange={setSearchQuery} />
+      <Results query={searchQuery} />
+    </>
+  );
+}
+
+// خوب — state نزدیک مالک واقعی آن قرار گرفته
+function SearchSection() {
+  const [searchQuery, setSearchQuery] = useState('');
+  return (
+    <>
+      <SearchBox query={searchQuery} onChange={setSearchQuery} />
+      <Results query={searchQuery} />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <>
+      <Header /> {/* دیگر با تایپ دوباره رندر نمی‌شود */}
+      <Sidebar /> {/* دیگر با تایپ دوباره رندر نمی‌شود */}
+      <SearchSection />
+    </>
+  );
+}
+```
+
+**اصل colocation:** state باید در پایین‌ترین جد مشترک همه کامپوننت‌هایی قرار بگیرد که به آن نیاز دارند.
+
+**چه زمانی state را بالا ببریم:** فقط وقتی که چند sibling باید همان state مشترک را مصرف کنند. حتی در این حالت هم فقط تا همان سطح لازم آن را بالا ببرید، نه لزوماً تا root.
+
+State colocation به‌طور طبیعی re-render ها را کم می‌کند، بدون اینکه همیشه لازم باشد سراغ `React.memo`، `useMemo` یا ابزارهای پیچیده مدیریت state بروید.
+
+## 🧠 سوال 50
+
+**شناسه**: react-050
+**عنوان**: الگوی compound component چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+الگوی compound component روشی برای طراحی کامپوننت‌هایی است که با هم کار می‌کنند، state مشترک را به‌طور ضمنی از طریق Context با هم به اشتراک می‌گذارند و در عین حال به مصرف‌کننده آزادی زیادی در composition و نحوه رندر می‌دهند.
+
+```jsx
+import { createContext, useContext, useState } from 'react';
+
+const TabsContext = createContext(null);
+
+function Tabs({ children, defaultTab }) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  return (
+    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
+      <div className="tabs">{children}</div>
+    </TabsContext.Provider>
+  );
+}
+
+function TabList({ children }) {
+  return (
+    <div className="tab-list" role="tablist">
+      {children}
+    </div>
+  );
+}
+
+function Tab({ id, children }) {
+  const { activeTab, setActiveTab } = useContext(TabsContext);
+  return (
+    <button
+      role="tab"
+      aria-selected={activeTab === id}
+      onClick={() => setActiveTab(id)}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TabPanel({ id, children }) {
+  const { activeTab } = useContext(TabsContext);
+  return activeTab === id ? <div role="tabpanel">{children}</div> : null;
+}
+
+// اتصال sub-component ها به‌عنوان property
+Tabs.List = TabList;
+Tabs.Tab = Tab;
+Tabs.Panel = TabPanel;
+
+// مصرف‌کننده روی layout و composition کنترل کامل دارد
+function App() {
+  return (
+    <Tabs defaultTab="home">
+      <Tabs.List>
+        <Tabs.Tab id="home">Home</Tabs.Tab>
+        <Tabs.Tab id="profile">Profile</Tabs.Tab>
+      </Tabs.List>
+      <Tabs.Panel id="home">
+        <HomeContent />
+      </Tabs.Panel>
+      <Tabs.Panel id="profile">
+        <ProfileContent />
+      </Tabs.Panel>
+    </Tabs>
+  );
+}
+```
+
+**مزیت نسبت به یک کامپوننت monolithic:** مصرف‌کننده می‌تواند sub-component ها را جابه‌جا کند، حذف کند یا بین آن‌ها عناصر دیگری قرار دهد. state مشترک از دید مصرف‌کننده پنهان می‌ماند، اما همه sub-component ها به آن دسترسی دارند.

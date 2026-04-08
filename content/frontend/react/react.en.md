@@ -2266,3 +2266,309 @@ You would write `React.createElement` directly only when:
 - Dynamically creating elements where the type is determined at runtime.
 - Working in an environment that does not support JSX.
 - Building low-level utilities or renderers.
+
+## 🧠 Question 46
+
+**ID**: react-046
+**Title**: What is the `children` prop and what patterns can you use with it?
+**Difficulty**: Easy
+**Category**: Components
+
+### Answer 📄
+
+`children` is a built-in React prop that contains the content placed between a component's opening and closing tags. It can be a single element, multiple elements, a string, a function, or any renderable value.
+
+```jsx
+function Card({ title, children }) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      <div className="card-body">{children}</div>
+    </div>
+  );
+}
+
+// children = <p>Content</p>
+<Card title="Info">
+  <p>Content</p>
+</Card>;
+```
+
+**Common patterns:**
+
+**Layout / wrapper components:**
+
+```jsx
+<Layout>
+  <Sidebar />
+  <MainContent />
+</Layout>
+```
+
+**Render props** (passing a function as `children`):
+
+```jsx
+<DataFetcher url="/api/users">
+  {({ data, loading }) => (loading ? <Spinner /> : <UserList users={data} />)}
+</DataFetcher>;
+
+// The component calls children as a function
+function DataFetcher({ url, children }) {
+  const { data, loading } = useFetch(url);
+  return children({ data, loading });
+}
+```
+
+**`React.Children` utilities** for inspecting/transforming children:
+
+```jsx
+React.Children.count(children);
+React.Children.map(children, (child) => cloneElement(child, { theme }));
+React.Children.toArray(children).filter(Boolean);
+```
+
+**Named slots via additional props** — for multiple content areas:
+
+```jsx
+<Modal header={<h2>Title</h2>} footer={<Button>Close</Button>}>
+  <p>Modal body content</p>
+</Modal>
+```
+
+## 🧠 Question 47
+
+**ID**: react-047
+**Title**: What are Higher-Order Components (HOCs) and when are they used?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A Higher-Order Component is a function that takes a component and returns a new enhanced component. It is a pattern for reusing component logic — a form of composition rather than inheritance.
+
+```jsx
+// withAuth — a HOC that redirects unauthenticated users
+function withAuth(WrappedComponent) {
+  return function AuthenticatedComponent(props) {
+    const { isAuthenticated, user } = useAuth();
+
+    if (!isAuthenticated) {
+      return <Navigate to="/login" />;
+    }
+
+    return <WrappedComponent {...props} user={user} />;
+  };
+}
+
+// Usage
+const ProtectedDashboard = withAuth(Dashboard);
+```
+
+**Common HOC use cases:**
+
+- Authentication / authorization checks
+- Logging and analytics
+- Injecting data or context into components
+- Adding error boundary behavior
+
+**Conventions for HOC authorship:**
+
+- Pass through all unrelated props with `{...props}`.
+- Set a meaningful `displayName` for debugging: `AuthenticatedComponent.displayName = \`withAuth(${WrappedComponent.displayName})\``.
+- Do not mutate the wrapped component — return a new component.
+- Do not define HOCs inside other components — they recreate the inner component on every render.
+
+**HOCs vs Custom Hooks:**
+
+In modern React, custom hooks have replaced most HOC use cases. Hooks are simpler, don't add components to the tree, and don't have prop name collision issues. HOCs are still useful for class component integration and adding JSX-level wrappers (like error boundaries or context providers).
+
+## 🧠 Question 48
+
+**ID**: react-048
+**Title**: What is the render prop pattern?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+The render prop pattern is a technique where a component accepts a function as a prop (or as `children`) and calls it to delegate rendering responsibility. This enables sharing logic between components without HOCs or code duplication.
+
+```jsx
+// Mouse tracker using render props
+function MouseTracker({ render }) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  function handleMouseMove(e) {
+    setPosition({ x: e.clientX, y: e.clientY });
+  }
+
+  return (
+    <div onMouseMove={handleMouseMove} style={{ height: '100vh' }}>
+      {render(position)}
+    </div>
+  );
+}
+
+// Consumer decides what to render with the position data
+<MouseTracker render={({ x, y }) => (
+  <div>Mouse at ({x}, {y})</div>
+)} />
+
+// Same component, different rendering
+<MouseTracker render={({ x, y }) => (
+  <Circle cx={x} cy={y} r={10} />
+)} />
+```
+
+**`children` as render prop** (same pattern, different syntax):
+
+```jsx
+<MouseTracker>
+  {({ x, y }) => <div>({x}, {y})</div>}
+</MouseTracker>
+
+// Implementation reads children as a function
+function MouseTracker({ children }) {
+  // ...
+  return <div onMouseMove={...}>{children(position)}</div>;
+}
+```
+
+**Render props vs Custom Hooks:**
+
+Custom hooks have largely superseded render props for logic sharing. The hook version is cleaner (no extra components in the tree, no prop passing). However, render props remain useful when the shared behavior is inherently about rendering (like virtualized lists that must control how each row renders).
+
+## 🧠 Question 49
+
+**ID**: react-049
+**Title**: What is state colocation and why does it matter?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+State colocation is the principle of keeping state as close as possible to the components that use it — not lifting it higher than necessary.
+
+**Why it matters:**
+
+When state lives too high in the tree, every state change re-renders the entire subtree below it, even components that don't care about that state:
+
+```jsx
+// Bad — search state lives in App, causes full-tree re-renders
+function App() {
+  const [searchQuery, setSearchQuery] = useState('');
+  return (
+    <>
+      <Header /> {/* re-renders every keystroke */}
+      <Sidebar /> {/* re-renders every keystroke */}
+      <SearchBox query={searchQuery} onChange={setSearchQuery} />
+      <Results query={searchQuery} />
+    </>
+  );
+}
+
+// Good — search state colocated in its owner
+function SearchSection() {
+  const [searchQuery, setSearchQuery] = useState('');
+  return (
+    <>
+      <SearchBox query={searchQuery} onChange={setSearchQuery} />
+      <Results query={searchQuery} />
+    </>
+  );
+}
+
+function App() {
+  return (
+    <>
+      <Header /> {/* no longer re-renders on search input */}
+      <Sidebar /> {/* no longer re-renders on search input */}
+      <SearchSection />
+    </>
+  );
+}
+```
+
+**The colocation principle:** state should live at the lowest common ancestor of all components that need it.
+
+**When to lift state:** only when sibling components need to share the same state. Even then, lift only as high as necessary, not all the way to the root.
+
+State colocation naturally reduces re-renders without needing `React.memo`, `useMemo`, or complex state management tools.
+
+## 🧠 Question 50
+
+**ID**: react-050
+**Title**: What is the compound component pattern?
+**Difficulty**: Hard
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+The compound component pattern is a way to design components that work together by sharing implicit state through Context, while giving the consumer control over rendering and composition.
+
+```jsx
+import { createContext, useContext, useState } from 'react';
+
+const TabsContext = createContext(null);
+
+function Tabs({ children, defaultTab }) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  return (
+    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
+      <div className="tabs">{children}</div>
+    </TabsContext.Provider>
+  );
+}
+
+function TabList({ children }) {
+  return (
+    <div className="tab-list" role="tablist">
+      {children}
+    </div>
+  );
+}
+
+function Tab({ id, children }) {
+  const { activeTab, setActiveTab } = useContext(TabsContext);
+  return (
+    <button
+      role="tab"
+      aria-selected={activeTab === id}
+      onClick={() => setActiveTab(id)}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TabPanel({ id, children }) {
+  const { activeTab } = useContext(TabsContext);
+  return activeTab === id ? <div role="tabpanel">{children}</div> : null;
+}
+
+// Attach sub-components as properties
+Tabs.List = TabList;
+Tabs.Tab = Tab;
+Tabs.Panel = TabPanel;
+
+// Consumer has full control over layout and composition
+function App() {
+  return (
+    <Tabs defaultTab="home">
+      <Tabs.List>
+        <Tabs.Tab id="home">Home</Tabs.Tab>
+        <Tabs.Tab id="profile">Profile</Tabs.Tab>
+      </Tabs.List>
+      <Tabs.Panel id="home">
+        <HomeContent />
+      </Tabs.Panel>
+      <Tabs.Panel id="profile">
+        <ProfileContent />
+      </Tabs.Panel>
+    </Tabs>
+  );
+}
+```
+
+**Benefits over a monolithic component:** the consumer can reorder, insert, or omit sub-components freely. The shared state is hidden from the consumer but accessible to all sub-components.

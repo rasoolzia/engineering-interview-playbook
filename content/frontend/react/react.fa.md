@@ -2572,3 +2572,269 @@ function App() {
 ```
 
 **مزیت نسبت به یک کامپوننت monolithic:** مصرف‌کننده می‌تواند sub-component ها را جابه‌جا کند، حذف کند یا بین آن‌ها عناصر دیگری قرار دهد. state مشترک از دید مصرف‌کننده پنهان می‌ماند، اما همه sub-component ها به آن دسترسی دارند.
+
+## 🧠 سوال 51
+
+**شناسه**: react-051
+**عنوان**: cleanup در `useEffect` چگونه کار می‌کند و چرا مهم است؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+تابعی که از `useEffect` برگردانده می‌شود، تابع cleanup است. React این تابع را قبل از اجرای دوباره effect، وقتی dependency ها تغییر کنند، و همچنین هنگام unmount شدن کامپوننت اجرا می‌کند.
+
+اگر cleanup درست انجام نشود، effect ها می‌توانند این مشکلات را ایجاد کنند:
+
+- **Memory leak** — مثل event listener، timer یا subscription هایی که جمع می‌شوند
+- **به‌روزرسانی state بعد از unmount** — callback های قدیمی هنوز تلاش می‌کنند state را عوض کنند
+- **stale closure** — subscription یا async callback قدیمی با داده‌های منقضی‌شده کار می‌کند
+
+```jsx
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false; // برای جلوگیری از update های قدیمی
+    const controller = new AbortController();
+
+    async function fetchUser() {
+      try {
+        const res = await fetch(`/api/users/${userId}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (!cancelled) setUser(data);
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error(err);
+      }
+    }
+
+    fetchUser();
+
+    return () => {
+      cancelled = true;
+      controller.abort(); // لغو درخواست در حال اجرا
+    };
+  }, [userId]); // با تغییر userId دوباره اجرا می‌شود و cleanup قبلی را انجام می‌دهد
+
+  return user ? <div>{user.name}</div> : <Spinner />;
+}
+```
+
+**React 18 + StrictMode** در محیط توسعه effect ها را به شکل mount → cleanup → mount دوبار اجرا می‌کند تا cleanup های ناقص مشخص شوند. اگر برنامه در StrictMode خراب می‌شود، معمولاً effect شما cleanup مناسب ندارد.
+
+## 🧠 سوال 52
+
+**شناسه**: react-052
+**عنوان**: بالا بردن state در React یعنی چه؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Props و State
+
+### پاسخ 📄
+
+Lifting state up یعنی state را از یک child component به نزدیک‌ترین جد مشترک منتقل کنیم، وقتی دو یا چند sibling باید آن state را با هم به اشتراک بگذارند یا همگام نگه دارند.
+
+```jsx
+// مشکل — هر Thermometer state خودش را دارد و نمی‌توانند sync شوند
+function ThermometerCelsius() {
+  const [celsius, setCelsius] = useState(0);
+  return <input value={celsius} onChange={(e) => setCelsius(e.target.value)} />;
+}
+function ThermometerFahrenheit() {
+  const [fahrenheit, setFahrenheit] = useState(32);
+  return (
+    <input value={fahrenheit} onChange={(e) => setFahrenheit(e.target.value)} />
+  );
+}
+
+// راه‌حل — state را به والد منتقل می‌کنیم
+function TemperatureConverter() {
+  const [celsius, setCelsius] = useState(0);
+  const fahrenheit = (celsius * 9) / 5 + 32;
+
+  return (
+    <>
+      <input
+        value={celsius}
+        onChange={(e) => setCelsius(Number(e.target.value))}
+        placeholder="Celsius"
+      />
+      <input
+        value={fahrenheit}
+        onChange={(e) => setCelsius(((Number(e.target.value) - 32) * 5) / 9)}
+        placeholder="Fahrenheit"
+      />
+    </>
+  );
+}
+```
+
+**چه زمانی state را بالا می‌بریم:**
+
+- وقتی دو sibling باید یک مقدار مشترک را بخوانند یا sync کنند
+- وقتی والد باید به تغییر state فرزند واکنش نشان دهد
+- وقتی یک state رفتار یا visibility چند کامپوننت مختلف را کنترل می‌کند
+
+**نقطه ضعف این کار:** هر بار که آن state تغییر کند، ancestor دوباره رندر می‌شود و ممکن است sibling های نامرتبط هم دوباره رندر شوند. می‌توان این اثر را با state colocation مناسب، `React.memo` یا شکستن کامپوننت‌ها کمتر کرد.
+
+## 🧠 سوال 53
+
+**شناسه**: react-053
+**عنوان**: الگوریتم diffing در reconciliation ری‌اکت دقیقاً چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+الگوریتم diffing ری‌اکت دو درخت virtual DOM را با استفاده از heuristic ها مقایسه می‌کند تا به‌جای پیچیدگی نظری `O(n^3)` در مقایسه کامل درخت‌ها، به پیچیدگی حدود `O(n)` برسد.
+
+**سه heuristic اصلی:**
+
+**1. عنصرهایی با type متفاوت، درخت‌های کاملاً متفاوتی تولید می‌کنند.**
+
+اگر type در یک موقعیت عوض شود، مثلا `<div>` به `<span>` یا `<Counter>` به `<Timer>`، ری‌اکت کل subtree قبلی را unmount می‌کند، از جمله همه child ها و state آن‌ها، و subtree جدید را از صفر mount می‌کند.
+
+```jsx
+// React، Counter را unmount و Timer را mount می‌کند
+{
+  isTimer ? <Timer /> : <Counter />;
+}
+```
+
+**2. prop `key` هویت عناصر را بین رندرها پایدار می‌کند.**
+
+در لیست‌ها، React از `key` برای match کردن عناصر استفاده می‌کند. element هایی با key یکسان درجا update می‌شوند و instance آن‌ها حفظ می‌شود. element هایی که key متناظر ندارند unmount می‌شوند و key های جدید mount می‌شوند.
+
+**3. عنصرهایی با type یکسان درجا update می‌شوند.**
+
+اگر type عنصر یکسان باشد، React همان DOM node موجود را نگه می‌دارد و فقط prop ها یا attribute های تغییر کرده را update می‌کند:
+
+```jsx
+// React فقط className را update می‌کند و نود DOM را از نو نمی‌سازد
+// Before: <div className="old" />
+// After:  <div className="new" />
+```
+
+برای element های کامپوننتی با type یکسان، React همان instance را نگه می‌دارد، prop ها را update می‌کند و دوباره render آن را اجرا می‌کند تا virtual DOM بعدی را بگیرد.
+
+**چرا diff بازگشتی زود متوقف می‌شود:** React هرگز نودها را بین موقعیت‌های sibling مختلف یا بین سطوح مختلف درخت با هم مقایسه نمی‌کند. هر موقعیت در درخت فقط با همان موقعیت متناظر در درخت جدید مقایسه می‌شود و همین باعث خطی ماندن الگوریتم می‌شود.
+
+## 🧠 سوال 54
+
+**شناسه**: react-054
+**عنوان**: `React.cloneElement` چیست و چه زمانی استفاده می‌شود؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: کامپوننت‌ها
+
+### پاسخ 📄
+
+`React.cloneElement` یک کپی از یک React element می‌سازد و در صورت نیاز prop ها یا children آن را تغییر می‌دهد. از آن معمولاً برای تزریق prop های اضافه به child element هایی استفاده می‌شود که والد کنترل مستقیمی روی پیاده‌سازی آن‌ها ندارد.
+
+```jsx
+React.cloneElement(element, [newProps], [...newChildren]);
+```
+
+**مثال — یک `RadioGroup` که prop `name` را به child های `Radio` تزریق می‌کند:**
+
+```jsx
+function RadioGroup({ name, children }) {
+  return (
+    <div>
+      {React.Children.map(
+        children,
+        (child) => React.cloneElement(child, { name }), // تزریق 'name' خاصبت
+      )}
+    </div>
+  );
+}
+
+// استفاده — کامپوننت‌های Radio به‌صورت خودکار name="gender" را دریافت می‌کنند
+<RadioGroup name="gender">
+  <Radio value="male">Male</Radio>
+  <Radio value="female">Female</Radio>
+</RadioGroup>;
+```
+
+**موارد استفاده رایج:**
+
+- تزریق prop های مشترک مثل group name، theme یا variant به children
+- wrap کردن child ها با event handler یا ref های اضافه
+- کتابخانه‌های tooltip یا overlay که هر element دلخواهی را wrap می‌کنند
+
+**جایگزین‌های مدرن:**
+
+`cloneElement` در React مدرن تا حدی anti-pattern محسوب می‌شود، چون وابستگی ضمنی بین والد و child ایجاد می‌کند. معمولاً این گزینه‌ها بهتر هستند:
+
+- **Context API** — برای تزریق داده به یک subtree دلخواه
+- **Compound components** — برای رابطه ساختاریافته بین والد و child
+- **Render props** یا `children` به‌شکل تابع — برای انعطاف بیشتر
+
+`cloneElement` هنوز برای primitive های سطح پایین UI که باید بدون نیاز به context، prop هایی به element های دلخواه اضافه کنند، کاربردی است.
+
+## 🧠 سوال 55
+
+**شناسه**: react-055
+**عنوان**: فرم‌ها را در React همراه با validation چگونه مدیریت می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: فرم‌ها و رویدادها
+
+### پاسخ 📄
+
+مدیریت فرم در React معمولاً یعنی استفاده از controlled component ها؛ یعنی نگه داشتن مقادیر فرم در state و اعتبارسنجی هنگام تغییر یا submit.
+
+**فرم controlled ساده با validation:**
+
+```jsx
+function SignUpForm() {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
+
+  function validate(values) {
+    const errs = {};
+    if (!values.email.includes('@')) errs.email = 'Invalid email';
+    if (values.password.length < 8) errs.password = 'Password too short';
+    return errs;
+  }
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    // پاک کردن خطا هنگام تغییر
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const errs = validate(form);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    submitForm(form);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" value={form.email} onChange={handleChange} />
+      {errors.email && <span>{errors.email}</span>}
+
+      <input
+        name="password"
+        type="password"
+        value={form.password}
+        onChange={handleChange}
+      />
+      {errors.password && <span>{errors.password}</span>}
+
+      <button type="submit">Sign Up</button>
+    </form>
+  );
+}
+```
+
+**کتابخانه‌های فرم** بخش‌هایی مثل validation، dirty state و submit را انتزاعی می‌کنند:
+
+- **React Hook Form** — رویکرد بیشتر uncontrolled با الگوی register؛ re-render کم؛ سازگاری خوب با Zod یا Yup
+- **Formik** — بیشتر controlled؛ re-render بیشتر ولی API کامل
+- **Remix forms / Server Actions** — submit در سمت سرور انجام می‌شود و برای فرم‌های ساده شاید اصلاً state سمت کلاینت لازم نباشد

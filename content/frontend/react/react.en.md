@@ -2572,3 +2572,269 @@ function App() {
 ```
 
 **Benefits over a monolithic component:** the consumer can reorder, insert, or omit sub-components freely. The shared state is hidden from the consumer but accessible to all sub-components.
+
+## 🧠 Question 51
+
+**ID**: react-051
+**Title**: How does `useEffect` cleanup work and why is it important?
+**Difficulty**: Medium
+**Category**: Effects & Lifecycle
+
+### Answer 📄
+
+The function returned from `useEffect` is the cleanup function. React runs it before the effect re-runs (when dependencies change) and when the component unmounts.
+
+Without proper cleanup, effects can cause:
+
+- **Memory leaks** — event listeners, timers, or subscriptions that accumulate.
+- **State updates on unmounted components** — calling `setState` after unmount logs a React warning.
+- **Stale closures acting on outdated data** — an old subscription still trying to update state with stale values.
+
+```jsx
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false; // flag to prevent stale updates
+    const controller = new AbortController();
+
+    async function fetchUser() {
+      try {
+        const res = await fetch(`/api/users/${userId}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (!cancelled) setUser(data);
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error(err);
+      }
+    }
+
+    fetchUser();
+
+    return () => {
+      cancelled = true;
+      controller.abort(); // cancel in-flight request
+    };
+  }, [userId]); // re-runs when userId changes → cleanup cancels previous request
+
+  return user ? <div>{user.name}</div> : <Spinner />;
+}
+```
+
+**React 18 + StrictMode** double-invokes effects (mount → cleanup → mount) in development to surface missing cleanup. If your app breaks in StrictMode, the effect is missing a cleanup.
+
+## 🧠 Question 52
+
+**ID**: react-052
+**Title**: What is lifting state up in React?
+**Difficulty**: Easy
+**Category**: Props & State
+
+### Answer 📄
+
+Lifting state up means moving state from a child component to the nearest common ancestor when two or more sibling components need to share or synchronize that state.
+
+```jsx
+// Problem — each Thermometer has its own state, they can't sync
+function ThermometerCelsius() {
+  const [celsius, setCelsius] = useState(0);
+  return <input value={celsius} onChange={(e) => setCelsius(e.target.value)} />;
+}
+function ThermometerFahrenheit() {
+  const [fahrenheit, setFahrenheit] = useState(32);
+  return (
+    <input value={fahrenheit} onChange={(e) => setFahrenheit(e.target.value)} />
+  );
+}
+
+// Solution — lift state to the parent
+function TemperatureConverter() {
+  const [celsius, setCelsius] = useState(0);
+  const fahrenheit = (celsius * 9) / 5 + 32;
+
+  return (
+    <>
+      <input
+        value={celsius}
+        onChange={(e) => setCelsius(Number(e.target.value))}
+        placeholder="Celsius"
+      />
+      <input
+        value={fahrenheit}
+        onChange={(e) => setCelsius(((Number(e.target.value) - 32) * 5) / 9)}
+        placeholder="Fahrenheit"
+      />
+    </>
+  );
+}
+```
+
+**When to lift state:**
+
+- Two siblings need to read or sync the same value.
+- A parent needs to react to a child's state change.
+- The state controls visibility or behavior of multiple unrelated components.
+
+**Downside of lifting:** the ancestor re-renders whenever the state changes, potentially re-rendering unrelated sibling components. Mitigate with `React.memo` or state colocation.
+
+## 🧠 Question 53
+
+**ID**: react-053
+**Title**: What is React's reconciliation diffing algorithm in detail?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+React's diffing algorithm compares two virtual DOM trees using heuristics to achieve O(n) complexity rather than the theoretical O(n³) of a full tree comparison.
+
+**Three core heuristics:**
+
+**1. Elements of different types produce entirely different trees.**
+
+If the type changes at a position (e.g., `<div>` → `<span>`, or `<Counter>` → `<Timer>`), React unmounts the old subtree completely (including all children and their state), then mounts the new subtree from scratch.
+
+```jsx
+// React unmounts Counter and mounts Timer — no state is preserved
+{
+  isTimer ? <Timer /> : <Counter />;
+}
+```
+
+**2. The `key` prop stabilizes element identity across renders.**
+
+In lists, React uses `key` to match elements between renders. Elements with matching keys are updated in place (props updated, instance preserved). Elements without a matching key are unmounted; new keys are mounted.
+
+**3. Same type elements are updated in place.**
+
+If the element type is the same, React keeps the existing DOM node and updates only changed attributes/props:
+
+```jsx
+// React updates only the className attribute — no DOM node recreation
+// Before: <div className="old" />
+// After:  <div className="new" />
+```
+
+For component elements of the same type, React reuses the instance and updates props, then calls the render function to get the next virtual DOM.
+
+**Why recursive diffing stops early:** React never compares nodes across sibling positions or across levels. Each position in the tree is compared only with the corresponding position in the new tree, keeping the algorithm linear.
+
+## 🧠 Question 54
+
+**ID**: react-054
+**Title**: What is `React.cloneElement` and when is it used?
+**Difficulty**: Medium
+**Category**: Components
+
+### Answer 📄
+
+`React.cloneElement` creates a copy of a React element with optionally modified props and children. It is used to inject additional props into children elements that the parent does not control.
+
+```jsx
+React.cloneElement(element, [newProps], [...newChildren]);
+```
+
+**Example — a `RadioGroup` that injects `name` into its `Radio` children:**
+
+```jsx
+function RadioGroup({ name, children }) {
+  return (
+    <div>
+      {React.Children.map(
+        children,
+        (child) => React.cloneElement(child, { name }), // inject 'name' prop
+      )}
+    </div>
+  );
+}
+
+// Usage — Radio components receive name="gender" automatically
+<RadioGroup name="gender">
+  <Radio value="male">Male</Radio>
+  <Radio value="female">Female</Radio>
+</RadioGroup>;
+```
+
+**Common use cases:**
+
+- Injecting shared props into children from a container (group name, theme, variant).
+- Wrapping children with additional event handlers or refs.
+- Tooltip/overlay libraries that wrap any passed element.
+
+**Modern alternatives:**
+
+`cloneElement` is considered somewhat of an anti-pattern in modern React because it creates implicit coupling between parent and child. Prefer:
+
+- **Context API** — for injecting data into an arbitrary subtree.
+- **Compound components** — for structured parent-child relationships.
+- **Render props or `children` as function** — for maximum flexibility.
+
+`cloneElement` is still useful for low-level UI primitives where you need to add props to arbitrary elements without requiring them to consume context.
+
+## 🧠 Question 55
+
+**ID**: react-055
+**Title**: How do you handle forms in React with validation?
+**Difficulty**: Medium
+**Category**: Forms & Events
+
+### Answer 📄
+
+Form handling in React typically means controlled components — keeping all form values in state and validating on change or submit.
+
+**Basic controlled form with validation:**
+
+```jsx
+function SignUpForm() {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
+
+  function validate(values) {
+    const errs = {};
+    if (!values.email.includes('@')) errs.email = 'Invalid email';
+    if (values.password.length < 8) errs.password = 'Password too short';
+    return errs;
+  }
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    // Clear error on change
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const errs = validate(form);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    submitForm(form);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" value={form.email} onChange={handleChange} />
+      {errors.email && <span>{errors.email}</span>}
+
+      <input
+        name="password"
+        type="password"
+        value={form.password}
+        onChange={handleChange}
+      />
+      {errors.password && <span>{errors.password}</span>}
+
+      <button type="submit">Sign Up</button>
+    </form>
+  );
+}
+```
+
+**Form libraries** abstract validation, dirty state, and submission:
+
+- **React Hook Form** — uncontrolled approach with a register pattern; minimal re-renders; schema validation via Zod or Yup.
+- **Formik** — fully controlled; higher re-render count but thorough API.
+- **Remix forms / Server Actions** — form submission handled server-side; no client-side state needed for basic forms.

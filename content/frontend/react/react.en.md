@@ -2838,3 +2838,273 @@ function SignUpForm() {
 - **React Hook Form** — uncontrolled approach with a register pattern; minimal re-renders; schema validation via Zod or Yup.
 - **Formik** — fully controlled; higher re-render count but thorough API.
 - **Remix forms / Server Actions** — form submission handled server-side; no client-side state needed for basic forms.
+
+## 🧠 Question 56
+
+**ID**: react-056
+**Title**: What is `forwardRef` in React?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+`forwardRef` is a React API that allows a parent component to pass a `ref` through to a DOM element or component instance inside a child component.
+
+By default, `ref` cannot be placed on functional components — the ref would not be forwarded to anything inside the component. `forwardRef` explicitly opts the component into accepting and forwarding a ref.
+
+```jsx
+import { forwardRef, useRef } from 'react';
+
+const Input = forwardRef(function Input({ label, ...props }, ref) {
+  return (
+    <div>
+      <label>{label}</label>
+      <input ref={ref} {...props} /> {/* ref forwarded to the DOM input */}
+    </div>
+  );
+});
+
+// Parent
+function Form() {
+  const inputRef = useRef(null);
+
+  function focusInput() {
+    inputRef.current.focus();
+  }
+
+  return (
+    <>
+      <Input label="Email" ref={inputRef} type="email" />
+      <button onClick={focusInput}>Focus</button>
+    </>
+  );
+}
+```
+
+**With TypeScript:**
+
+```tsx
+const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { label, ...props },
+  ref,
+) {
+  return <input ref={ref} {...props} />;
+});
+```
+
+**React 19 changes:** In React 19, `ref` is available as a regular prop in function components, so new components often won't need `forwardRef`. `forwardRef` still matters when supporting older React versions, and refs to class components still point to the instance rather than becoming a regular prop.
+
+```jsx
+// React 19 — no forwardRef needed
+function Input({ ref, ...props }) {
+  return <input ref={ref} {...props} />;
+}
+```
+
+## 🧠 Question 57
+
+**ID**: react-057
+**Title**: What is the React profiler and how do you use it to find performance issues?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+React provides two ways to profile component rendering performance.
+
+**React DevTools Profiler** — a browser extension tab that records all renders and their causes during an interaction.
+
+To use it:
+
+1. Open React DevTools → Profiler tab.
+2. Click Record.
+3. Interact with the application (click, type, navigate).
+4. Stop recording.
+5. Inspect the flame graph — each bar is a component render. Width = render duration. Click a component to see why it rendered.
+
+**Common findings:**
+
+- A component renders frequently without its props changing → apply `React.memo`.
+- A component renders because its parent does → check if parent state change is necessary.
+- Many small renders coalesce into one → batching is working correctly.
+- A single render is extremely long → the component's logic is expensive → `useMemo` or virtualization.
+
+**`React.Profiler` API** — for programmatic measurement in production:
+
+```jsx
+import { Profiler } from 'react';
+
+function onRender(id, phase, actualDuration) {
+  // id: the "id" prop of the Profiler tree that just committed
+  // phase: "mount" or "update"
+  // actualDuration: time to render (ms)
+  if (actualDuration > 16) {
+    reportSlowRender(id, actualDuration);
+  }
+}
+
+<Profiler id="Dashboard" onRender={onRender}>
+  <Dashboard />
+</Profiler>;
+```
+
+The `Profiler` component has a small but non-zero overhead — use it selectively and consider stripping it from production builds.
+
+## 🧠 Question 58
+
+**ID**: react-058
+**Title**: What is windowing (virtualization) and when do you need it in React?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Windowing (also called virtualization) is a technique that renders only the visible portion of a large list. Instead of creating thousands of DOM nodes, only the items currently in the viewport (plus a small buffer) are rendered. As the user scrolls, items enter and leave the rendered set.
+
+**When to use it:**
+
+- Lists with hundreds or thousands of items where full rendering causes:
+  - Long initial render time
+  - Excessive memory usage
+  - Laggy scrolling (dropped frames)
+
+**Libraries:**
+
+- **`react-window`** (lightweight, minimal API) — `FixedSizeList`, `VariableSizeList`, `FixedSizeGrid`
+- **`react-virtual` / `@tanstack/virtual`** (headless, framework-agnostic)
+- **`react-virtuoso`** (full-featured, supports variable heights, infinite scroll, grouping)
+
+```jsx
+import { FixedSizeList } from 'react-window';
+
+function VirtualList({ items }) {
+  const Row = ({ index, style }) => (
+    <div style={style}>
+      {/* style contains top/height positioning */}
+      <UserCard user={items[index]} />
+    </div>
+  );
+
+  return (
+    <FixedSizeList
+      height={600} // visible height of the list container
+      itemCount={items.length}
+      itemSize={72} // height of each row in px
+      width="100%"
+    >
+      {Row}
+    </FixedSizeList>
+  );
+}
+```
+
+**Trade-offs:**
+
+- Items outside the viewport are unmounted (lose state) and remounted on scroll.
+- Accessibility can be affected (screen readers may not see off-screen items).
+- Keyboard navigation requires additional handling.
+
+For simple cases with a few hundred items, `React.memo` + `useMemo` filtering is usually sufficient before reaching for virtualization.
+
+## 🧠 Question 59
+
+**ID**: react-059
+**Title**: What are the differences between React 17 and React 18?
+**Difficulty**: Medium
+**Category**: React Basics
+
+### Answer 📄
+
+React 18 introduced several significant features and changes.
+
+**New Root API:**
+
+```jsx
+// React 17 — legacy mode, no concurrent features
+ReactDOM.render(<App />, document.getElementById('root'));
+
+// React 18 — enables concurrent features
+const root = createRoot(document.getElementById('root'));
+root.render(<App />);
+```
+
+**Automatic Batching:**
+
+React 17 only batched state updates inside React event handlers. React 18 batches ALL updates everywhere — `setTimeout`, `Promise.then`, native listeners — by default.
+
+**Concurrent Features (stable):**
+
+- `useTransition` and `startTransition` — mark updates as non-urgent.
+- `useDeferredValue` — defer re-rendering of a subtree.
+- `useId` — stable IDs for SSR.
+- `useSyncExternalStore` — safe external store subscriptions.
+- `useInsertionEffect` — CSS-in-JS library hook.
+
+**Streaming SSR with Suspense:**
+
+React 18 supports `renderToPipeableStream` (Node.js) and `renderToReadableStream` (Edge), enabling progressive HTML streaming with Suspense-based loading states.
+
+**StrictMode double effects:**
+
+React 18 StrictMode now mounts → unmounts → remounts effects in development to surface cleanup bugs.
+
+**React 18 dropped support for IE11.**
+
+## 🧠 Question 60
+
+**ID**: react-060
+**Title**: What is `startTransition` and how is it different from `useTransition`?
+**Difficulty**: Medium
+**Category**: Concurrent React
+
+### Answer 📄
+
+Both `startTransition` and `useTransition` mark state updates as non-urgent transitions, but they are used in different contexts.
+
+**`startTransition`** — a standalone function imported from React. Use it when you don't need to track the pending state:
+
+```jsx
+import { startTransition } from 'react';
+
+function handleSearch(query) {
+  startTransition(() => {
+    setSearchResults(search(query)); // non-urgent
+  });
+}
+```
+
+**`useTransition`** — a hook that also returns an `isPending` boolean so you can show a loading indicator during the transition:
+
+```jsx
+import { useTransition } from 'react';
+
+function SearchBox() {
+  const [isPending, startTransition] = useTransition();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+
+  function handleChange(e) {
+    setQuery(e.target.value); // urgent — instant
+
+    startTransition(() => {
+      setResults(search(e.target.value)); // non-urgent
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />} {/* only available with useTransition */}
+      <ResultsList results={results} />
+    </>
+  );
+}
+```
+
+**When React handles transitions:**
+
+- Urgent updates (input typing, clicking) render immediately.
+- Transition updates render at lower priority — they can be interrupted if a new urgent update arrives.
+- If the user types again before the transition finishes, React discards the in-progress transition render and starts fresh.
+
+Use `startTransition` when you don't need `isPending`; use `useTransition` when you need to show a loading state during the transition.

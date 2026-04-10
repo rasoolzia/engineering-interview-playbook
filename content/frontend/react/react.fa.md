@@ -2838,3 +2838,273 @@ function SignUpForm() {
 - **React Hook Form** — رویکرد بیشتر uncontrolled با الگوی register؛ re-render کم؛ سازگاری خوب با Zod یا Yup
 - **Formik** — بیشتر controlled؛ re-render بیشتر ولی API کامل
 - **Remix forms / Server Actions** — submit در سمت سرور انجام می‌شود و برای فرم‌های ساده شاید اصلاً state سمت کلاینت لازم نباشد
+
+## 🧠 سوال 56
+
+**شناسه**: react-056
+**عنوان**: `forwardRef` در React چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`forwardRef` یک API در React است که به کامپوننت والد اجازه می‌دهد یک `ref` را به DOM element یا instance داخل یک child component عبور دهد.
+
+به‌صورت پیش‌فرض، `ref` را نمی‌توان مستقیماً روی functional component گذاشت، چون به‌طور خودکار به چیزی در داخل آن forward نمی‌شود. `forwardRef` به‌صورت صریح این قابلیت را فعال می‌کند.
+
+```jsx
+import { forwardRef, useRef } from 'react';
+
+const Input = forwardRef(function Input({ label, ...props }, ref) {
+  return (
+    <div>
+      <label>{label}</label>
+      <input ref={ref} {...props} /> {/* ref به input واقعی forward می‌شود */}
+    </div>
+  );
+});
+
+// Parent
+function Form() {
+  const inputRef = useRef(null);
+
+  function focusInput() {
+    inputRef.current.focus();
+  }
+
+  return (
+    <>
+      <Input label="Email" ref={inputRef} type="email" />
+      <button onClick={focusInput}>Focus</button>
+    </>
+  );
+}
+```
+
+**همراه با TypeScript:**
+
+```tsx
+const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { label, ...props },
+  ref,
+) {
+  return <input ref={ref} {...props} />;
+});
+```
+
+**تغییرات React 19:** در React 19، `ref` در function component ها به‌عنوان یک prop معمولی هم در دسترس است، بنابراین برای کامپوننت‌های جدید خیلی وقت‌ها دیگر به `forwardRef` نیاز ندارید. با این حال اگر از نسخه‌های قدیمی‌تر React پشتیبانی می‌کنید، یا با class component ها و الگوهای قدیمی‌تر سروکار دارید، `forwardRef` همچنان مهم است.
+
+```jsx
+// React 19 — در بسیاری از function component ها دیگر forwardRef لازم نیست
+function Input({ ref, ...props }) {
+  return <input ref={ref} {...props} />;
+}
+```
+
+## 🧠 سوال 57
+
+**شناسه**: react-057
+**عنوان**: React profiler چیست و چگونه از آن برای پیدا کردن مشکلات performance استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+React دو راه اصلی برای profiling عملکرد رندر کامپوننت‌ها فراهم می‌کند.
+
+**React DevTools Profiler** — تب مخصوصی در افزونه مرورگر که همه رندرها و علت آن‌ها را در طول یک interaction ثبت می‌کند.
+
+**نحوه استفاده:**
+
+1. React DevTools را باز کنید و به تب Profiler بروید
+2. روی Record کلیک کنید
+3. با برنامه تعامل انجام دهید، مثل کلیک، تایپ یا navigation
+4. ضبط را متوقف کنید
+5. flame graph را بررسی کنید؛ هر نوار نماینده یک رندر کامپوننت است. عرض نوار برابر مدت زمان رندر است
+
+**یافته‌های رایج:**
+
+- کامپوننتی زیاد رندر می‌شود بدون اینکه prop هایش تغییر کرده باشد — شاید `React.memo` کمک کند
+- کامپوننتی فقط چون والدش رندر شده دوباره رندر می‌شود — بررسی کنید آیا state والد در جای درستی قرار دارد
+- تعداد زیادی رندر کوچک با هم یکی شده‌اند — batching درست کار می‌کند
+- یک رندر خیلی طولانی است — منطق کامپوننت سنگین است و شاید `useMemo` یا virtualization لازم باشد
+
+**API مربوط به `React.Profiler`** — برای اندازه‌گیری برنامه‌نویسی‌شده:
+
+```jsx
+import { Profiler } from 'react';
+
+function onRender(id, phase, actualDuration) {
+  // id: همان id ای که به Profiler داده‌اید
+  // phase: "mount" یا "update"
+  // actualDuration: مدت زمان رندر برحسب میلی‌ثانیه
+  if (actualDuration > 16) {
+    reportSlowRender(id, actualDuration);
+  }
+}
+
+<Profiler id="Dashboard" onRender={onRender}>
+  <Dashboard />
+</Profiler>;
+```
+
+کامپوننت `Profiler` سربار کمی دارد، هرچند زیاد نیست. آن را به‌صورت هدفمند استفاده کنید و در صورت نیاز برای build های production حذفش کنید.
+
+## 🧠 سوال 58
+
+**شناسه**: react-058
+**عنوان**: windowing یا virtualization چیست و چه زمانی در React به آن نیاز دارید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Windowing یا virtualization تکنیکی است که فقط بخش قابل‌مشاهده یک لیست بزرگ را رندر می‌کند. به‌جای ساختن هزاران DOM node، فقط آیتم‌هایی که در viewport هستند به‌همراه یک بافر کوچک رندر می‌شوند. با اسکرول کاربر، آیتم‌ها وارد و خارج از مجموعه رندرشده می‌شوند.
+
+**چه زمانی از آن استفاده کنیم:**
+
+- وقتی لیست صدها یا هزاران آیتم دارد و رندر کامل باعث این مشکلات می‌شود:
+  - زمان اولیه رندر زیاد
+  - مصرف حافظه بالا
+  - اسکرول کند و افت فریم
+
+**کتابخانه‌ها:**
+
+- **`react-window`** — سبک و با API ساده
+- **`react-virtual` / `@tanstack/virtual`** — headless و منعطف
+- **`react-virtuoso`** — کامل‌تر با پشتیبانی از ارتفاع متغیر، infinite scroll و grouping
+
+```jsx
+import { FixedSizeList } from 'react-window';
+
+function VirtualList({ items }) {
+  const Row = ({ index, style }) => (
+    <div style={style}>
+      {/* style شامل موقعیت top و height است */}
+      <UserCard user={items[index]} />
+    </div>
+  );
+
+  return (
+    <FixedSizeList
+      height={600}
+      itemCount={items.length}
+      itemSize={72}
+      width="100%"
+    >
+      {Row}
+    </FixedSizeList>
+  );
+}
+```
+
+**Trade-off ها:**
+
+- آیتم‌های بیرون viewport unmount و هنگام اسکرول دوباره mount می‌شوند، بنابراین ممکن است state محلی خود را از دست بدهند
+- دسترس‌پذیری می‌تواند پیچیده‌تر شود، چون screen reader ها شاید آیتم‌های خارج از viewport را نبینند
+- navigation با کیبورد معمولاً نیاز به رسیدگی بیشتر دارد
+
+برای حالت‌های ساده با چندصد آیتم، معمولاً قبل از رفتن سراغ virtualization، استفاده از فیلتر مناسب، `React.memo` و `useMemo` کافی است.
+
+## 🧠 سوال 59
+
+**شناسه**: react-059
+**عنوان**: تفاوت‌های React 17 و React 18 چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مبانی React
+
+### پاسخ 📄
+
+React 18 چند قابلیت و تغییر مهم معرفی کرد.
+
+**API جدید برای root:**
+
+```jsx
+// React 17 — legacy mode و بدون قابلیت‌های concurrent
+ReactDOM.render(<App />, document.getElementById('root'));
+
+// React 18 — قابلیت‌های concurrent را فعال می‌کند
+const root = createRoot(document.getElementById('root'));
+root.render(<App />);
+```
+
+**Automatic Batching:**
+
+در React 17 فقط update های state داخل React event handler ها batch می‌شدند. در React 18 همه update ها، حتی داخل `setTimeout`، `Promise.then` و native listener ها، به‌صورت پیش‌فرض batch می‌شوند.
+
+**قابلیت‌های concurrent که پایدار شدند:**
+
+- `useTransition` و `startTransition`
+- `useDeferredValue`
+- `useId`
+- `useSyncExternalStore`
+- `useInsertionEffect`
+
+**Streaming SSR همراه با Suspense:**
+
+React 18 از `renderToPipeableStream` در Node.js و `renderToReadableStream` در محیط‌های Edge پشتیبانی می‌کند و امکان stream کردن تدریجی HTML را فراهم می‌کند.
+
+**دوبار اجرا شدن effect ها در StrictMode:**
+
+در React 18، StrictMode در محیط توسعه effect ها را به‌صورت mount → unmount → remount اجرا می‌کند تا cleanup های ناقص پیدا شوند.
+
+**React 18 پشتیبانی از IE11 را حذف کرد.**
+
+## 🧠 سوال 60
+
+**شناسه**: react-060
+**عنوان**: `startTransition` چیست و چه تفاوتی با `useTransition` دارد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+هر دو `startTransition` و `useTransition` update های state را به‌عنوان transition های غیرفوری علامت‌گذاری می‌کنند، اما در موقعیت‌های متفاوتی استفاده می‌شوند.
+
+**`startTransition`** — یک تابع مستقل است که از React import می‌شود. وقتی فقط می‌خواهید update را کم‌اولویت کنید و نیازی به وضعیت pending ندارید، از آن استفاده می‌کنید:
+
+```jsx
+import { startTransition } from 'react';
+
+function handleSearch(query) {
+  startTransition(() => {
+    setSearchResults(search(query)); // غیرفوری
+  });
+}
+```
+
+**`useTransition`** — یک hook است که علاوه بر `startTransition` یک مقدار `isPending` هم برمی‌گرداند تا بتوانید هنگام transition وضعیت loading نشان دهید:
+
+```jsx
+import { useTransition } from 'react';
+
+function SearchBox() {
+  const [isPending, startTransition] = useTransition();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+
+  function handleChange(e) {
+    setQuery(e.target.value); // فوری
+
+    startTransition(() => {
+      setResults(search(e.target.value)); // غیرفوری
+    });
+  }
+
+  return (
+    <>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />} {/* فقط در useTransition در دسترس است */}
+      <ResultsList results={results} />
+    </>
+  );
+}
+```
+
+**وقتی React transition را مدیریت می‌کند چه می‌شود:**
+
+- update های فوری مثل تایپ یا کلیک بلافاصله رندر می‌شوند
+- update های transition با اولویت پایین‌تر رندر می‌شوند و می‌توانند قطع شوند
+- اگر کاربر قبل از پایان transition دوباره تایپ کند، React کار نیمه‌تمام را کنار می‌گذارد و از نو با داده جدید شروع می‌کند
+
+وقتی به `isPending` نیاز ندارید از `startTransition` استفاده کنید، و وقتی لازم است وضعیت درحال‌انتظار را نشان دهید از `useTransition` استفاده کنید.

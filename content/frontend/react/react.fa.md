@@ -3108,3 +3108,283 @@ function SearchBox() {
 - اگر کاربر قبل از پایان transition دوباره تایپ کند، React کار نیمه‌تمام را کنار می‌گذارد و از نو با داده جدید شروع می‌کند
 
 وقتی به `isPending` نیاز ندارید از `startTransition` استفاده کنید، و وقتی لازم است وضعیت درحال‌انتظار را نشان دهید از `useTransition` استفاده کنید.
+
+## 🧠 سوال 61
+
+**شناسه**: react-061
+**عنوان**: سیستم رویداد synthetic در React چگونه کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+React رویدادهای بومی مرورگر را داخل یک شیء `SyntheticEvent` قرار می‌دهد تا تفاوت‌های مرورگرهای مختلف را یکدست کند. همه synthetic event ها فارغ از مرورگر، API یکسانی دارند.
+
+**Event Delegation:**
+
+React روی هر DOM node جداگانه event listener نصب نمی‌کند. در عوض، یک listener واحد روی root container مثل `#root` قرار می‌دهد. وقتی رویداد تا ریشه bubble می‌کند، React تشخیص می‌دهد کدام handler مربوط به کدام کامپوننت باید اجرا شود. به این روش **event delegation** می‌گویند.
+
+در React 16 و قبل‌تر، رویدادها روی `document` delegate می‌شدند. در React 17 این رفتار به root DOM container تغییر کرد و همین باعث شد embed کردن React داخل اپ‌های غیر React ساده‌تر شود.
+
+```jsx
+// React یک listener روی #root می‌گذارد، نه روی هر دکمه
+function App() {
+  return (
+    <div>
+      <button onClick={() => console.log('clicked')}>Click me</button>
+    </div>
+  );
+}
+```
+
+**Event Pooling** — در React 16 و قبل‌تر، حذف شد در React 17:
+
+React 16 برای performance، شیء `SyntheticEvent` را بین event ها reuse می‌کرد. بعد از تمام شدن handler، property های event خالی می‌شدند. اگر می‌خواستید event را بعداً به‌صورت async استفاده کنید، باید `e.persist()` را صدا می‌زدید.
+
+در React 17 event pooling حذف شد، بنابراین `SyntheticEvent` ها دیگر reuse نمی‌شوند و می‌توانید با خیال راحت در `setTimeout` یا `Promise.then` هم به property های event دسترسی داشته باشید.
+
+**متوقف کردن انتشار:**
+
+```jsx
+function Parent() {
+  return (
+    <div onClick={() => console.log('parent')}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // جلوی اجرای handler والد را می‌گیرد
+          console.log('child');
+        }}
+      >
+        Click
+      </button>
+    </div>
+  );
+}
+```
+
+**دسترسی به رویداد بومی:**
+
+```jsx
+function handleClick(e) {
+  console.log(e.nativeEvent); // شیء Event اصلی مرورگر
+}
+```
+
+**فاز capture:**
+
+برای مدیریت رویداد در فاز capture از `onClickCapture` به‌جای `onClick` استفاده می‌کنید. capture از بالا به پایین است، در حالی که bubble از پایین به بالا انجام می‌شود.
+
+## 🧠 سوال 62
+
+**شناسه**: react-062
+**عنوان**: `flushSync` چیست و چه زمانی به آن نیاز دارید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`flushSync` به React مجبور می‌کند همه update های در انتظار را داخل callback داده‌شده **به‌صورت synchronous** اجرا و commit کند و از مسیر عادی async و batched خارج شود.
+
+```jsx
+import { flushSync } from 'react-dom';
+
+function handleClick() {
+  flushSync(() => {
+    setCount((c) => c + 1);
+  });
+  // اینجا DOM حتماً به‌روزرسانی شده است
+  console.log(document.getElementById('counter').textContent);
+
+  flushSync(() => {
+    setFlag(true);
+  });
+  // دوباره DOM به‌روزرسانی شده
+}
+```
+
+**چرا وجود دارد:**
+
+React 18 تقریباً همه update ها را به‌صورت خودکار batch می‌کند. این رفتار معمولاً بهترین انتخاب است. اما بعضی سناریوها نیاز دارند DOM قبل از ادامه اجرا فوراً به‌روزرسانی شود:
+
+- **اندازه‌گیری DOM** بلافاصله بعد از تغییر state
+- **یکپارچه‌سازی با کتابخانه‌های third-party** که بعد از تغییر React باید DOM را بخوانند
+- **scroll یا animation دستوری** که به موقعیت جدید DOM وابسته است
+
+**نکات مهم:**
+
+- `flushSync` به performance ضربه می‌زند، چون render و commit را sync می‌کند
+- صدا زدن آن داخل render یا lifecycle های نامناسب می‌تواند مشکل‌ساز شود
+- باید آخرین راه‌حل باشد؛ در خیلی از موارد `useLayoutEffect` انتخاب بهتری است
+
+```jsx
+// جایگزین ترجیحی: useLayoutEffect برای اندازه‌گیری DOM
+useLayoutEffect(() => {
+  const height = elementRef.current.offsetHeight;
+  setContainerHeight(height);
+}, [dependency]);
+```
+
+## 🧠 سوال 63
+
+**شناسه**: react-063
+**عنوان**: hook `use()` در React 19 چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`use()` یک API در React 19 است که اجازه می‌دهد داخل render کامپوننت، مقدار یک منبع مثل **Promise** یا **Context** را بخوانید. برخلاف hook های سنتی، `use()` می‌تواند به‌صورت شرطی هم صدا زده شود.
+
+**خواندن Promise:**
+
+```jsx
+import { use, Suspense } from 'react';
+
+function UserProfile({ userPromise }) {
+  const user = use(userPromise); // تا resolve شدن Promise کامپوننت suspend می‌شود
+  return <h1>{user.name}</h1>;
+}
+
+function App() {
+  const userPromise = fetchUser(1); // بیرون از کامپوننت ساخته شده
+  return (
+    <Suspense fallback={<Spinner />}>
+      <UserProfile userPromise={userPromise} />
+    </Suspense>
+  );
+}
+```
+
+اگر Promise هنوز pending باشد، `use()` کامپوننت را suspend می‌کند. اگر Promise reject شود، خطا به نزدیک‌ترین Error Boundary می‌رسد.
+
+**خواندن Context به‌صورت شرطی:**
+
+برخلاف `useContext`، می‌توان `use(Context)` را داخل شرط‌ها و حلقه‌ها هم استفاده کرد:
+
+```jsx
+function Component({ show }) {
+  if (!show) return null;
+  const theme = use(ThemeContext); // معتبر است — به‌صورت شرطی استفاده شده
+  return <div style={{ color: theme.color }}>Hello</div>;
+}
+```
+
+**قواعد مهم:**
+
+- Promise باید **بیرون از render کامپوننت** ساخته شود؛ ساختن Promise جدید در هر render باعث suspend بی‌پایان می‌شود
+- `use()` یک hook سنتی نیست و لازم نیست قوانین معمول Hook ها را دقیقاً دنبال کند
+- هم در Client Component ها و هم در Server Component ها کار می‌کند
+
+## 🧠 سوال 64
+
+**شناسه**: react-064
+**عنوان**: `useOptimistic` در React 19 چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`useOptimistic` اجازه می‌دهد وقتی یک عملیات async در حال انجام است، یک UI خوش‌بینانه و موقت نشان دهید و بعد از تمام شدن عملیات، به‌صورت خودکار به state واقعی برگردید.
+
+```jsx
+import { useOptimistic } from 'react';
+
+function MessageList({ messages, sendMessage }) {
+  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
+    messages,
+    (currentMessages, newText) => [
+      ...currentMessages,
+      { text: newText, pending: true },
+    ],
+  );
+
+  async function handleSubmit(formData) {
+    const text = formData.get('message');
+    addOptimisticMessage(text); // UI بلافاصله آپدیت می‌شود
+    await sendMessage(text); // درخواست واقعی به سرور
+    // در موفقیت: prop اصلی messages آپدیت می‌شود و جای state خوش‌بینانه را می‌گیرد
+  }
+
+  return (
+    <form action={handleSubmit}>
+      {optimisticMessages.map((msg, i) => (
+        <div key={i} style={{ opacity: msg.pending ? 0.5 : 1 }}>
+          {msg.text}
+        </div>
+      ))}
+      <input name="message" />
+      <button type="submit">Send</button>
+    </form>
+  );
+}
+```
+
+**امضا:**
+
+```jsx
+const [optimisticState, addOptimistic] = useOptimistic(
+  state, // فعلی state
+  updateFn, // (وضعیت فعلی، مقدار خوش‌بینانه) => وضعیت خوش‌بینانه جدید
+);
+```
+
+**رفتار:**
+
+- تا وقتی action async در حال اجراست، `optimisticState` نتیجه `updateFn` را برمی‌گرداند
+- وقتی action تمام شود، React state خوش‌بینانه را کنار می‌گذارد و state واقعی جدید را استفاده می‌کند
+- چند update خوش‌بینانه می‌توانند در صف قرار بگیرند و پشت سر هم اعمال شوند
+
+## 🧠 سوال 65
+
+**شناسه**: react-065
+**عنوان**: `useActionState` در React 19 چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Concurrent React
+
+### پاسخ 📄
+
+`useActionState` state حاصل از یک form action را مدیریت می‌کند. این hook معمولاً همراه با Server Actions یا تابع‌های async استفاده می‌شود تا نتیجه و وضعیت pending ارسال فرم را دنبال کند. این API قبلاً در کانال canary با نام `useFormState` شناخته می‌شد.
+
+```jsx
+import { useActionState } from 'react';
+
+async function submitAction(previousState, formData) {
+  const name = formData.get('name');
+  if (!name) return { error: 'Name is required' };
+  await saveToServer(name);
+  return { success: true, name };
+}
+
+function Form() {
+  const [state, formAction, isPending] = useActionState(submitAction, null);
+
+  return (
+    <form action={formAction}>
+      <input name="name" />
+      {state?.error && <p style={{ color: 'red' }}>{state.error}</p>}
+      {state?.success && <p>Saved: {state.name}</p>}
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Saving...' : 'Save'}
+      </button>
+    </form>
+  );
+}
+```
+
+**امضا:**
+
+```jsx
+const [state, formAction, isPending] = useActionState(action, initialState);
+```
+
+- `action`: تابع async که `(previousState, formData)` را می‌گیرد و می‌تواند Server Action باشد
+- `initialState`: مقدار state قبل از اولین submit
+- `state`: خروجی آخرین اجرای action
+- `formAction`: action بسته‌بندی‌شده برای پاس دادن به `<form action={...}>`
+- `isPending`: تا وقتی action در حال اجراست برابر `true` است
+
+**نکات مهم:**
+
+- action، **state قبلی** را به‌عنوان آرگومان اول دریافت می‌کند
+- همراه با Server Action به‌صورت progressive enhancement هم کار می‌کند و فرم می‌تواند حتی بدون جاوااسکریپت submit شود
+- جایگزین الگوی قدیمی مدیریت دستی loading و error با `useState` و `useEffect` می‌شود

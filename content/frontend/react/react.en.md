@@ -3388,3 +3388,343 @@ const [state, formAction, isPending] = useActionState(action, initialState);
 - The action receives the **previous state** as its first argument (unlike a plain form action)
 - Works progressively — the form can be submitted without JavaScript when using a Server Action
 - Replaces the old pattern of managing loading/error state manually with `useState` + `useEffect`
+
+## 🧠 Question 66
+
+**ID**: react-066
+**Title**: What are React Server Actions?
+**Difficulty**: Hard
+**Category**: Server Components
+
+### Answer 📄
+
+Server Actions are async functions that run **on the server** but can be called directly from client-side event handlers or form actions. They are a stable React 19 feature, primarily used in frameworks like Next.js App Router.
+
+**Defining a Server Action:**
+
+```js
+// actions.js — 'use server' marks this as a server-only module
+'use server';
+
+export async function saveUser(formData) {
+  const name = formData.get('name');
+  await db.users.create({ name }); // direct database access — runs on server only
+  revalidatePath('/users');
+}
+```
+
+**Using in a Server Component (progressive enhancement):**
+
+```jsx
+import { saveUser } from './actions';
+
+export default function UserForm() {
+  return (
+    <form action={saveUser}>
+      <input name="name" placeholder="Enter name" />
+      <button type="submit">Save</button>
+    </form>
+  );
+}
+```
+
+**Using from a Client Component:**
+
+```jsx
+'use client';
+import { saveUser } from './actions';
+import { useActionState } from 'react';
+
+function UserForm() {
+  const [state, action, isPending] = useActionState(saveUser, null);
+  return (
+    <form action={action}>
+      <input name="name" />
+      <button disabled={isPending}>Save</button>
+    </form>
+  );
+}
+```
+
+**How they work under the hood:**
+
+- The framework compiles Server Actions into HTTP POST endpoint handlers
+- Calling a Server Action from the client sends a POST request to the server
+- The response is used to update UI state (via `useActionState` or `useOptimistic`)
+- They work without JavaScript — the browser can submit the form natively (progressive enhancement)
+
+**Security:**
+
+- Server Actions run in a trusted server environment — you can query databases and access secrets
+- Inputs from the client must still be validated and sanitized — the client can send arbitrary `FormData`
+
+## 🧠 Question 67
+
+**ID**: react-067
+**Title**: What is `useFormStatus` in React 19?
+**Difficulty**: Medium
+**Category**: Concurrent React
+
+### Answer 📄
+
+`useFormStatus` reads the submission status of the **parent `<form>`** element. It allows deeply nested components — like a submit button — to know whether the form is currently submitting, without prop drilling.
+
+```jsx
+import { useFormStatus } from 'react-dom';
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? 'Saving...' : 'Save'}
+    </button>
+  );
+}
+
+function Form() {
+  return (
+    <form action={serverAction}>
+      <input name="name" />
+      <SubmitButton /> {/* reads parent form status automatically */}
+    </form>
+  );
+}
+```
+
+**What `useFormStatus` returns:**
+
+```ts
+{
+  pending: boolean; // true while the form action is running
+  data: FormData | null; // the FormData being submitted
+  method: string | null; // 'get' or 'post'
+  action: string | Function | null; // the form's action
+}
+```
+
+**Critical constraint:**
+
+`useFormStatus` must be used **inside a child component** of the `<form>`. It does not work in the same component that renders the `<form>`.
+
+```jsx
+// WRONG — useFormStatus is in the same component as the form
+function Form() {
+  const { pending } = useFormStatus(); // always returns { pending: false }
+  return <form action={action}>...</form>;
+}
+
+// CORRECT — useFormStatus is in a child component
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return <button disabled={pending}>Submit</button>;
+}
+```
+
+## 🧠 Question 68
+
+**ID**: react-068
+**Title**: What are the ref improvements in React 19?
+**Difficulty**: Easy
+**Category**: React Basics
+
+### Answer 📄
+
+React 19 introduced two significant improvements to refs:
+
+**1. Refs as props — no more `forwardRef`:**
+
+In React 18 and earlier, passing a ref to a custom component required wrapping it in `React.forwardRef()`:
+
+```jsx
+// React 18 — verbose wrapper required
+const Input = React.forwardRef((props, ref) => <input ref={ref} {...props} />);
+
+<Input ref={inputRef} />;
+```
+
+In React 19, `ref` is passed as a regular prop — no `forwardRef` needed:
+
+```jsx
+// React 19 — clean and simple
+function Input({ ref, ...props }) {
+  return <input ref={ref} {...props} />;
+}
+
+<Input ref={inputRef} />;
+```
+
+**2. Ref cleanup functions:**
+
+In React 19, a ref callback can return a cleanup function, similar to `useEffect`. React calls the cleanup when the component unmounts or when the ref changes:
+
+```jsx
+function Component() {
+  return (
+    <div
+      ref={(node) => {
+        if (!node) return;
+
+        const observer = new ResizeObserver(handleResize);
+        observer.observe(node);
+
+        // cleanup: returned function runs on unmount or ref change
+        return () => observer.disconnect();
+      }}
+    />
+  );
+}
+```
+
+Previously you had to manually check for `null` inside the ref callback (React calls it with `null` on unmount). The cleanup function pattern is cleaner and more explicit.
+
+## 🧠 Question 69
+
+**ID**: react-069
+**Title**: How does `Suspense` work for data fetching and how does it integrate with frameworks?
+**Difficulty**: Hard
+**Category**: Concurrent React
+
+### Answer 📄
+
+`Suspense` for data fetching works by components **throwing a Promise** when data is not yet available. React catches the thrown Promise, renders the fallback UI, and re-renders the component once the Promise resolves.
+
+**The underlying mechanism (what libraries implement):**
+
+```jsx
+// Simplified version of what TanStack Query does internally
+const cache = {};
+
+function fetchUser(id) {
+  if (cache[id]?.status === 'success') return cache[id].data;
+  if (cache[id]?.status === 'pending') throw cache[id].promise; // suspend
+  if (cache[id]?.status === 'error') throw cache[id].error;
+
+  const promise = fetch(`/api/users/${id}`)
+    .then((r) => r.json())
+    .then((data) => {
+      cache[id] = { status: 'success', data };
+    });
+
+  cache[id] = { status: 'pending', promise };
+  throw promise; // suspend
+}
+
+function UserProfile({ id }) {
+  const user = fetchUser(id); // suspends if data is not ready
+  return <h1>{user.name}</h1>;
+}
+```
+
+**Framework integration:**
+
+- **Next.js App Router**: Server Components support `async/await` natively. Awaiting inside a Server Component triggers Suspense automatically.
+- **TanStack Query**: `useSuspenseQuery` integrates with Suspense — it throws while loading and throws on error.
+
+```jsx
+import { useSuspenseQuery } from '@tanstack/react-query';
+
+function UserProfile({ id }) {
+  const { data } = useSuspenseQuery({
+    queryKey: ['user', id],
+    queryFn: () => fetchUser(id),
+  });
+  return <h1>{data.name}</h1>; // no loading check needed — Suspense handles it
+}
+
+// Usage — boundaries handle loading and error states
+<Suspense fallback={<Spinner />}>
+  <ErrorBoundary fallback={<ErrorUI />}>
+    <UserProfile id={1} />
+  </ErrorBoundary>
+</Suspense>;
+```
+
+**Benefits:**
+
+- Components only describe the success state — loading and error are handled at the boundary level
+- Multiple suspended components inside the same `Suspense` boundary are waited on together
+- React can abort and retry suspended renders during concurrent mode
+
+## 🧠 Question 70
+
+**ID**: react-070
+**Title**: How does error handling work with Suspense and Error Boundaries?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+`Suspense` and `ErrorBoundary` work as a pair: Suspense handles the **loading** state, ErrorBoundary handles the **error** state.
+
+```jsx
+<ErrorBoundary fallback={<ErrorUI />}>
+  <Suspense fallback={<Spinner />}>
+    <DataComponent /> {/* can suspend or throw */}
+  </Suspense>
+</ErrorBoundary>
+```
+
+**How errors propagate:**
+
+1. `DataComponent` throws a Promise → Suspense catches it → shows `<Spinner />`
+2. The Promise rejects (or the component throws an `Error`) → ErrorBoundary catches it → shows `<ErrorUI />`
+3. On success → Suspense removes the fallback and renders `DataComponent` with real data
+
+**Implementing an ErrorBoundary (must be a class component):**
+
+```jsx
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, info) {
+    logError(error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return typeof this.props.fallback === 'function'
+        ? this.props.fallback(this.state.error)
+        : this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+```
+
+**Resetting an ErrorBoundary:**
+
+```jsx
+// react-error-boundary library (recommended)
+import { ErrorBoundary } from 'react-error-boundary';
+
+<ErrorBoundary
+  fallbackRender={({ error, resetErrorBoundary }) => (
+    <div>
+      <p>{error.message}</p>
+      <button onClick={resetErrorBoundary}>Try again</button>
+    </div>
+  )}
+  onReset={() => refetch()}
+>
+  <DataComponent />
+</ErrorBoundary>;
+```
+
+**Errors in `useEffect` and event handlers:**
+
+ErrorBoundaries only catch errors thrown **during rendering**. Errors in `useEffect` or event handlers must be caught manually and re-thrown into the render cycle:
+
+```jsx
+function Component() {
+  const [error, setError] = useState(null);
+  if (error) throw error; // re-throw into render — ErrorBoundary catches it
+
+  useEffect(() => {
+    fetchData().catch(setError);
+  }, []);
+}
+```

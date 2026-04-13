@@ -3728,3 +3728,282 @@ function Component() {
   }, []);
 }
 ```
+
+## 🧠 سوال 71
+
+**شناسه**: react-071
+**عنوان**: `React.cache()` در React 19 چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Server Components
+
+### پاسخ 📄
+
+`React.cache()` نتیجه فراخوانی یک تابع را **به‌ازای هر درخواست سرور** memoize می‌کند. این API برای React Server Components طراحی شده تا عملیات گران مثل query به دیتابیس را در یک render pass واحد deduplicate کند.
+
+```jsx
+import { cache } from 'react';
+
+// هر دو کامپوننت getUser(id) را صدا می‌زنند، اما در هر request فقط یک query اجرا می‌شود
+export const getUser = cache(async (id) => {
+  return await db.users.findById(id);
+});
+
+async function UserProfile({ id }) {
+  const user = await getUser(id);
+  return <h2>{user.name}</h2>;
+}
+
+async function UserAvatar({ id }) {
+  const user = await getUser(id); // cache hit — query دوم اجرا نمی‌شود
+  return <img src={user.avatarUrl} />;
+}
+```
+
+**مقایسه با `useMemo`:**
+
+|                | `React.cache()`          | `useMemo`                    |
+| -------------- | ------------------------ | ---------------------------- |
+| محل استفاده    | Server Components        | Client Components            |
+| محدوده cache   | هر request سرور          | هر instance کامپوننت         |
+| کلید cache     | آرگومان‌های تابع         | dependency array             |
+| پشتیبانی async | بله                      | نه                           |
+| ماندگاری       | در هر request پاک می‌شود | تا عمر کامپوننت باقی می‌ماند |
+
+**ویژگی‌های مهم:**
+
+- cache فقط در محدوده یک request سرور معتبر است، بنابراین داده بین کاربران نشت نمی‌کند
+- با تابع‌های async کار می‌کند، برخلاف `useMemo`
+- باید در سطح ماژول فراخوانی شود، نه داخل خود کامپوننت
+- روی کلاینت در دسترس نیست؛ برای caching سمت کلاینت از `useMemo` یا کتابخانه‌هایی مثل TanStack Query استفاده کنید
+
+## 🧠 سوال 72
+
+**شناسه**: react-072
+**عنوان**: lazy initialization در `useState` چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+`useState` می‌تواند یا یک مقدار مستقیم بگیرد یا یک **initializer function**. وقتی یک تابع به آن می‌دهید، React فقط **یک‌بار** در mount اولیه آن تابع را اجرا می‌کند تا state اولیه را بسازد. به این الگو lazy initialization می‌گویند.
+
+```jsx
+// غیر lazy: expensiveComputation() در هر render اجرا می‌شود
+const [state, setState] = useState(expensiveComputation());
+
+// lazy: expensiveComputation() فقط یک‌بار در mount اجرا می‌شود
+const [state, setState] = useState(() => expensiveComputation());
+```
+
+**چه زمانی مفید است:**
+
+- وقتی از `localStorage` یا `sessionStorage` مقدار اولیه می‌خوانید
+- وقتی ساختن state اولیه محاسبه گران دارد
+- وقتی پارامترهای URL یا داده serialize شده را parse می‌کنید
+
+```jsx
+function Component() {
+  const [filters, setFilters] = useState(() => {
+    // فقط یک‌بار اجرا می‌شود
+    const saved = localStorage.getItem('filters');
+    return saved ? JSON.parse(saved) : defaultFilters;
+  });
+}
+```
+
+**چرا مهم است:**
+
+React بعد از اولین render مقدار اولیه state را نادیده می‌گیرد. اما اگر از فرم تابعی استفاده نکنید، آن expression همچنان در هر render **محاسبه می‌شود** و فقط نتیجه‌اش دور ریخته می‌شود. برای کارهای سنگین این اتلاف می‌تواند محسوس باشد.
+
+```jsx
+// در هر render JSON را parse می‌کند، حتی اگر بعد از mount دیگر لازم نباشد
+const [data, setData] = useState(JSON.parse(heavyJsonString));
+
+// فقط یک‌بار parse می‌کند
+const [data, setData] = useState(() => JSON.parse(heavyJsonString));
+```
+
+همین الگو برای `useReducer` هم وجود دارد:
+
+```jsx
+const [state, dispatch] = useReducer(reducer, arg, initFn);
+// initFn(arg) فقط یک‌بار برای ساخت state اولیه اجرا می‌شود
+```
+
+## 🧠 سوال 73
+
+**شناسه**: react-073
+**عنوان**: چگونه از memory leak در کامپوننت‌های React جلوگیری می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+Memory leak در React معمولاً وقتی رخ می‌دهد که یک کامپوننت بعد از unmount شدن هنوز تلاش کند state را تغییر دهد یا subscription ها و منابع باز را آزاد نکند. راه‌حل اصلی در همه این موارد، cleanup درست داخل `useEffect` است.
+
+**1. عملیات fetch async:**
+
+```jsx
+// مشکل‌دار — ممکن است setState بعد از unmount اجرا شود
+useEffect(() => {
+  fetch('/api/data')
+    .then((r) => r.json())
+    .then((data) => setData(data));
+}, []);
+
+// درست — AbortController درخواست در حال اجرا را لغو می‌کند
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch('/api/data', { signal: controller.signal })
+    .then((r) => r.json())
+    .then((data) => setData(data))
+    .catch((err) => {
+      if (err.name === 'AbortError') return;
+    });
+
+  return () => controller.abort();
+}, []);
+```
+
+**2. event listener ها:**
+
+```jsx
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+```
+
+**3. interval و timeout:**
+
+```jsx
+useEffect(() => {
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id);
+}, []);
+```
+
+**4. subscription ها مثل WebSocket یا store:**
+
+```jsx
+useEffect(() => {
+  const subscription = eventBus.subscribe(topic, handleMessage);
+  return () => subscription.unsubscribe();
+}, [topic]);
+```
+
+**قاعده کلی:** هر `useEffect` که چیزی پایدار راه‌اندازی می‌کند، مثل request، event listener، timer یا subscription، باید cleanup متناظر برای جمع کردن آن برگرداند.
+
+React 18 در StrictMode عمداً effect ها را در development به شکل mount → unmount → remount اجرا می‌کند تا cleanup های ناقص زودتر پیدا شوند.
+
+## 🧠 سوال 74
+
+**شناسه**: react-074
+**عنوان**: `React.Children` چیست و چه زمانی از آن استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+`React.Children` مجموعه‌ای از utility ها برای کار ایمن با prop `children` است. چون `children` می‌تواند یک عنصر، آرایه، `null`، `undefined`، رشته یا عدد باشد، این ابزارها شکل‌های مختلف آن را یکدست مدیریت می‌کنند.
+
+```jsx
+function List({ children }) {
+  const count = React.Children.count(children);
+
+  return (
+    <div>
+      <p>{count} items</p>
+      <ul>
+        {React.Children.map(children, (child, index) => (
+          <li key={index}>{child}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+**متدهای موجود:**
+
+- `React.Children.map(children, fn)` — شبیه `Array.map`
+- `React.Children.forEach(children, fn)` — شبیه `Array.forEach`
+- `React.Children.count(children)` — تعداد child ها
+- `React.Children.only(children)` — بررسی می‌کند دقیقاً یک child وجود داشته باشد
+- `React.Children.toArray(children)` — `children` را به آرایه تخت با key های پایدار تبدیل می‌کند
+
+**چه زمانی استفاده می‌شود:**
+
+- وقتی layout component ای می‌سازید که باید روی child ها loop بزند یا آن‌ها را بشمارد
+- وقتی می‌خواهید دور هر child یک wrapper بگذارید
+- وقتی می‌خواهید child های خاصی را بر اساس type فیلتر یا انتخاب کنید
+
+**جایگزین مدرن:**
+
+تیم React معمولاً توصیه می‌کند به‌جای تکیه زیاد بر `React.Children`، از render prop یا آرایه‌ای از object ها استفاده کنید، چون:
+
+- وقتی child ها داخل `Fragment` باشند، بعضی الگوها پیچیده می‌شوند
+- با کامپوننت‌هایی که خودشان آرایه برمی‌گردانند همیشه خوب compose نمی‌شود
+- `React.cloneElement` که معمولاً کنار `React.Children` استفاده می‌شود، یک escape hatch محسوب می‌شود
+
+```jsx
+// الگوی ترجیحی مدرن — slot های صریح با props
+function Tabs({ tabs }) {
+  return tabs.map((tab) => <TabPanel key={tab.id} {...tab} />);
+}
+```
+
+## 🧠 سوال 75
+
+**شناسه**: react-075
+**عنوان**: `displayName` در React چیست و چرا مهم است؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: مبانی React
+
+### پاسخ 📄
+
+`displayName` یک property رشته‌ای است که روی کامپوننت تنظیم می‌کنید تا مشخص کند آن کامپوننت در React DevTools، پیام‌های خطا و stack trace ها با چه نامی نمایش داده شود.
+
+**چرا لازم می‌شود:**
+
+در build های production نام توابع ممکن است minify شوند. حتی در development هم arrow function های anonymous اسم خوبی در DevTools ندارند. `displayName` یک برچسب پایدار و خوانا فراهم می‌کند.
+
+**تنظیم روی HOC:**
+
+```jsx
+function withAuth(Component) {
+  function WithAuth(props) {
+    const user = useAuth();
+    if (!user) return <Redirect to="/login" />;
+    return <Component {...props} />;
+  }
+
+  // DevTools چیزی مثل withAuth(Button) را نشان می‌دهد
+  WithAuth.displayName = `withAuth(${Component.displayName ?? Component.name})`;
+  return WithAuth;
+}
+```
+
+**تنظیم روی Context:**
+
+```jsx
+const ThemeContext = React.createContext(null);
+ThemeContext.displayName = 'ThemeContext';
+```
+
+**تابع named در برابر anonymous:**
+
+```jsx
+// anonymous — ممکن است DevTools نام خوبی نشان ندهد
+const MyList = memo(({ items }) => <ul>{...}</ul>);
+
+// named — خروجی DevTools خواناتر است
+const MyList = memo(function MyList({ items }) {
+  return <ul>{...}</ul>;
+});
+```
+
+**چه چیزهایی آن را خودکار تنظیم می‌کنند:**
+
+کتابخانه‌هایی مثل `styled-components`، `Apollo Client` و `react-query` معمولاً روی کامپوننت‌های تولیدی خود `displayName` می‌گذارند تا خروجی DevTools خواناتر باشد.

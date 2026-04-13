@@ -3728,3 +3728,282 @@ function Component() {
   }, []);
 }
 ```
+
+## 🧠 Question 71
+
+**ID**: react-071
+**Title**: What is `React.cache()` in React 19?
+**Difficulty**: Hard
+**Category**: Server Components
+
+### Answer 📄
+
+`React.cache()` memoizes the result of a function call **per server request**. It is designed for React Server Components to deduplicate expensive operations — like database queries — within a single render pass.
+
+```jsx
+import { cache } from 'react';
+
+// Both components call getUser(id), but only ONE DB query runs per request
+export const getUser = cache(async (id) => {
+  return await db.users.findById(id);
+});
+
+async function UserProfile({ id }) {
+  const user = await getUser(id);
+  return <h2>{user.name}</h2>;
+}
+
+async function UserAvatar({ id }) {
+  const user = await getUser(id); // cache hit — no second DB query
+  return <img src={user.avatarUrl} />;
+}
+```
+
+**Comparison with `useMemo`:**
+
+|               | `React.cache()`     | `useMemo`              |
+| ------------- | ------------------- | ---------------------- |
+| Where         | Server Components   | Client Components      |
+| Cache scope   | Per server request  | Per component instance |
+| Cache key     | Function arguments  | Dependency array       |
+| Async support | Yes                 | No                     |
+| Persistence   | Cleared per request | Lives with component   |
+
+**Key characteristics:**
+
+- Cache is scoped to a single server request — no data leaks between users
+- Works with async functions (unlike `useMemo`)
+- Must be called at the module level, not inside a component
+- Not available on the client — use `useMemo` or TanStack Query for client-side caching
+
+## 🧠 Question 72
+
+**ID**: react-072
+**Title**: What is lazy initialization in `useState`?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+`useState` accepts either a direct value or an **initializer function**. When you pass a function, React calls it only **once** (on the initial mount) to compute the initial state — this is called lazy initialization.
+
+```jsx
+// Non-lazy: expensiveComputation() runs on EVERY render (result is ignored after mount)
+const [state, setState] = useState(expensiveComputation());
+
+// Lazy: expensiveComputation() runs only ONCE on mount
+const [state, setState] = useState(() => expensiveComputation());
+```
+
+**When to use it:**
+
+- Reading from `localStorage` or `sessionStorage`
+- Computing initial state from expensive calculations
+- Parsing URL parameters or serialized data
+
+```jsx
+function Component() {
+  const [filters, setFilters] = useState(() => {
+    // Only runs once — not on every re-render
+    const saved = localStorage.getItem('filters');
+    return saved ? JSON.parse(saved) : defaultFilters;
+  });
+}
+```
+
+**Why it matters:**
+
+React ignores the initial state value after the first render. But without the function form, the expression still _evaluates_ on every render — it's just discarded. For expensive operations, this wasted computation adds up across many re-renders.
+
+```jsx
+// Each re-render parses the JSON (wasteful — result is thrown away after mount)
+const [data, setData] = useState(JSON.parse(heavyJsonString));
+
+// Parses JSON only once (efficient)
+const [data, setData] = useState(() => JSON.parse(heavyJsonString));
+```
+
+The same pattern applies to `useReducer`:
+
+```jsx
+const [state, dispatch] = useReducer(reducer, arg, initFn);
+// initFn(arg) is called once to compute the initial state
+```
+
+## 🧠 Question 73
+
+**ID**: react-073
+**Title**: How do you prevent memory leaks in React components?
+**Difficulty**: Medium
+**Category**: Effects & Lifecycle
+
+### Answer 📄
+
+Memory leaks in React typically occur when a component sets state after it has unmounted. The fix in every case is a proper cleanup function inside `useEffect`.
+
+**1. Async fetch operations:**
+
+```jsx
+// Problematic — setState may be called after unmount
+useEffect(() => {
+  fetch('/api/data')
+    .then((r) => r.json())
+    .then((data) => setData(data)); // runs even if component unmounted
+}, []);
+
+// Fixed — AbortController cancels the in-flight request on cleanup
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch('/api/data', { signal: controller.signal })
+    .then((r) => r.json())
+    .then((data) => setData(data))
+    .catch((err) => {
+      if (err.name === 'AbortError') return; // ignore intentional cancellation
+    });
+
+  return () => controller.abort();
+}, []);
+```
+
+**2. Event listeners:**
+
+```jsx
+useEffect(() => {
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+```
+
+**3. Intervals and timeouts:**
+
+```jsx
+useEffect(() => {
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id);
+}, []);
+```
+
+**4. Subscriptions (WebSocket, observables, stores):**
+
+```jsx
+useEffect(() => {
+  const subscription = eventBus.subscribe(topic, handleMessage);
+  return () => subscription.unsubscribe();
+}, [topic]);
+```
+
+**The rule:** every `useEffect` that sets up something persistent — a network request, event listener, timer, or subscription — must return a cleanup function that tears it down.
+
+React 18 StrictMode deliberately mounts → unmounts → remounts effects in development to expose missing cleanup functions early.
+
+## 🧠 Question 74
+
+**ID**: react-074
+**Title**: What is `React.Children` and when do you use it?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+`React.Children` is a utility for safely working with the `children` prop. The `children` prop can be a single element, an array, `null`, `undefined`, a string, or a number — `React.Children` normalizes all of these.
+
+```jsx
+function List({ children }) {
+  const count = React.Children.count(children);
+
+  return (
+    <div>
+      <p>{count} items</p>
+      <ul>
+        {React.Children.map(children, (child, index) => (
+          <li key={index}>{child}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+**Available methods:**
+
+- `React.Children.map(children, fn)` — like `Array.map`, handles `null`/`undefined`
+- `React.Children.forEach(children, fn)` — like `Array.forEach`
+- `React.Children.count(children)` — total number of children
+- `React.Children.only(children)` — asserts exactly one child, throws otherwise
+- `React.Children.toArray(children)` — converts children to a flat array with stable keys
+
+**When to use it:**
+
+- Building layout components that need to iterate over or count children
+- Adding a wrapper element around each child
+- Filtering or selecting specific children by type
+
+**Modern alternative:**
+
+The React team now recommends passing render props or arrays of objects instead of relying on `React.Children`, because:
+
+- It breaks when children are wrapped in a `Fragment`
+- It doesn't compose well with components that return arrays
+- `React.cloneElement` (often paired with `React.Children`) is considered an escape hatch
+
+```jsx
+// Modern preferred pattern — explicit slots via props
+function Tabs({ tabs }) {
+  return tabs.map((tab) => <TabPanel key={tab.id} {...tab} />);
+}
+```
+
+## 🧠 Question 75
+
+**ID**: react-075
+**Title**: What is `displayName` in React and why does it matter?
+**Difficulty**: Easy
+**Category**: React Basics
+
+### Answer 📄
+
+`displayName` is a string property you set on a component to control how it appears in React DevTools, error messages, and stack traces.
+
+**Why it's needed:**
+
+In production builds, function names are minified (`a`, `b`, `c`). Even in development, anonymous arrow functions lose their names. `displayName` provides a stable, human-readable label.
+
+**Setting it on an HOC:**
+
+```jsx
+function withAuth(Component) {
+  function WithAuth(props) {
+    const user = useAuth();
+    if (!user) return <Redirect to="/login" />;
+    return <Component {...props} />;
+  }
+
+  // DevTools shows "withAuth(Button)" instead of "WithAuth" or "Component"
+  WithAuth.displayName = `withAuth(${Component.displayName ?? Component.name})`;
+  return WithAuth;
+}
+```
+
+**Setting it on Context:**
+
+```jsx
+const ThemeContext = React.createContext(null);
+ThemeContext.displayName = 'ThemeContext'; // DevTools shows meaningful name
+```
+
+**Named vs anonymous functions:**
+
+```jsx
+// Anonymous — DevTools may show "Component"
+const MyList = memo(({ items }) => <ul>{...}</ul>);
+
+// Named — DevTools shows "memo(MyList)"
+const MyList = memo(function MyList({ items }) {
+  return <ul>{...}</ul>;
+});
+```
+
+**Who sets it automatically:**
+
+Libraries like `styled-components`, `Apollo Client`, and `react-query` set `displayName` on their generated components automatically, which is why they tend to have readable DevTools output without any manual work.

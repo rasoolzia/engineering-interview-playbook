@@ -4007,3 +4007,347 @@ const MyList = memo(function MyList({ items }) {
 **چه چیزهایی آن را خودکار تنظیم می‌کنند:**
 
 کتابخانه‌هایی مثل `styled-components`، `Apollo Client` و `react-query` معمولاً روی کامپوننت‌های تولیدی خود `displayName` می‌گذارند تا خروجی DevTools خواناتر باشد.
+
+## 🧠 سوال 76
+
+**شناسه**: react-076
+**عنوان**: چگونه کامپوننت‌های React را با React Testing Library تست می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مبانی React
+
+### پاسخ 📄
+
+React Testing Library یا RTL روش استاندارد تست کامپوننت‌های React است. فلسفه اصلی آن این است: **رفتار را از دید کاربر تست کن، نه جزئیات پیاده‌سازی را**.
+
+**تست ساده:**
+
+```jsx
+// Component
+function Counter() {
+  const [count, setCount] = useState(0);
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount((c) => c + 1)}>Increment</button>
+    </div>
+  );
+}
+
+// Test
+import { render, screen, fireEvent } from '@testing-library/react';
+
+test('counter increments when button is clicked', () => {
+  render(<Counter />);
+
+  expect(screen.getByText('Count: 0')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Increment' }));
+
+  expect(screen.getByText('Count: 1')).toBeInTheDocument();
+});
+```
+
+**اولویت query ها طبق پیشنهاد RTL:**
+
+1. `getByRole` — بهترین و نزدیک‌ترین به تجربه کاربر و screen reader
+2. `getByLabelText` — برای input هایی که label دارند
+3. `getByPlaceholderText` — گزینه دوم برای input ها
+4. `getByText` — برای محتوای غیرتعاملی
+5. `getByTestId` — آخرین راه‌حل
+
+**تست async:**
+
+```jsx
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+test('shows user data after loading', async () => {
+  render(<UserProfile id={1} />);
+
+  expect(screen.getByText('Loading...')).toBeInTheDocument();
+
+  await waitFor(() => {
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+  });
+});
+```
+
+**چه چیزهایی را نباید تست کنید:**
+
+- state داخلی کامپوننت
+- فراخوانی method های داخلی
+- جزئیات پیاده‌سازی‌ای که از دید کاربر اثری ندارند
+
+## 🧠 سوال 77
+
+**شناسه**: react-077
+**عنوان**: چگونه custom hook ها را در React تست می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Hooks
+
+### پاسخ 📄
+
+Custom hook ها را نمی‌توان خارج از کامپوننت React صدا زد. utility ای به نام `renderHook` از `@testing-library/react` یک wrapper حداقلی فراهم می‌کند تا hook را به‌صورت جداگانه تست کنید.
+
+```jsx
+// Hook مورد تست
+function useCounter(initialValue = 0) {
+  const [count, setCount] = useState(initialValue);
+  const increment = useCallback(() => setCount((c) => c + 1), []);
+  const decrement = useCallback(() => setCount((c) => c - 1), []);
+  const reset = useCallback(() => setCount(initialValue), [initialValue]);
+  return { count, increment, decrement, reset };
+}
+
+// Tests
+import { renderHook, act } from '@testing-library/react';
+
+test('initializes with default value', () => {
+  const { result } = renderHook(() => useCounter());
+  expect(result.current.count).toBe(0);
+});
+
+test('increments count', () => {
+  const { result } = renderHook(() => useCounter(5));
+
+  act(() => {
+    result.current.increment();
+  });
+
+  expect(result.current.count).toBe(6);
+});
+```
+
+**تست با prop های متفاوت و `rerender`:**
+
+```jsx
+test('resets to new initial value on rerender', () => {
+  const { result, rerender } = renderHook(
+    ({ initial }) => useCounter(initial),
+    { initialProps: { initial: 0 } },
+  );
+
+  expect(result.current.count).toBe(0);
+
+  rerender({ initial: 100 });
+  // توجه: count ریست نمی‌شود — initialValue فقط در mount اول اعمال می‌شود
+});
+```
+
+**تست hook هایی که به context نیاز دارند:**
+
+```jsx
+test('hook using ThemeContext', () => {
+  const wrapper = ({ children }) => (
+    <ThemeContext.Provider value={{ color: 'blue' }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+
+  const { result } = renderHook(() => useTheme(), { wrapper });
+  expect(result.current.color).toBe('blue');
+});
+```
+
+همیشه فراخوانی‌هایی که state را تغییر می‌دهند داخل `act()` قرار دهید تا queue آپدیت React قبل از assertion خالی شود.
+
+## 🧠 سوال 78
+
+**شناسه**: react-078
+**عنوان**: `act()` در تست React چیست و چرا لازم است؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+`act()` یک utility برای تست است که مطمئن می‌شود همه update های state، effect ها و re-render هایی که توسط یک قطعه کد ایجاد شده‌اند، **قبل از assertion کاملاً پردازش شده باشند**.
+
+**چرا لازم است:**
+
+React update های state را batch می‌کند و effect ها را async پردازش می‌کند. بدون `act()` ممکن است روی UI قدیمی assertion بزنید، چون هنوز re-render کامل نشده است.
+
+```jsx
+// بدون act() — ممکن است assertion روی UI قدیمی انجام شود
+test('broken test', () => {
+  render(<Counter />);
+  screen.getByRole('button').click();
+  // React هنوز رندر مجدد نشده است
+  expect(screen.getByText('Count: 1')).toBeInTheDocument();
+});
+
+// با act() — React قبل از assertion همه update ها را flush می‌کند
+test('correct test', () => {
+  render(<Counter />);
+
+  act(() => {
+    screen.getByRole('button').click();
+  });
+
+  expect(screen.getByText('Count: 1')).toBeInTheDocument();
+});
+```
+
+**React Testing Library معمولاً `act()` را خودش انجام می‌دهد:**
+
+در RTL، ابزارهایی مثل `render`، `fireEvent`، `userEvent` و `waitFor` معمولاً عملیات را داخل `act()` انجام می‌دهند. بنابراین در بیشتر تست‌ها لازم نیست `act()` را دستی صدا بزنید.
+
+**`act()` async:**
+
+```jsx
+test('loads data', async () => {
+  render(<DataComponent />);
+
+  await act(async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Load' }));
+  });
+
+  expect(screen.getByText('Loaded Data')).toBeInTheDocument();
+});
+```
+
+**هشدارهای `act()`:**
+
+اگر اخطاری شبیه `not wrapped in act(...)` دیدید، یعنی یک update state بیرون از `act()` رخ داده است، معمولاً از یک عملیات async که بعد از پایان تست resolve شده. راه‌حل این است که همه عملیات async را await کنید یا از `waitFor` استفاده کنید.
+
+## 🧠 سوال 79
+
+**شناسه**: react-079
+**عنوان**: چرا `useContext` باعث re-render های غیرضروری می‌شود و چگونه آن را حل می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+`useContext` یک کامپوننت را به **کل مقدار context** subscribe می‌کند. هر زمان هر بخشی از آن مقدار تغییر کند، همه مصرف‌کننده‌های آن context دوباره رندر می‌شوند، حتی اگر فقط از یک فیلد کوچک استفاده کنند.
+
+```jsx
+const AppContext = createContext({
+  user: null,
+  theme: 'light',
+  language: 'en',
+});
+
+// این کامپوننت با هر تغییر AppContext دوباره رندر می‌شود
+function Avatar() {
+  const { user } = useContext(AppContext);
+  return <img src={user.avatar} />;
+}
+```
+
+**راه‌حل‌ها:**
+
+**1. تقسیم context ها بر اساس حوزه و نرخ تغییر:**
+
+```jsx
+const UserContext = createContext(null);
+const ThemeContext = createContext('light');
+
+// آواتار فقط زمانی که UserContext تغییر کند، دوباره رندر می‌شود
+function Avatar() {
+  const user = useContext(UserContext);
+  return <img src={user.avatar} />;
+}
+```
+
+**2. memoize کردن مقدار context:**
+
+```jsx
+function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState('light');
+
+  // بدون useMemo: ارجاع شیء جدید در هر رندر، همه مصرف‌کنندگان را فعال می‌کند
+  const value = useMemo(
+    () => ({ user, theme, setUser, setTheme }),
+    [user, theme],
+  );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+```
+
+**3. استفاده از `React.memo` برای بخش مصرف‌کننده واقعی:**
+
+```jsx
+const Avatar = React.memo(function Avatar({ user }) {
+  return <img src={user.avatar} />; // Avatar فقط در صورت تغییر مرجع کاربر دوباره رندر می‌شود
+});
+
+function AvatarConnected() {
+  const { user } = useContext(AppContext);
+  return <Avatar user={user} />;
+}
+```
+
+**4. context selector ها** با کتابخانه `use-context-selector`:
+
+```jsx
+import { createContext, useContextSelector } from 'use-context-selector';
+
+function Avatar() {
+  const user = useContextSelector(AppContext, (ctx) => ctx.user);
+  // فقط زمانی که ctx.user تغییر کند، دوباره رندر می‌شود
+  return <img src={user.avatar} />;
+}
+```
+
+**وضعیت فعلی React:**
+
+React هنوز API داخلی برای context selector ندارد. راه پیشنهادی فعلی معمولاً split کردن context ها بر اساس domain است. درباره selector API صحبت‌هایی شده، اما هنوز به‌صورت رسمی منتشر نشده است.
+
+## 🧠 سوال 80
+
+**شناسه**: react-080
+**عنوان**: ترفند prop `key` برای reset کردن state کامپوننت چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+تغییر prop `key` یک کامپوننت باعث می‌شود React **instance قبلی را unmount و یک instance کاملاً جدید mount کند** و در نتیجه همه state های داخلی آن reset شوند. این رفتار عمدی است و گاهی ساده‌ترین راه‌حل برای مسائل همگام‌سازی state است.
+
+```jsx
+function ParentForm({ userId }) {
+  return (
+    // وقتی userId تغییر می‌کند، React فرم قدیمی را از بین می‌برد و فرم جدیدی ایجاد می‌کند
+    // همه useState های داخل فرم به طور خودکار به مقادیر اولیه بازنشانی می‌شوند
+    <Form key={userId} userId={userId} />
+  );
+}
+```
+
+**چه مشکلی را حل می‌کند:**
+
+وقتی همان type از کامپوننت با داده جدید رندر می‌شود، React همان instance موجود را reuse می‌کند و فقط prop ها را update می‌کند. state ای که با `useState` مقداردهی اولیه شده، خودبه‌خود reset نمی‌شود مگر اینکه خودتان آن را مدیریت کنید.
+
+```jsx
+// مشکل: با عوض شدن userId، draft فرم reset نمی‌شود
+function UserForm({ userId }) {
+  const [name, setName] = useState('');
+}
+
+// راه‌حل 1: استفاده از key
+<UserForm key={userId} userId={userId} />;
+
+// راه‌حل 2: reset کردن با useEffect
+useEffect(() => {
+  setName('');
+  setEmail('');
+  // ... reset کردن بقیه state ها
+}, [userId]);
+```
+
+**مثال‌های کاربردی:**
+
+```jsx
+// reset کردن تایمر با تغییر تمرین
+<Timer key={currentExercise.id} duration={currentExercise.duration} />
+
+// reset کردن editor با تغییر سند
+<Editor key={documentId} initialContent={document.content} />
+
+// اجرای دوباره animation
+<AnimatedBanner key={animationTrigger} message={message} />
+```
+
+**نکته مهم:** کامپوننتی که key آن را عوض می‌کنید باید بتواند state خود را از prop ها یا initializer های اولیه دوباره بسازد، چون همه state های داخلی آن در mount جدید از اول مقداردهی می‌شوند.

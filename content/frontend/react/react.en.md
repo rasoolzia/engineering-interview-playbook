@@ -4007,3 +4007,347 @@ const MyList = memo(function MyList({ items }) {
 **Who sets it automatically:**
 
 Libraries like `styled-components`, `Apollo Client`, and `react-query` set `displayName` on their generated components automatically, which is why they tend to have readable DevTools output without any manual work.
+
+## 🧠 Question 76
+
+**ID**: react-076
+**Title**: How do you test React components with React Testing Library?
+**Difficulty**: Medium
+**Category**: React Basics
+
+### Answer 📄
+
+React Testing Library (RTL) is the standard for testing React components. Its philosophy: **test behavior from the user's perspective, not implementation details**.
+
+**Basic test:**
+
+```jsx
+// Component
+function Counter() {
+  const [count, setCount] = useState(0);
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount((c) => c + 1)}>Increment</button>
+    </div>
+  );
+}
+
+// Test
+import { render, screen, fireEvent } from '@testing-library/react';
+
+test('counter increments when button is clicked', () => {
+  render(<Counter />);
+
+  expect(screen.getByText('Count: 0')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Increment' }));
+
+  expect(screen.getByText('Count: 1')).toBeInTheDocument();
+});
+```
+
+**Query priority (RTL recommendation — use in this order):**
+
+1. `getByRole` — most accessible; tests what users and screen readers see
+2. `getByLabelText` — for form inputs with labels
+3. `getByPlaceholderText` — fallback for inputs without labels
+4. `getByText` — for non-interactive content
+5. `getByTestId` — last resort (couples tests to implementation)
+
+**Async testing:**
+
+```jsx
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+test('shows user data after loading', async () => {
+  render(<UserProfile id={1} />);
+
+  expect(screen.getByText('Loading...')).toBeInTheDocument();
+
+  await waitFor(() => {
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+  });
+});
+```
+
+**What NOT to test:**
+
+- Internal state values (`component.state`)
+- Component method calls
+- Implementation details that have no effect on user experience
+
+## 🧠 Question 77
+
+**ID**: react-077
+**Title**: How do you test custom hooks in React?
+**Difficulty**: Medium
+**Category**: Hooks
+
+### Answer 📄
+
+Custom hooks cannot be called outside a React component. The `renderHook` utility from `@testing-library/react` provides a minimal component wrapper to test hooks in isolation.
+
+```jsx
+// Hook under test
+function useCounter(initialValue = 0) {
+  const [count, setCount] = useState(initialValue);
+  const increment = useCallback(() => setCount((c) => c + 1), []);
+  const decrement = useCallback(() => setCount((c) => c - 1), []);
+  const reset = useCallback(() => setCount(initialValue), [initialValue]);
+  return { count, increment, decrement, reset };
+}
+
+// Tests
+import { renderHook, act } from '@testing-library/react';
+
+test('initializes with default value', () => {
+  const { result } = renderHook(() => useCounter());
+  expect(result.current.count).toBe(0);
+});
+
+test('increments count', () => {
+  const { result } = renderHook(() => useCounter(5));
+
+  act(() => {
+    result.current.increment();
+  });
+
+  expect(result.current.count).toBe(6);
+});
+```
+
+**Testing with different props (rerender):**
+
+```jsx
+test('resets to new initial value on rerender', () => {
+  const { result, rerender } = renderHook(
+    ({ initial }) => useCounter(initial),
+    { initialProps: { initial: 0 } },
+  );
+
+  expect(result.current.count).toBe(0);
+
+  rerender({ initial: 100 });
+  // note: count does not reset — initialValue only applies on first mount
+});
+```
+
+**Testing hooks that require context:**
+
+```jsx
+test('hook using ThemeContext', () => {
+  const wrapper = ({ children }) => (
+    <ThemeContext.Provider value={{ color: 'blue' }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+
+  const { result } = renderHook(() => useTheme(), { wrapper });
+  expect(result.current.color).toBe('blue');
+});
+```
+
+Always wrap state-changing calls in `act()` to flush React's update queue before asserting.
+
+## 🧠 Question 78
+
+**ID**: react-078
+**Title**: What is `act()` in React testing and why is it necessary?
+**Difficulty**: Medium
+**Category**: React Internals
+
+### Answer 📄
+
+`act()` is a testing utility that ensures all state updates, effects, and re-renders triggered by a piece of code have been **fully processed** before you make assertions.
+
+**Why it's needed:**
+
+React batches state updates and processes effects asynchronously. Without `act()`, you assert against a stale UI — the component hasn't re-rendered yet.
+
+```jsx
+// Without act() — stale assertion (may fail)
+test('broken test', () => {
+  render(<Counter />);
+  screen.getByRole('button').click(); // triggers state update
+  // React hasn't re-rendered yet
+  expect(screen.getByText('Count: 1')).toBeInTheDocument(); // might fail
+});
+
+// With act() — React flushes all updates before assertion
+test('correct test', () => {
+  render(<Counter />);
+
+  act(() => {
+    screen.getByRole('button').click();
+  });
+
+  expect(screen.getByText('Count: 1')).toBeInTheDocument(); // passes
+});
+```
+
+**React Testing Library handles `act()` automatically:**
+
+RTL's `fireEvent`, `userEvent`, `render`, and `waitFor` all wrap their operations in `act()` internally. You rarely need to call `act()` directly when using RTL.
+
+**Async `act()`:**
+
+```jsx
+test('loads data', async () => {
+  render(<DataComponent />);
+
+  await act(async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Load' }));
+  });
+
+  expect(screen.getByText('Loaded Data')).toBeInTheDocument();
+});
+```
+
+**`act()` warnings:**
+
+If you see `Warning: An update to Component inside a test was not wrapped in act(...)`, a state update happened outside of `act()` — typically from an async operation that resolved after the test ended. Fix by awaiting all async operations within `act()` or using `waitFor`.
+
+## 🧠 Question 79
+
+**ID**: react-079
+**Title**: Why does `useContext` cause unnecessary re-renders and how do you solve it?
+**Difficulty**: Hard
+**Category**: Performance Optimization
+
+### Answer 📄
+
+`useContext` subscribes a component to the **entire** context value. Whenever any part of that value changes, every component consuming that context re-renders — even if it only uses one field.
+
+```jsx
+const AppContext = createContext({
+  user: null,
+  theme: 'light',
+  language: 'en',
+});
+
+// This re-renders on EVERY AppContext change — even theme or language changes
+function Avatar() {
+  const { user } = useContext(AppContext);
+  return <img src={user.avatar} />;
+}
+```
+
+**Solutions:**
+
+**1. Split contexts by update frequency (recommended):**
+
+```jsx
+const UserContext = createContext(null);
+const ThemeContext = createContext('light');
+
+// Avatar only re-renders when UserContext changes
+function Avatar() {
+  const user = useContext(UserContext);
+  return <img src={user.avatar} />;
+}
+```
+
+**2. Memoize the context value:**
+
+```jsx
+function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState('light');
+
+  // Without useMemo: new object reference on every render triggers all consumers
+  const value = useMemo(
+    () => ({ user, theme, setUser, setTheme }),
+    [user, theme],
+  );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+```
+
+**3. Wrap consumers in `React.memo`:**
+
+```jsx
+const Avatar = React.memo(function Avatar({ user }) {
+  return <img src={user.avatar} />;
+});
+
+function AvatarConnected() {
+  const { user } = useContext(AppContext);
+  return <Avatar user={user} />; // Avatar only re-renders if user reference changes
+}
+```
+
+**4. Context selectors (`use-context-selector` library):**
+
+```jsx
+import { createContext, useContextSelector } from 'use-context-selector';
+
+function Avatar() {
+  const user = useContextSelector(AppContext, (ctx) => ctx.user);
+  // Only re-renders when ctx.user changes
+  return <img src={user.avatar} />;
+}
+```
+
+**React's current stance:**
+
+React does not have a built-in context selector API. The recommended approach is to split contexts by domain. An official selector API has been discussed but has not been released.
+
+## 🧠 Question 80
+
+**ID**: react-080
+**Title**: What is the `key` prop trick for resetting component state?
+**Difficulty**: Medium
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+Changing a component's `key` prop forces React to **unmount the old instance and mount a completely fresh one** — including resetting all internal state. This is intentional and sometimes the most elegant solution to a state synchronization problem.
+
+```jsx
+function ParentForm({ userId }) {
+  return (
+    // When userId changes, React destroys the old Form and creates a new one
+    // All useState inside Form resets to initial values automatically
+    <Form key={userId} userId={userId} />
+  );
+}
+```
+
+**The problem it solves:**
+
+When the same component type renders with different data, React reuses the existing instance and only updates props. State initialized in `useState` does **not** reset unless you handle it explicitly.
+
+```jsx
+// Problem: switching users doesn't reset the form's draft state
+function UserForm({ userId }) {
+  const [name, setName] = useState(''); // persists across userId changes
+}
+
+// Solution 1: key prop (simplest)
+<UserForm key={userId} userId={userId} />;
+
+// Solution 2: useEffect to reset (verbose — must list every state piece)
+useEffect(() => {
+  setName('');
+  setEmail('');
+  // ...reset all fields
+}, [userId]);
+```
+
+**Practical examples:**
+
+```jsx
+// Reset a timer when the exercise changes
+<Timer key={currentExercise.id} duration={currentExercise.duration} />
+
+// Reset a rich text editor when the document changes
+<Editor key={documentId} initialContent={document.content} />
+
+// Force re-trigger of an animation
+<AnimatedBanner key={animationTrigger} message={message} />
+```
+
+**Important:** the component being keyed must fully initialize its state from props (or from an initializer function), since all internal state resets to the values passed to `useState` on the fresh mount.

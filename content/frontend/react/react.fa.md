@@ -4351,3 +4351,313 @@ useEffect(() => {
 ```
 
 **نکته مهم:** کامپوننتی که key آن را عوض می‌کنید باید بتواند state خود را از prop ها یا initializer های اولیه دوباره بسازد، چون همه state های داخلی آن در mount جدید از اول مقداردهی می‌شوند.
+
+## 🧠 سوال 81
+
+**شناسه**: react-081
+**عنوان**: الگوی headless component چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+Headless component الگویی است که **منطق و state** را از **UI و markup** جدا می‌کند. این نوع کامپوننت رفتار لازم مثل accessibility، تعامل با کیبورد و مدیریت state را فراهم می‌کند، اما خودش UI مشخصی رندر نمی‌کند و مصرف‌کننده markup را تعیین می‌کند.
+
+```jsx
+// hook هدلس برای toggle — فقط منطق، بدون UI
+function useToggle(initialState = false) {
+  const [on, setOn] = useState(initialState);
+  const toggle = useCallback(() => setOn((v) => !v), []);
+  const setToggle = useCallback((v) => setOn(Boolean(v)), []);
+  return { on, toggle, setToggle };
+}
+
+// مصرف‌کننده 1 — رابط کاربری checkbox
+function FeatureFlag({ label }) {
+  const { on, toggle } = useToggle();
+  return (
+    <label>
+      <input type="checkbox" checked={on} onChange={toggle} />
+      {label}
+    </label>
+  );
+}
+
+// مصرف‌کننده 2 — رابط کاربری switch
+function DarkModeSwitch() {
+  const { on, toggle } = useToggle();
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      onClick={toggle}
+      className={on ? 'switch-on' : 'switch-off'}
+    >
+      {on ? 'Dark' : 'Light'}
+    </button>
+  );
+}
+```
+
+**نمونه‌های معروف در دنیای واقعی:**
+
+- **Radix UI** — primitive های بدون استایل و دسترس‌پذیر
+- **react-aria** — hook هایی مثل `useButton` و `useCheckbox`
+- **Downshift** — برای autocomplete و combobox
+- **TanStack Table** — جدول هدلس با sorting، filtering و pagination
+
+**چرا مهم است:**
+
+- یک منطق واحد می‌تواند چند UI متفاوت را پشتیبانی کند
+- منطق جدا از markup تست می‌شود
+- design system ها می‌توانند روی این primitive ها سوار شوند بدون درگیری با استایل‌های تحمیلی
+
+## 🧠 سوال 82
+
+**شناسه**: react-082
+**عنوان**: الگوی Provider در React چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+الگوی Provider از Context React برای تزریق dependency، تنظیمات یا state مشترک به یک subtree استفاده می‌کند، بدون نیاز به prop drilling. این در عمل شکل React از dependency injection است.
+
+```jsx
+// تعریف context و hook محافظ
+const ConfigContext = createContext(null);
+
+export function ConfigProvider({ config, children }) {
+  const value = useMemo(() => config, [config]);
+  return (
+    <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
+  );
+}
+
+export function useConfig() {
+  const ctx = useContext(ConfigContext);
+  if (!ctx) throw new Error('useConfig must be used inside <ConfigProvider>');
+  return ctx;
+}
+
+// Root — یک‌بار wrap می‌کنیم
+function App() {
+  return (
+    <ConfigProvider config={{ apiUrl: 'https://api.example.com', env: 'prod' }}>
+      <Router />
+    </ConfigProvider>
+  );
+}
+
+// هر کامپوننت nested — بدون prop drilling
+function UserService() {
+  const { apiUrl } = useConfig();
+  // ...
+}
+```
+
+**ترکیب چند Provider:**
+
+```jsx
+function AppProviders({ children }) {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
+```
+
+**بهترین روش‌ها:**
+
+- همیشه یک custom hook صادر کنید، نه خود Context خام
+- مقدار provider را memoize کنید تا مصرف‌کننده‌ها بی‌دلیل re-render نشوند
+- provider ها را بر اساس domain جدا کنید، مثل Auth، Theme یا Config
+
+## 🧠 سوال 83
+
+**شناسه**: react-083
+**عنوان**: کامپوننت‌های Presentational و Container چیستند؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+الگوی Presentational/Container که در سال 2015 معروف شد، کامپوننت‌ها را به دو دسته تقسیم می‌کند:
+
+|              | Presentational | Container                  |
+| ------------ | -------------- | -------------------------- |
+| تمرکز        | ظاهر UI        | منطق و رفتار               |
+| منبع داده    | فقط props      | state، context یا store    |
+| side effect  | ندارد          | fetch، subscription و غیره |
+| قابلیت reuse | بالا           | کمتر                       |
+
+```jsx
+// Presentational — فقط UI
+function UserCard({ name, avatar, onFollow }) {
+  return (
+    <div className="card">
+      <img src={avatar} alt={name} />
+      <h2>{name}</h2>
+      <button onClick={onFollow}>Follow</button>
+    </div>
+  );
+}
+
+// Container — منطق و fetch داده
+function UserCardContainer({ userId }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetchUser(userId).then(setUser);
+  }, [userId]);
+
+  const handleFollow = () => followUser(userId);
+
+  if (!user) return <Skeleton />;
+  return (
+    <UserCard name={user.name} avatar={user.avatar} onFollow={handleFollow} />
+  );
+}
+```
+
+**نگاه مدرن:**
+
+بعدها خود Dan Abramov هم گفت این الگو را دیگر به‌عنوان یک قانون سخت توصیه نمی‌کند. امروز custom hook ها همان جداسازی منطق و UI را تمیزتر انجام می‌دهند، بدون اینکه حتماً به دو فایل کامپوننت جدا نیاز باشد.
+
+```jsx
+// رویکرد مدرن — hook منطق container را جدا می‌کند
+function useUser(userId) {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    fetchUser(userId).then(setUser);
+  }, [userId]);
+  return user;
+}
+
+function UserCard({ userId }) {
+  const user = useUser(userId);
+  if (!user) return <Skeleton />;
+  return <div>{user.name}</div>;
+}
+```
+
+نکته اصلی این الگو، یعنی جدا کردن concern ها، هنوز درست است؛ فقط ابزار پیاده‌سازی آن از container component به hook ها تغییر کرده است.
+
+## 🧠 سوال 84
+
+**شناسه**: react-084
+**عنوان**: ساختار پوشه‌بندی feature-based در React چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+ساختار feature-based یا domain-based کد را **بر اساس feature** سازمان‌دهی می‌کند، نه بر اساس نوع فایل. این روش در پروژه‌های بزرگ بسیار بهتر از ساختار type-based مقیاس پیدا می‌کند.
+
+**ساختار بر اساس نوع فایل — معمولاً ضعیف‌تر برای مقیاس:**
+
+```text
+src/
+  components/
+  hooks/
+  utils/
+  services/
+  types/
+```
+
+**ساختار feature-based — مناسب‌تر برای رشد پروژه:**
+
+```text
+src/
+  features/
+    auth/
+      components/
+      hooks/
+      api/
+      types.ts
+      index.ts
+    products/
+      components/
+      hooks/
+      api/
+      types.ts
+      index.ts
+    orders/
+      ...
+  shared/
+    components/
+    hooks/
+    utils/
+    types/
+  app/
+    App.tsx
+    router.tsx
+    store.ts
+```
+
+**نقش `index.ts` به‌عنوان public API:**
+
+هر feature فقط چیزهایی را export می‌کند که بقیه feature ها باید ببینند:
+
+```ts
+// features/auth/index.ts
+export { AuthProvider, AuthGuard } from './components';
+export { useAuth } from './hooks/useAuth';
+export type { User, AuthState } from './types';
+// جزئیات پیاده‌سازی داخلی صادر نمی‌شوند
+```
+
+**مزیت‌ها نسبت به ساختار type-based:**
+
+- همه کدهای مربوط به یک feature کنار هم هستند و پیدا کردنشان راحت‌تر است
+- حذف یا استخراج یک feature ساده‌تر می‌شود
+- برای تیم‌های بزرگ بهتر است، چون مالکیت بر اساس feature تعریف می‌شود نه نوع فایل
+
+## 🧠 سوال 85
+
+**شناسه**: react-085
+**عنوان**: barrel file چیست و trade-off های آن چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+Barrel file معمولاً یک `index.ts` یا `index.js` است که export های چند ماژول را یکجا دوباره export می‌کند و یک نقطه ورود واحد برای یک پوشه می‌سازد.
+
+```ts
+// components/index.ts — barrel file
+export { Button } from './Button';
+export { Input } from './Input';
+export { Modal } from './Modal';
+
+// مصرف‌کننده — import تمیزتر
+import { Button, Modal } from '@/components';
+// vs without barrel:
+import { Button } from '@/components/Button/Button';
+```
+
+**مزیت‌ها:**
+
+- مسیر import ها برای مصرف‌کننده کوتاه‌تر و تمیزتر می‌شود
+- public API ماژول را کنترل می‌کنید
+- refactor کردن داخلی ساده‌تر می‌شود، چون import مصرف‌کننده‌ها تغییر نمی‌کند
+
+**محدودیت‌ها و مشکلات (Trade-offs and pitfalls):**
+
+**۱. مشکل Tree shaking:**
+اگر فایل بشکه‌ای (barrel) دارای `side effects` در نظر گرفته شود، `bundler`ها ممکن است کل بشکه را `import` کنند حتی اگر شما فقط از یکی از `export`های آن استفاده کنید.
+
+**راه حل:** مقدار `"sideEffects": false` را در `package.json` قرار دهید، یا برای `production bundles` از `direct path imports` استفاده کنید.
+
+**۲. استارت آهسته سرور در حالت توسعه (مخصوص Vite/ESBuild):**
+زنجیره‌های عمیق بشکه‌ای (`deep barrel chains`) باعث می‌شوند `bundler` مجبور شود تعداد زیادی فایل را هنگام استارت پردازش کند. `Vite` به طور خاص در مورد این الگو هشدار می‌دهد.
+
+**۳. خطر وابستگی حلقوی (Circular dependency):**
+اگر `ModuleA` درون بشکه‌ای قرار داشته باشد که همان `ModuleA` نیز از آن `import` می‌کند، با خطاهای `circular dependency` مواجه خواهید شد.
+
+**روش بهترین (Best practice):** از فایل‌های بشکه‌ای در سطح `feature` استفاده کنید (هر `feature` یک بشکه) به جای اینکه زنجیره‌های عمیق بشکه‌ای ایجاد کنید.

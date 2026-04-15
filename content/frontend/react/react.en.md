@@ -4351,3 +4351,313 @@ useEffect(() => {
 ```
 
 **Important:** the component being keyed must fully initialize its state from props (or from an initializer function), since all internal state resets to the values passed to `useState` on the fresh mount.
+
+## 🧠 Question 81
+
+**ID**: react-081
+**Title**: What is the headless component pattern?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A headless component separates **logic and state** from **UI markup**. The component provides behavior (accessibility, keyboard interaction, state management) but renders nothing itself — the consumer provides all the markup.
+
+```jsx
+// Headless toggle hook — pure logic, no UI
+function useToggle(initialState = false) {
+  const [on, setOn] = useState(initialState);
+  const toggle = useCallback(() => setOn((v) => !v), []);
+  const setToggle = useCallback((v) => setOn(Boolean(v)), []);
+  return { on, toggle, setToggle };
+}
+
+// Consumer 1 — checkbox UI
+function FeatureFlag({ label }) {
+  const { on, toggle } = useToggle();
+  return (
+    <label>
+      <input type="checkbox" checked={on} onChange={toggle} />
+      {label}
+    </label>
+  );
+}
+
+// Consumer 2 — switch UI (same logic, different UI)
+function DarkModeSwitch() {
+  const { on, toggle } = useToggle();
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      onClick={toggle}
+      className={on ? 'switch-on' : 'switch-off'}
+    >
+      {on ? 'Dark' : 'Light'}
+    </button>
+  );
+}
+```
+
+**Where you see headless components in the wild:**
+
+- **Radix UI** — `<DropdownMenu.Root>`, `<Dialog.Root>`, `<Popover.Root>`: unstyled, fully accessible primitives
+- **react-aria** (Adobe) — hooks like `useButton`, `useCheckbox`, `useSelect` with full ARIA handling
+- **Downshift** — headless autocomplete/combobox
+- **TanStack Table** — headless table with sorting, filtering, pagination
+
+**Why it matters:**
+
+- The same logic can power many visual variants
+- Logic is tested independently of markup
+- Design systems can build on top of headless primitives without fighting opinionated styles
+
+## 🧠 Question 82
+
+**ID**: react-082
+**Title**: What is the Provider pattern in React?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+The Provider pattern uses React Context to inject dependencies, configuration, or shared state into a component subtree — without prop drilling. It is React's approach to dependency injection.
+
+```jsx
+// Define context + hook with a guard
+const ConfigContext = createContext(null);
+
+export function ConfigProvider({ config, children }) {
+  const value = useMemo(() => config, [config]);
+  return (
+    <ConfigContext.Provider value={value}>{children}</ConfigContext.Provider>
+  );
+}
+
+export function useConfig() {
+  const ctx = useContext(ConfigContext);
+  if (!ctx) throw new Error('useConfig must be used inside <ConfigProvider>');
+  return ctx;
+}
+
+// Root — wrap once
+function App() {
+  return (
+    <ConfigProvider config={{ apiUrl: 'https://api.example.com', env: 'prod' }}>
+      <Router />
+    </ConfigProvider>
+  );
+}
+
+// Any nested component — no prop drilling
+function UserService() {
+  const { apiUrl } = useConfig();
+  // ...
+}
+```
+
+**Composing multiple providers:**
+
+```jsx
+function AppProviders({ children }) {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}
+```
+
+**Best practices:**
+
+- Always export a custom hook (not the raw Context) — the hook enforces the guard and hides the Context implementation
+- Memoize the provider value to prevent unnecessary re-renders of all consumers
+- Split providers by domain (Auth, Theme, Config) rather than one giant global provider
+
+## 🧠 Question 83
+
+**ID**: react-083
+**Title**: What are Presentational and Container components?
+**Difficulty**: Easy
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+The Presentational/Container pattern (popularized by Dan Abramov in 2015) splits components into two categories:
+
+|              | Presentational  | Container                    |
+| ------------ | --------------- | ---------------------------- |
+| Concern      | How things look | How things work              |
+| Data source  | Props only      | State, Context, or stores    |
+| Side effects | None            | Data fetching, subscriptions |
+| Reusability  | High            | Low                          |
+
+```jsx
+// Presentational — pure UI, stateless
+function UserCard({ name, avatar, onFollow }) {
+  return (
+    <div className="card">
+      <img src={avatar} alt={name} />
+      <h2>{name}</h2>
+      <button onClick={onFollow}>Follow</button>
+    </div>
+  );
+}
+
+// Container — data fetching and logic
+function UserCardContainer({ userId }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetchUser(userId).then(setUser);
+  }, [userId]);
+
+  const handleFollow = () => followUser(userId);
+
+  if (!user) return <Skeleton />;
+  return (
+    <UserCard name={user.name} avatar={user.avatar} onFollow={handleFollow} />
+  );
+}
+```
+
+**Modern perspective:**
+
+Dan Abramov himself later noted he no longer recommends the pattern as a strict rule. Custom hooks now cleanly separate logic from presentation without needing to split into two component files.
+
+```jsx
+// Modern — hook extracts the "container" logic
+function useUser(userId) {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    fetchUser(userId).then(setUser);
+  }, [userId]);
+  return user;
+}
+
+function UserCard({ userId }) {
+  const user = useUser(userId);
+  if (!user) return <Skeleton />;
+  return <div>{user.name}</div>;
+}
+```
+
+The key insight — separating concerns — remains valid; the mechanism (two component files vs. hooks) has evolved.
+
+## 🧠 Question 84
+
+**ID**: react-084
+**Title**: What is feature-based folder structure in React?
+**Difficulty**: Easy
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+Feature-based (domain-based) folder structure organizes code **by feature** rather than by technical type. This scales significantly better than a type-based structure as projects grow.
+
+**Type-based (doesn't scale):**
+
+```text
+src/
+  components/    ← hundreds of files mixed together
+  hooks/
+  utils/
+  services/
+  types/
+```
+
+**Feature-based (scales well):**
+
+```
+src/
+  features/
+    auth/
+      components/     LoginForm.tsx, AuthGuard.tsx
+      hooks/          useAuth.ts, useSession.ts
+      api/            auth.api.ts
+      types.ts
+      index.ts        ← public API of this feature
+    products/
+      components/     ProductCard.tsx, ProductList.tsx
+      hooks/          useProducts.ts, useCart.ts
+      api/            products.api.ts
+      types.ts
+      index.ts
+    orders/
+      ...
+  shared/
+    components/       Button, Input, Modal (reusable UI)
+    hooks/            useDebounce, useLocalStorage
+    utils/            format, validate
+    types/            common types
+  app/
+    App.tsx
+    router.tsx
+    store.ts
+```
+
+**The `index.ts` as public API:**
+
+Each feature exports only what other features need to know about:
+
+```ts
+// features/auth/index.ts
+export { AuthProvider, AuthGuard } from './components';
+export { useAuth } from './hooks/useAuth';
+export type { User, AuthState } from './types';
+// Internal implementation details are NOT exported
+```
+
+**Benefits over type-based:**
+
+- All code related to a feature lives together → easier to navigate
+- Features can be deleted or extracted as a unit
+- Scales to large teams — teams own features, not file types
+
+## 🧠 Question 85
+
+**ID**: react-085
+**Title**: What are barrel files and what are their trade-offs?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A barrel file is an `index.ts` (or `index.js`) that re-exports from other modules, creating a single entry point for a folder.
+
+```ts
+// components/index.ts — barrel file
+export { Button } from './Button';
+export { Input } from './Input';
+export { Modal } from './Modal';
+
+// Consumer — clean import
+import { Button, Modal } from '@/components';
+// vs without barrel:
+import { Button } from '@/components/Button/Button';
+```
+
+**Benefits:**
+
+- Cleaner import paths for consumers
+- Ability to control the public API of a module
+- Easy refactoring — move internals without changing consumer imports
+
+**Trade-offs and pitfalls:**
+
+**1. Tree shaking issues:**
+Bundlers may import the entire barrel even if you only use one export, if the barrel is seen as having side effects.
+
+Fix: set `"sideEffects": false` in `package.json`, or use direct path imports for production bundles.
+
+**2. Slow dev server startup (Vite/ESBuild):**
+Deep barrel chains force the bundler to process many files on startup. Vite specifically warns about this pattern.
+
+**3. Circular dependency risk:**
+If `ModuleA` is in a barrel that `ModuleA` also imports from, you get circular dependency errors.
+
+**Best practice:** Use barrel files at the feature level (one per feature) rather than creating deep barrel chains.

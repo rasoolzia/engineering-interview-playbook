@@ -4661,3 +4661,331 @@ Deep barrel chains force the bundler to process many files on startup. Vite spec
 If `ModuleA` is in a barrel that `ModuleA` also imports from, you get circular dependency errors.
 
 **Best practice:** Use barrel files at the feature level (one per feature) rather than creating deep barrel chains.
+
+## 🧠 Question 86
+
+**ID**: react-086
+**Title**: Why does React favor composition over inheritance?
+**Difficulty**: Easy
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+React's component model is built entirely on **composition** — combining smaller components — rather than class inheritance hierarchies.
+
+**Why inheritance fails for UI:**
+
+```jsx
+// If React used inheritance, you could only extend one class
+class FancyBorderedDialog extends BorderedBox { ... }
+// Problem: UI needs to combine many concerns, not just extend one
+```
+
+**How React achieves the same goals with composition:**
+
+```jsx
+// Children prop — structural composition
+function Card({ children, title }) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      <div className="card-body">{children}</div>
+    </div>
+  );
+}
+
+function Dialog({ children }) {
+  return (
+    <Card title="Dialog">
+      <p>{children}</p>
+      <button>OK</button>
+    </Card>
+  );
+}
+
+// Hooks — logic composition (modern approach)
+function UserDashboard() {
+  const user = useAuth();
+  const theme = useTheme();
+  const { data } = useUserData();
+  // ...
+}
+```
+
+**React's official guidance:**
+
+> "If you want to reuse non-UI functionality between components, extract it into a separate JavaScript module."
+
+Custom hooks are the primary mechanism for sharing logic. They compose naturally — a hook can call other hooks — without the complexity of class hierarchies.
+
+## 🧠 Question 87
+
+**ID**: react-087
+**Title**: How do you choose between local state, lifted state, Context, and external stores?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+State placement is one of the most impactful architectural decisions in React. Use the simplest solution that satisfies the actual requirements.
+
+**Decision framework:**
+
+```
+Is the state used by only one component?
+  └─ YES → Local state (useState)
+
+Is the state used by a few closely related components?
+  └─ YES → Lift state to the nearest common ancestor
+
+Is the state needed across many components far apart in the tree?
+  ├─ Global UI state (theme, locale, auth user) → Context API
+  └─ Frequently updated or complex state?
+      ├─ Server state (data from APIs) → TanStack Query / SWR
+      └─ Complex client state → Zustand / Redux Toolkit
+```
+
+**In practice:**
+
+```jsx
+// 1. Local state
+const [isOpen, setIsOpen] = useState(false);
+
+// 2. Lifted state
+function Parent() {
+  const [selected, setSelected] = useState(null);
+  return (
+    <>
+      <List onSelect={setSelected} />
+      <Detail item={selected} />
+    </>
+  );
+}
+
+// 3. Context — read-heavy, rarely changes
+const user = useContext(AuthContext);
+
+// 4. TanStack Query — server data with caching
+const { data: products } = useQuery({
+  queryKey: ['products'],
+  queryFn: fetchProducts,
+});
+
+// 5. Zustand — shared UI state mutated from many places
+const count = useStore((state) => state.count);
+```
+
+**Common mistakes:**
+
+- Putting everything in a global store (over-engineering)
+- Using Context for frequently updated state (causes excessive re-renders)
+- Not using TanStack Query/SWR for server data (reinventing caching/loading/error handling)
+
+## 🧠 Question 88
+
+**ID**: react-088
+**Title**: What is Zustand and how does it work?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+Zustand is a minimal, fast, and scalable state management library. It uses a single store (plain JavaScript object) with actions defined alongside state, and React hooks for subscription.
+
+```js
+import { create } from 'zustand';
+
+const useCartStore = create((set, get) => ({
+  items: [],
+  total: 0,
+
+  addItem: (product) =>
+    set((state) => ({
+      items: [...state.items, product],
+      total: state.total + product.price,
+    })),
+
+  removeItem: (id) =>
+    set((state) => {
+      const items = state.items.filter((item) => item.id !== id);
+      return { items, total: items.reduce((sum, item) => sum + item.price, 0) };
+    }),
+
+  clearCart: () => set({ items: [], total: 0 }),
+  getItemCount: () => get().items.length,
+}));
+```
+
+**Using in components — subscribe to slices:**
+
+```jsx
+// Only re-renders when items.length changes
+const itemCount = useCartStore((state) => state.items.length);
+
+// Only re-renders when total changes
+const total = useCartStore((state) => state.total);
+
+// Actions are stable references — no re-render concern
+const addItem = useCartStore((state) => state.addItem);
+```
+
+**Middleware:**
+
+```js
+import { devtools, persist } from 'zustand/middleware';
+
+const useStore = create(
+  devtools(
+    persist(
+      (set) => ({
+        count: 0,
+        increment: () => set((s) => ({ count: s.count + 1 })),
+      }),
+      { name: 'counter-storage' },
+    ),
+  ),
+);
+```
+
+**Why Zustand over Redux:**
+
+- Zero boilerplate — no actions, reducers, or dispatchers
+- No Provider wrapper needed (store lives outside React)
+- Selector-based subscriptions prevent unnecessary re-renders
+- Async actions are plain async functions inside the store
+
+## 🧠 Question 89
+
+**ID**: react-089
+**Title**: What is Redux Toolkit and how does it modernize Redux?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+Redux Toolkit (RTK) is the official, opinionated way to write Redux code. It eliminates the boilerplate of vanilla Redux while keeping its predictable state container and DevTools.
+
+**`createSlice` — combines action creators + reducer:**
+
+```js
+import { createSlice } from '@reduxjs/toolkit';
+
+const counterSlice = createSlice({
+  name: 'counter',
+  initialState: { value: 0 },
+  reducers: {
+    increment: (state) => {
+      state.value += 1;
+    }, // Immer allows direct "mutations"
+    decrement: (state) => {
+      state.value -= 1;
+    },
+    incrementByAmount: (state, action) => {
+      state.value += action.payload;
+    },
+  },
+});
+
+export const { increment, decrement, incrementByAmount } = counterSlice.actions;
+export default counterSlice.reducer;
+```
+
+**`createAsyncThunk` — async actions:**
+
+```js
+export const fetchUser = createAsyncThunk('users/fetchById', async (userId) => {
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
+});
+
+const usersSlice = createSlice({
+  name: 'users',
+  initialState: { data: null, loading: false, error: null },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = action.payload;
+      })
+      .addCase(fetchUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      });
+  },
+});
+```
+
+**RTK Query — built-in data fetching:**
+
+```js
+export const apiSlice = createApi({
+  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  endpoints: (builder) => ({
+    getUsers: builder.query({ query: () => '/users' }),
+    addUser: builder.mutation({
+      query: (user) => ({ url: '/users', method: 'POST', body: user }),
+    }),
+  }),
+});
+
+export const { useGetUsersQuery, useAddUserMutation } = apiSlice;
+```
+
+**RTK vs Zustand:**
+
+RTK shines for large teams needing strict patterns and time-travel debugging. Zustand is better for small-medium apps that want minimal boilerplate.
+
+## 🧠 Question 90
+
+**ID**: react-090
+**Title**: What is TanStack Query and how does it manage server state?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+TanStack Query (formerly React Query) manages **server state** — data fetched from APIs. It handles caching, background refetching, deduplication, loading/error states, and cache invalidation automatically.
+
+```jsx
+// Reading data
+function UserProfile({ id }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['user', id],
+    queryFn: () => fetchUser(id),
+    staleTime: 5 * 60 * 1000, // data is fresh for 5 minutes
+  });
+
+  if (isLoading) return <Skeleton />;
+  if (error) return <ErrorMessage error={error} />;
+  return <div>{data.name}</div>;
+}
+
+// Mutations (writes)
+function DeleteButton({ userId }) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (id) => deleteUser(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  return (
+    <button
+      onClick={() => mutation.mutate(userId)}
+      disabled={mutation.isPending}
+    >
+      {mutation.isPending ? 'Deleting...' : 'Delete'}
+    </button>
+  );
+}
+```
+
+**Why server state needs its own library:**
+
+Server state is fundamentally different from client state — it lives remotely, can become stale, requires async fetching, and may be needed by multiple components simultaneously. TanStack Query provides:
+
+- **Deduplication**: multiple `useQuery` calls with the same key share one network request
+- **Background refetch**: queries refetch when the browser tab regains focus
+- **Stale-while-revalidate**: shows cached data immediately, fetches fresh data in the background

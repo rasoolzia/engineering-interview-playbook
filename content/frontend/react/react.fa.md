@@ -4661,3 +4661,331 @@ import { Button } from '@/components/Button/Button';
 اگر `ModuleA` درون بشکه‌ای قرار داشته باشد که همان `ModuleA` نیز از آن `import` می‌کند، با خطاهای `circular dependency` مواجه خواهید شد.
 
 **روش بهترین (Best practice):** از فایل‌های بشکه‌ای در سطح `feature` استفاده کنید (هر `feature` یک بشکه) به جای اینکه زنجیره‌های عمیق بشکه‌ای ایجاد کنید.
+
+## 🧠 سوال 86
+
+**شناسه**: react-086
+**عنوان**: چرا React ترکیب‌پذیری را به inheritance ترجیح می‌دهد؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+مدل کامپوننتی React کاملاً بر پایه **composition** ساخته شده است؛ یعنی کنار هم قرار دادن کامپوننت‌های کوچک‌تر، نه ساخت سلسله‌مراتب inheritance.
+
+**چرا inheritance برای UI خوب جواب نمی‌دهد:**
+
+```jsx
+// اگر React بر پایه inheritance بود، فقط از یک کلاس می‌شد ارث برد
+class FancyBorderedDialog extends BorderedBox {}
+// اما UI معمولاً باید چند concern را با هم ترکیب کند، نه فقط از یک چیز ارث ببرد
+```
+
+**React چگونه همان نیازها را با composition حل می‌کند:**
+
+```jsx
+// children — composition ساختاری
+function Card({ children, title }) {
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      <div className="card-body">{children}</div>
+    </div>
+  );
+}
+
+function Dialog({ children }) {
+  return (
+    <Card title="Dialog">
+      <p>{children}</p>
+      <button>OK</button>
+    </Card>
+  );
+}
+
+// hook ها — composition منطقی
+function UserDashboard() {
+  const user = useAuth();
+  const theme = useTheme();
+  const { data } = useUserData();
+  //...
+}
+```
+
+**راهنمای رسمی React:**
+
+اگر می‌خواهید منطق غیر UI را بین کامپوننت‌ها به اشتراک بگذارید، آن را به یک ماژول جاوااسکریپتی جدا یا یک custom hook استخراج کنید.
+
+Custom hook ها امروز مهم‌ترین ابزار اشتراک‌گذاری منطق هستند و بدون پیچیدگی inheritance یا کلاس‌ها، به‌خوبی compose می‌شوند.
+
+## 🧠 سوال 87
+
+**شناسه**: react-087
+**عنوان**: چگونه بین state محلی، state بالا برده‌شده، Context و store های خارجی انتخاب می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+محل قرار دادن state یکی از مهم‌ترین تصمیم‌های معماری در React است. اصل کلی این است: ساده‌ترین راهی را انتخاب کنید که واقعاً نیاز شما را برآورده می‌کند.
+
+**چارچوب تصمیم‌گیری:**
+
+```text
+آیا این state فقط توسط یک کامپوننت استفاده می‌شود؟
+  └─ بله → state محلی با useState
+
+آیا این state بین چند کامپوننت نزدیک و مرتبط استفاده می‌شود؟
+  └─ بله → بالا بردن state تا نزدیک‌ترین جد مشترک
+
+آیا این state در بخش‌های زیادی از درخت و دور از هم لازم است؟
+  ├─ state سراسری UI مثل theme، locale، auth user → Context
+  └─ state پرتغییر یا پیچیده؟
+      ├─ server state → TanStack Query / SWR
+      └─ client state پیچیده → Zustand / Redux Toolkit
+```
+
+**در عمل:**
+
+```jsx
+// 1. state محلی
+const [isOpen, setIsOpen] = useState(false);
+
+// 2. state بالا برده‌شده
+function Parent() {
+  const [selected, setSelected] = useState(null);
+  return (
+    <>
+      <List onSelect={setSelected} />
+      <Detail item={selected} />
+    </>
+  );
+}
+
+// 3. Context
+const user = useContext(AuthContext);
+
+// 4. TanStack Query
+const { data: products } = useQuery({
+  queryKey: ['products'],
+  queryFn: fetchProducts,
+});
+
+// 5. Zustand
+const count = useStore((state) => state.count);
+```
+
+**اشتباه‌های رایج:**
+
+- بردن همه چیز به store سراسری
+- استفاده از Context برای state پرتغییر
+- استفاده نکردن از ابزارهای مخصوص server state و بازنویسی دستی caching و loading
+
+## 🧠 سوال 88
+
+**شناسه**: react-088
+**عنوان**: Zustand چیست و چگونه کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت State
+
+### پاسخ 📄
+
+Zustand یک کتابخانه مدیریت state مینیمال، سریع و مقیاس‌پذیر است. این کتابخانه معمولاً از یک store واحد استفاده می‌کند که یک شیء جاوااسکریپتی ساده است و action ها کنار همان state تعریف می‌شوند. React از طریق hook ها به این store subscribe می‌شود.
+
+```js
+import { create } from 'zustand';
+
+const useCartStore = create((set, get) => ({
+  items: [],
+  total: 0,
+
+  addItem: (product) =>
+    set((state) => ({
+      items: [...state.items, product],
+      total: state.total + product.price,
+    })),
+
+  removeItem: (id) =>
+    set((state) => {
+      const items = state.items.filter((item) => item.id !== id);
+      return { items, total: items.reduce((sum, item) => sum + item.price, 0) };
+    }),
+
+  clearCart: () => set({ items: [], total: 0 }),
+  getItemCount: () => get().items.length,
+}));
+```
+
+**استفاده در کامپوننت‌ها — subscribe به slice ها:**
+
+```jsx
+// فقط وقتی items.length تغییر کند re-render می‌شود
+const itemCount = useCartStore((state) => state.items.length);
+
+// فقط وقتی total تغییر کند re-render می‌شود
+const total = useCartStore((state) => state.total);
+
+// action ها معمولاً reference پایدار دارند
+const addItem = useCartStore((state) => state.addItem);
+```
+
+**middleware ها:**
+
+```js
+import { devtools, persist } from 'zustand/middleware';
+
+const useStore = create(
+  devtools(
+    persist(
+      (set) => ({
+        count: 0,
+        increment: () => set((s) => ({ count: s.count + 1 })),
+      }),
+      { name: 'counter-storage' },
+    ),
+  ),
+);
+```
+
+**چرا گاهی Zustand به‌جای Redux انتخاب می‌شود:**
+
+- boilerplate بسیار کمتر
+- نیازی به Provider ندارد
+- subscription مبتنی بر selector باعث کاهش re-render غیرضروری می‌شود
+- action های async می‌توانند همان تابع‌های async معمولی باشند
+
+## 🧠 سوال 89
+
+**شناسه**: react-089
+**عنوان**: Redux Toolkit چیست و چگونه Redux را مدرن‌تر می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت State
+
+### پاسخ 📄
+
+Redux Toolkit یا RTK روش رسمی و opinionated برای نوشتن Redux است. این ابزار boilerplate زیاد Redux کلاسیک را حذف می‌کند، در حالی که مزایای container قابل پیش‌بینی state و DevTools را حفظ می‌کند.
+
+**`createSlice` — ترکیب action creator و reducer:**
+
+```js
+import { createSlice } from '@reduxjs/toolkit';
+
+const counterSlice = createSlice({
+  name: 'counter',
+  initialState: { value: 0 },
+  reducers: {
+    increment: (state) => {
+      state.value += 1;
+    },
+    decrement: (state) => {
+      state.value -= 1;
+    },
+    incrementByAmount: (state, action) => {
+      state.value += action.payload;
+    },
+  },
+});
+
+export const { increment, decrement, incrementByAmount } = counterSlice.actions;
+export default counterSlice.reducer;
+```
+
+**`createAsyncThunk` — برای action های async:**
+
+```js
+export const fetchUser = createAsyncThunk('users/fetchById', async (userId) => {
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
+});
+
+const usersSlice = createSlice({
+  name: 'users',
+  initialState: { data: null, loading: false, error: null },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = action.payload;
+      })
+      .addCase(fetchUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      });
+  },
+});
+```
+
+**RTK Query — data fetching داخلی:**
+
+```js
+export const apiSlice = createApi({
+  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  endpoints: (builder) => ({
+    getUsers: builder.query({ query: () => '/users' }),
+    addUser: builder.mutation({
+      query: (user) => ({ url: '/users', method: 'POST', body: user }),
+    }),
+  }),
+});
+
+export const { useGetUsersQuery, useAddUserMutation } = apiSlice;
+```
+
+**تفاوت RTK و Zustand:**
+
+RTK برای تیم‌های بزرگ با نیاز به الگوهای سخت‌گیرانه‌تر، trace کردن بهتر و DevTools قوی مناسب‌تر است. Zustand برای اپ‌های کوچک تا متوسط که سادگی و boilerplate کم می‌خواهند سبک‌تر است.
+
+## 🧠 سوال 90
+
+**شناسه**: react-090
+**عنوان**: TanStack Query چیست و چگونه server state را مدیریت می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت State
+
+### پاسخ 📄
+
+TanStack Query که قبلاً React Query نام داشت، **server state** یعنی داده‌ای که از API ها می‌آید را مدیریت می‌کند. این کتابخانه caching، background refetch، deduplication، وضعیت loading/error و invalidation کش را به‌صورت خودکار مدیریت می‌کند.
+
+```jsx
+// خواندن داده
+function UserProfile({ id }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['user', id],
+    queryFn: () => fetchUser(id),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) return <Skeleton />;
+  if (error) return <ErrorMessage error={error} />;
+  return <div>{data.name}</div>;
+}
+
+// mutation ها
+function DeleteButton({ userId }) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (id) => deleteUser(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  });
+
+  return (
+    <button
+      onClick={() => mutation.mutate(userId)}
+      disabled={mutation.isPending}
+    >
+      {mutation.isPending ? 'Deleting...' : 'Delete'}
+    </button>
+  );
+}
+```
+
+**چرا server state به کتابخانه مخصوص خودش نیاز دارد:**
+
+Server state اساساً با client state فرق دارد. این داده در جای دوردست نگه داشته می‌شود، ممکن است stale شود، fetch آن async است و معمولاً چند کامپوننت هم‌زمان به آن نیاز دارند. TanStack Query امکاناتی مثل این‌ها را می‌دهد:
+
+- **Deduplication** — چند `useQuery` با key یکسان از یک request مشترک استفاده می‌کنند
+- **Background refetch** — query ها مثلاً هنگام focus گرفتن دوباره tab می‌توانند refresh شوند
+- **Stale-while-revalidate** — ابتدا داده cache شده نشان داده می‌شود و در پس‌زمینه داده تازه fetch می‌شود

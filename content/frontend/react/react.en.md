@@ -4989,3 +4989,299 @@ Server state is fundamentally different from client state — it lives remotely,
 - **Deduplication**: multiple `useQuery` calls with the same key share one network request
 - **Background refetch**: queries refetch when the browser tab regains focus
 - **Stale-while-revalidate**: shows cached data immediately, fetches fresh data in the background
+
+## 🧠 Question 91
+
+**ID**: react-091
+**Title**: How do you implement optimistic updates with TanStack Query?
+**Difficulty**: Hard
+**Category**: State Management
+
+### Answer 📄
+
+Optimistic updates show the expected result of a mutation immediately before the server confirms it. TanStack Query supports this via `onMutate`, `onError`, and `onSettled`.
+
+```jsx
+const toggleTodo = useMutation({
+  mutationFn: ({ id, completed }) => updateTodo(id, { completed }),
+
+  // 1. Optimistically update the cache
+  onMutate: async ({ id, completed }) => {
+    await queryClient.cancelQueries({ queryKey: ['todos'] });
+    const previousTodos = queryClient.getQueryData(['todos']);
+
+    queryClient.setQueryData(['todos'], (old) =>
+      old.map((todo) => (todo.id === id ? { ...todo, completed } : todo)),
+    );
+
+    return { previousTodos }; // snapshot for rollback
+  },
+
+  // 2. On error, roll back
+  onError: (err, variables, context) => {
+    queryClient.setQueryData(['todos'], context.previousTodos);
+  },
+
+  // 3. On settle, sync with server truth
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ['todos'] });
+  },
+});
+```
+
+**The three-phase pattern:**
+
+1. `onMutate` — apply optimistic update + save rollback snapshot
+2. `onError` — restore rollback snapshot
+3. `onSettled` — always invalidate (runs after `onSuccess` or `onError`)
+
+**When to use:** Actions that almost always succeed (toggling, liking, reordering). Not ideal for frequently-failing operations (payments, complex validation).
+
+## 🧠 Question 92
+
+**ID**: react-092
+**Title**: How do you build a multi-step form in React?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+Multi-step forms require managing: current step, shared data across steps, per-step validation, and navigation. `useReducer` works well as a mini state machine.
+
+```jsx
+const STEPS = ['personal', 'address', 'payment', 'review'];
+
+function formReducer(state, action) {
+  switch (action.type) {
+    case 'NEXT':
+      return { ...state, step: Math.min(state.step + 1, STEPS.length - 1) };
+    case 'PREV':
+      return { ...state, step: Math.max(state.step - 1, 0) };
+    case 'UPDATE':
+      return { ...state, data: { ...state.data, ...action.payload } };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+function MultiStepForm() {
+  const [{ step, data }, dispatch] = useReducer(formReducer, {
+    step: 0,
+    data: { name: '', email: '', street: '', city: '', cardNumber: '' },
+  });
+
+  const updateData = (fields) => dispatch({ type: 'UPDATE', payload: fields });
+  const next = () => dispatch({ type: 'NEXT' });
+  const prev = () => dispatch({ type: 'PREV' });
+
+  const steps = {
+    personal: <PersonalStep data={data} onUpdate={updateData} onNext={next} />,
+    address: (
+      <AddressStep
+        data={data}
+        onUpdate={updateData}
+        onNext={next}
+        onPrev={prev}
+      />
+    ),
+    payment: (
+      <PaymentStep
+        data={data}
+        onUpdate={updateData}
+        onNext={next}
+        onPrev={prev}
+      />
+    ),
+    review: (
+      <ReviewStep data={data} onPrev={prev} onSubmit={() => submitForm(data)} />
+    ),
+  };
+
+  return (
+    <div>
+      <ProgressBar current={step} total={STEPS.length} />
+      {steps[STEPS[step]]}
+    </div>
+  );
+}
+```
+
+**Considerations:**
+
+- Validate each step before allowing forward navigation
+- Save progress in `sessionStorage` to survive page refreshes
+- Sync the current step with the URL for shareable deep links
+
+## 🧠 Question 93
+
+**ID**: react-093
+**Title**: What is the polymorphic component pattern ("as" prop)?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A polymorphic component renders as different HTML elements or custom components depending on the `as` prop, while keeping its own styles and behavior.
+
+```tsx
+// JavaScript version
+function Text({ as: Component = 'p', children, ...props }) {
+  return <Component {...props}>{children}</Component>;
+}
+
+<Text>Paragraph</Text>                    // renders <p>
+<Text as="h1">Heading</Text>             // renders <h1>
+<Text as={Link} to="/about">Link</Text>  // renders <Link>
+```
+
+**TypeScript — fully typed polymorphic component:**
+
+```tsx
+type PolymorphicProps<T extends React.ElementType> = {
+  as?: T;
+  children?: React.ReactNode;
+} & React.ComponentPropsWithoutRef<T>;
+
+function Text<T extends React.ElementType = 'p'>({
+  as, children, ...props
+}: PolymorphicProps<T>) {
+  const Component = as ?? 'p';
+  return <Component {...props}>{children}</Component>;
+}
+
+// TypeScript knows href is valid because as="a"
+<Text as="a" href="/home">Go home</Text>
+
+// TypeScript error — href is not valid for "p"
+<Text href="/home">Wrong</Text>
+```
+
+**Common use cases:** `Button` that can be `<button>` or `<a>` or `<Link>`, `Text` that can be any heading level, `Card` that can be `<div>` or `<article>`.
+
+**Alternative:** `@radix-ui/react-slot` provides the `asChild` prop, a cleaner alternative that avoids complex TypeScript generics.
+
+## 🧠 Question 94
+
+**ID**: react-094
+**Title**: What is the slot pattern in React?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+The slot pattern allows parent components to inject content into named areas of a child component — similar to slots in Vue or Web Components.
+
+**Named props approach (most common):**
+
+```jsx
+function PageLayout({ header, sidebar, children, footer }) {
+  return (
+    <div className="layout">
+      <header>{header}</header>
+      <div className="main">
+        <aside>{sidebar}</aside>
+        <main>{children}</main>
+      </div>
+      <footer>{footer}</footer>
+    </div>
+  );
+}
+
+<PageLayout
+  header={<Nav links={navLinks} />}
+  sidebar={<FilterPanel />}
+  footer={<Footer />}
+>
+  <ProductList products={products} />
+</PageLayout>;
+```
+
+**Radix UI `asChild` pattern (behavioral slots):**
+
+```jsx
+// asChild renders the component's behavior onto the consumer's element
+<Dialog.Trigger asChild>
+  <MyCustomButton>Open Dialog</MyCustomButton>
+  {/* MyCustomButton now has Dialog's trigger ARIA + onClick behavior */}
+</Dialog.Trigger>
+```
+
+**When to use:** Layout and shell components that accept structured content from consumers without dictating the content's implementation.
+
+## 🧠 Question 95
+
+**ID**: react-095
+**Title**: How do you handle accessibility (a11y) in React?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+Accessibility in React follows HTML/ARIA standards but requires extra attention because dynamic rendering can break native browser behaviors.
+
+**Semantic HTML first:**
+
+```jsx
+// Wrong — div has no keyboard access, no role for screen readers
+<div onClick={handleSubmit}>Submit</div>
+
+// Correct — button is keyboard accessible and has implicit role="button"
+<button onClick={handleSubmit}>Submit</button>
+```
+
+**ARIA attributes for custom widgets:**
+
+```jsx
+function Disclosure({ title, children }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const id = useId();
+
+  return (
+    <div>
+      <button
+        aria-expanded={isOpen}
+        aria-controls={id}
+        onClick={() => setIsOpen((v) => !v)}
+      >
+        {title}
+      </button>
+      <div id={id} hidden={!isOpen} role="region">
+        {children}
+      </div>
+    </div>
+  );
+}
+```
+
+**Focus management for modals:**
+
+```jsx
+function Modal({ isOpen, onClose, children }) {
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) closeRef.current?.focus();
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div role="dialog" aria-modal="true">
+      <button ref={closeRef} onClick={onClose} aria-label="Close">
+        ×
+      </button>
+      {children}
+    </div>
+  );
+}
+```
+
+**Keyboard navigation:** All interactive elements must be reachable via `Tab`. Handle `Enter`, `Space`, `Escape`, and arrow keys where applicable.
+
+**Tooling:**
+
+- `eslint-plugin-jsx-a11y` — catches common a11y mistakes at lint time
+- `@axe-core/react` — runtime accessibility audit in development
+- `react-aria` (Adobe) — complete headless accessibility primitives

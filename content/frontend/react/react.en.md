@@ -5285,3 +5285,344 @@ function Modal({ isOpen, onClose, children }) {
 - `eslint-plugin-jsx-a11y` — catches common a11y mistakes at lint time
 - `@axe-core/react` — runtime accessibility audit in development
 - `react-aria` (Adobe) — complete headless accessibility primitives
+
+## 🧠 Question 96
+
+**ID**: react-096
+**Title**: How do you implement internationalization (i18n) in React?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+Internationalization handles translation, locale-specific formatting, and RTL layout. The standard library is **react-i18next**.
+
+**Setup and usage:**
+
+```js
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+i18n.use(initReactI18next).init({
+  lng: 'en',
+  fallbackLng: 'en',
+  resources: {
+    en: {
+      translation: {
+        greeting: 'Hello, {{name}}!',
+        items_one: '{{count}} item',
+        items_other: '{{count}} items',
+      },
+    },
+    fa: {
+      translation: {
+        greeting: 'سلام، {{name}}!',
+        items_one: '{{count}} آیتم',
+        items_other: '{{count}} آیتم',
+      },
+    },
+  },
+});
+```
+
+```jsx
+import { useTranslation } from 'react-i18next';
+
+function Header({ user }) {
+  const { t, i18n } = useTranslation();
+
+  return (
+    <header dir={i18n.dir()}>
+      {/* 'rtl' for Arabic/Persian */}
+      <h1>{t('greeting', { name: user.name })}</h1>
+      <p>{t('items', { count: user.cartCount })}</p>{' '}
+      {/* automatic pluralization */}
+      <button onClick={() => i18n.changeLanguage('fa')}>فارسی</button>
+    </header>
+  );
+}
+```
+
+**Date and number formatting with `Intl`:**
+
+```js
+// Built into all modern browsers — no extra library needed
+const amount = new Intl.NumberFormat('fa-IR', {
+  style: 'currency',
+  currency: 'IRR',
+}).format(150000);
+const date = new Intl.DateTimeFormat('fa-IR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+}).format(new Date());
+```
+
+**RTL support:**
+
+```js
+document.documentElement.dir = i18n.dir(); // 'rtl' or 'ltr'
+document.documentElement.lang = i18n.language;
+// In CSS: use logical properties (margin-inline-start instead of margin-left)
+```
+
+## 🧠 Question 97
+
+**ID**: react-097
+**Title**: What is a design system in the context of React component libraries?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A design system is a collection of reusable components, design tokens (colors, spacing, typography), and usage guidelines that ensure visual and behavioral consistency.
+
+**Design tokens — the foundation:**
+
+```css
+:root {
+  --color-primary-500: #3b82f6;
+  --spacing-4: 1rem;
+  --radius-md: 0.375rem;
+}
+```
+
+**Component variants with CVA (class-variance-authority):**
+
+```tsx
+import { cva } from 'class-variance-authority';
+
+const buttonVariants = cva(
+  'inline-flex items-center rounded font-medium focus-visible:outline-none', // base
+  {
+    variants: {
+      intent: {
+        primary: 'bg-blue-600 text-white hover:bg-blue-700',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+      },
+      size: {
+        sm: 'px-3 py-1.5 text-sm',
+        md: 'px-4 py-2 text-base',
+        lg: 'px-6 py-3 text-lg',
+      },
+    },
+    defaultVariants: { intent: 'primary', size: 'md' },
+  },
+);
+
+function Button({ intent, size, className, ...props }) {
+  return (
+    <button
+      className={buttonVariants({ intent, size, className })}
+      {...props}
+    />
+  );
+}
+
+<Button intent="danger" size="lg">
+  Delete Account
+</Button>;
+```
+
+**Popular design systems built with React:**
+
+- **shadcn/ui** — copy-paste components (Radix UI + Tailwind)
+- **Radix UI** — headless accessible primitives
+- **MUI (Material UI)** — complete opinionated system
+- **Chakra UI** — accessible, themeable components
+
+## 🧠 Question 98
+
+**ID**: react-098
+**Title**: What is a good testing strategy for a React application?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A balanced React testing strategy follows the **testing pyramid** — many unit tests, fewer integration tests, fewest E2E tests.
+
+```
+┌──────────────────────────┐
+│    E2E Tests (few)       │  Playwright, Cypress
+│  Integration Tests (some)│  RTL + MSW
+│  Unit Tests (many)       │  Vitest, Jest
+└──────────────────────────┘
+```
+
+**Unit tests — hooks and utilities:**
+
+```jsx
+test('useCounter increments', () => {
+  const { result } = renderHook(() => useCounter(0));
+  act(() => result.current.increment());
+  expect(result.current.count).toBe(1);
+});
+```
+
+**Integration tests — components with mocked APIs (MSW):**
+
+```jsx
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+
+const server = setupServer(
+  http.get('/api/users', () => HttpResponse.json([{ id: 1, name: 'Ali' }])),
+);
+
+test('UserList renders fetched users', async () => {
+  render(
+    <QueryClientProvider client={queryClient}>
+      <UserList />
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('Ali')).toBeInTheDocument());
+});
+```
+
+**E2E tests — critical flows:**
+
+```js
+test('user can sign in', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('[name=email]', 'user@example.com');
+  await page.fill('[name=password]', 'password');
+  await page.click('button[type=submit]');
+  await expect(page).toHaveURL('/dashboard');
+});
+```
+
+**Priority:** Unit-test all hooks and utilities → Integration-test all user-facing features → E2E only the most critical paths (sign up, checkout, core workflow).
+
+## 🧠 Question 99
+
+**ID**: react-099
+**Title**: How do you design a good component API in React?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+A well-designed component API is easy to use correctly and hard to misuse.
+
+**1. Sensible defaults:**
+
+```jsx
+// Bad — requires 5 props just to render a default button
+<Button variant="solid" colorScheme="blue" size="md" type="button" isDisabled={false}>Click</Button>
+
+// Good — works out of the box
+<Button>Click</Button>
+<Button variant="outline">Click</Button>
+```
+
+**2. Discriminated state over boolean combinations:**
+
+```jsx
+// Bad — allows impossible combinations: loading AND error AND disabled
+<Button isLoading isDisabled isError />
+
+// Better — mutually exclusive via union type
+<Button status="loading" />  // status: 'idle' | 'loading' | 'success' | 'error'
+```
+
+**3. Event callbacks named `onX`:**
+
+```jsx
+<Select onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} />
+```
+
+**4. Spread `...props` for extensibility:**
+
+```jsx
+function Card({ title, children, className, ...props }) {
+  return (
+    <div className={`card ${className ?? ''}`} {...props}>
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+}
+// Consumer can add data-testid, aria-*, onClick, etc.
+```
+
+**5. Composition over configuration:**
+
+```jsx
+// Bad — 15 props to configure every aspect
+<Button leftIcon={<SearchIcon />} rightIcon={<ArrowIcon />} iconSpacing={2} />
+
+// Good — children handles composition
+<Button><SearchIcon /> Search <ArrowIcon /></Button>
+```
+
+**6. Data and handler separation:**
+
+```jsx
+// Good — parent provides data, component handles presentation
+<ProductList products={products} onProductClick={handleClick} />
+```
+
+This pattern keeps data presentation and event response cleaner.
+
+## 🧠 Question 100
+
+**ID**: react-100
+**Title**: What is micro-frontend architecture with React?
+**Difficulty**: Hard
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+Micro-frontends apply microservices principles to the frontend: breaking a large application into independently developed, deployed, and scaled frontend slices.
+
+**Integration approaches:**
+
+**1. Build-time — npm packages:**
+
+```jsx
+// Team A publishes their feature
+import { CheckoutWidget } from '@company/checkout-widget';
+```
+
+Simple but requires coordinated releases; all teams share the same React version.
+
+**2. Runtime — Module Federation (Webpack 5):**
+
+```js
+// checkout-app (remote)
+new ModuleFederationPlugin({
+  name: 'checkout',
+  filename: 'remoteEntry.js',
+  exposes: { './CheckoutWidget': './src/CheckoutWidget' },
+  shared: { react: { singleton: true }, 'react-dom': { singleton: true } },
+});
+
+// shell-app (host)
+new ModuleFederationPlugin({
+  remotes: { checkout: 'checkout@https://checkout.example.com/remoteEntry.js' },
+  shared: { react: { singleton: true } },
+});
+```
+
+```jsx
+const CheckoutWidget = React.lazy(() => import('checkout/CheckoutWidget'));
+
+function App() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <CheckoutWidget />
+    </Suspense>
+  );
+}
+```
+
+**Key challenges:**
+
+- **Shared dependencies**: use `singleton: true` to ensure one React instance
+- **Shared state**: use URL params, `localStorage`, or `postMessage`
+- **Design consistency**: shared design system package
+- **Performance**: each micro-frontend adds bundle overhead
+
+**When to use:** Large organizations with multiple teams shipping independently. For most projects, a well-structured monolith is simpler and faster.

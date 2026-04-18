@@ -5285,3 +5285,344 @@ function Modal({ isOpen, onClose, children }) {
 - `eslint-plugin-jsx-a11y`
 - `@axe-core/react`
 - `react-aria`
+
+## 🧠 سوال 96
+
+**شناسه**: react-096
+**عنوان**: internationalization یا i18n را در React چگونه پیاده‌سازی می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+Internationalization شامل ترجمه متن‌ها، فرمت‌بندی مبتنی بر locale و پشتیبانی از RTL است. یکی از کتابخانه‌های استاندارد برای این کار **react-i18next** است.
+
+**راه‌اندازی و استفاده:**
+
+```js
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+i18n.use(initReactI18next).init({
+  lng: 'en',
+  fallbackLng: 'en',
+  resources: {
+    en: {
+      translation: {
+        greeting: 'Hello, {{name}}!',
+        items_one: '{{count}} item',
+        items_other: '{{count}} items',
+      },
+    },
+    fa: {
+      translation: {
+        greeting: 'سلام، {{name}}!',
+        items_one: '{{count}} آیتم',
+        items_other: '{{count}} آیتم',
+      },
+    },
+  },
+});
+```
+
+```jsx
+import { useTranslation } from 'react-i18next';
+
+function Header({ user }) {
+  const { t, i18n } = useTranslation();
+
+  return (
+    <header dir={i18n.dir()}>
+      {/* 'rtl' برای عربی/فارسی */}
+      <h1>{t('greeting', { name: user.name })}</h1>
+      <p>{t('items', { count: user.cartCount })}</p>
+      {/* جمع‌بندی خودکار */}
+      <button onClick={() => i18n.changeLanguage('fa')}>فارسی</button>
+    </header>
+  );
+}
+```
+
+**فرمت تاریخ و عدد با `Intl`:**
+
+```js
+const amount = new Intl.NumberFormat('fa-IR', {
+  style: 'currency',
+  currency: 'IRR',
+}).format(150000);
+
+const date = new Intl.DateTimeFormat('fa-IR', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+}).format(new Date());
+```
+
+**پشتیبانی از RTL:**
+
+```js
+document.documentElement.dir = i18n.dir();
+document.documentElement.lang = i18n.language;
+// در CSS: از ویژگی‌های منطقی استفاده کنید (به جای margin-left از margin-inline-start استفاده کنید)
+```
+
+## 🧠 سوال 97
+
+**شناسه**: react-097
+**عنوان**: design system در زمینه کتابخانه‌های کامپوننت React چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+Design system مجموعه‌ای از کامپوننت‌های قابل استفاده مجدد، design token ها مثل رنگ و فاصله و تایپوگرافی، و همین‌طور guideline های استفاده است که ثبات بصری و رفتاری را تضمین می‌کند.
+
+**Design token ها — پایه سیستم:**
+
+```css
+:root {
+  --color-primary-500: #3b82f6;
+  --spacing-4: 1rem;
+  --radius-md: 0.375rem;
+}
+```
+
+**variant های کامپوننت با CVA:**
+
+```tsx
+import { cva } from 'class-variance-authority';
+
+const buttonVariants = cva(
+  'inline-flex items-center rounded font-medium focus-visible:outline-none',
+  {
+    variants: {
+      intent: {
+        primary: 'bg-blue-600 text-white hover:bg-blue-700',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
+        danger: 'bg-red-600 text-white hover:bg-red-700',
+      },
+      size: {
+        sm: 'px-3 py-1.5 text-sm',
+        md: 'px-4 py-2 text-base',
+        lg: 'px-6 py-3 text-lg',
+      },
+    },
+    defaultVariants: { intent: 'primary', size: 'md' },
+  },
+);
+
+function Button({ intent, size, className, ...props }) {
+  return (
+    <button
+      className={buttonVariants({ intent, size, className })}
+      {...props}
+    />
+  );
+}
+
+<Button intent="danger" size="lg">
+  Delete Account
+</Button>;
+```
+
+**نمونه‌های معروف design system یا کتابخانه‌های مرتبط:**
+
+- `shadcn/ui`
+- `Radix UI`
+- `MUI`
+- `Chakra UI`
+
+## 🧠 سوال 98
+
+**شناسه**: react-098
+**عنوان**: یک استراتژی خوب برای تست یک اپلیکیشن React چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+یک استراتژی متعادل برای تست اپ React معمولاً از **هرم تست** پیروی می‌کند: تعداد زیاد تست واحد، تعداد کمتر تست integration و تعداد خیلی کمتر تست E2E.
+
+```text
+┌──────────────────────────┐
+│    E2E Tests (few)       │  Playwright, Cypress
+│  Integration Tests (some)│  RTL + MSW
+│  Unit Tests (many)       │  Vitest, Jest
+└──────────────────────────┘
+```
+
+**Unit test — برای hook ها و utility ها:**
+
+```jsx
+test('useCounter increments', () => {
+  const { result } = renderHook(() => useCounter(0));
+  act(() => result.current.increment());
+  expect(result.current.count).toBe(1);
+});
+```
+
+**Integration test — برای کامپوننت‌ها همراه با API mock شده:**
+
+```jsx
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+
+const server = setupServer(
+  http.get('/api/users', () => HttpResponse.json([{ id: 1, name: 'Ali' }])),
+);
+
+test('UserList renders fetched users', async () => {
+  render(
+    <QueryClientProvider client={queryClient}>
+      <UserList />
+    </QueryClientProvider>,
+  );
+  await waitFor(() => expect(screen.getByText('Ali')).toBeInTheDocument());
+});
+```
+
+**E2E test — برای مسیرهای حیاتی:**
+
+```js
+test('user can sign in', async ({ page }) => {
+  await page.goto('/login');
+  await page.fill('[name=email]', 'user@example.com');
+  await page.fill('[name=password]', 'password');
+  await page.click('button[type=submit]');
+  await expect(page).toHaveURL('/dashboard');
+});
+```
+
+**اولویت کلی:** اول hook ها و utility ها را unit test کنید، بعد feature های کاربرمحور را integration test کنید، و E2E را فقط برای مسیرهای واقعاً حیاتی مثل sign in، checkout یا workflow اصلی نگه دارید.
+
+## 🧠 سوال 99
+
+**شناسه**: react-099
+**عنوان**: چگونه یک API خوب برای کامپوننت React طراحی می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+یک API خوب برای کامپوننت باید استفاده درست را آسان و استفاده اشتباه را سخت کند.
+
+**1. پیش‌فرض‌های معقول:**
+
+```jsx
+// بد — برای یک دکمه ساده prop های زیادی لازم است
+<Button variant="solid" colorScheme="blue" size="md" type="button" isDisabled={false}>Click</Button>
+
+// خوب — از همان ابتدا قابل استفاده است
+<Button>Click</Button>
+<Button variant="outline">Click</Button>
+```
+
+**2. استفاده از state متمایز به‌جای ترکیب boolean ها:**
+
+```jsx
+// بد — ترکیب‌های نامعتبر ممکن می‌شود
+<Button isLoading isDisabled isError />
+
+// بهتر — یک union مشخص
+<Button status="loading" />
+```
+
+**3. نام‌گذاری callback ها با `onX`:**
+
+```jsx
+<Select onChange={handleChange} onFocus={handleFocus} onBlur={handleBlur} />
+```
+
+**4. پشتیبانی از `...props` برای توسعه‌پذیری:**
+
+```jsx
+function Card({ title, children, className, ...props }) {
+  return (
+    <div className={`card ${className ?? ''}`} {...props}>
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+}
+// مصرف‌کننده می‌تواند data-testid، aria-*، onClick و غیره را اضافه کند.
+```
+
+**5. ترجیح composition بر configuration زیاد:**
+
+```jsx
+// بد — prop های زیاد برای شخصی‌سازی
+<Button leftIcon={<SearchIcon />} rightIcon={<ArrowIcon />} iconSpacing={2} />
+
+// خوب — composition با children
+<Button><SearchIcon /> Search <ArrowIcon /></Button>
+```
+
+**6. جداسازی داده و handler:**
+
+```jsx
+// خوب - والد داده‌ها را فراهم می‌کند، کامپوننت نمایش را مدیریت می‌کند
+<ProductList products={products} onProductClick={handleClick} />
+```
+
+این الگو باعث می‌شود ارائه داده و واکنش به رویدادها تمیزتر بماند.
+
+## 🧠 سوال 100
+
+**شناسه**: react-100
+**عنوان**: معماری micro-frontend با React چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+Micro-frontend همان ایده microservice را به فرانت‌اند می‌آورد: شکستن یک اپلیکیشن بزرگ به بخش‌های فرانت‌اندی که بتوانند مستقل توسعه، deploy و scale شوند.
+
+**روش‌های یکپارچه‌سازی:**
+
+**1. در زمان build — با npm package:**
+
+```jsx
+// تیم A ویژگی خود را منتشر می‌کند
+import { CheckoutWidget } from '@company/checkout-widget';
+```
+
+این روش ساده است، اما release ها باید هماهنگ باشند و معمولاً همه تیم‌ها یک نسخه مشترک از React دارند.
+
+**2. در زمان runtime — با Module Federation در Webpack 5:**
+
+```js
+// checkout-app (remote)
+new ModuleFederationPlugin({
+  name: 'checkout',
+  filename: 'remoteEntry.js',
+  exposes: { './CheckoutWidget': './src/CheckoutWidget' },
+  shared: { react: { singleton: true }, 'react-dom': { singleton: true } },
+});
+
+// shell-app (host)
+new ModuleFederationPlugin({
+  remotes: { checkout: 'checkout@https://checkout.example.com/remoteEntry.js' },
+  shared: { react: { singleton: true } },
+});
+```
+
+```jsx
+const CheckoutWidget = React.lazy(() => import('checkout/CheckoutWidget'));
+
+function App() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <CheckoutWidget />
+    </Suspense>
+  );
+}
+```
+
+**چالش‌های اصلی:**
+
+- **Shared dependency ها** — باید فقط یک instance از React وجود داشته باشد
+- **Shared state** — معمولاً از URL، `localStorage` یا `postMessage` استفاده می‌شود
+- **یکپارچگی طراحی** — بهتر است یک design system مشترک وجود داشته باشد
+- **Performance** — هر micro-frontend سربار bundle خودش را اضافه می‌کند
+
+**چه زمانی مناسب است:** برای سازمان‌های بزرگ با چند تیم مستقل که باید جداگانه release بدهند. برای بیشتر پروژه‌ها، یک monolith خوش‌ساخت ساده‌تر، سریع‌تر و کم‌هزینه‌تر است.

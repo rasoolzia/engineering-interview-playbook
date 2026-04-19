@@ -5626,3 +5626,359 @@ function App() {
 - **Performance** — هر micro-frontend سربار bundle خودش را اضافه می‌کند
 
 **چه زمانی مناسب است:** برای سازمان‌های بزرگ با چند تیم مستقل که باید جداگانه release بدهند. برای بیشتر پروژه‌ها، یک monolith خوش‌ساخت ساده‌تر، سریع‌تر و کم‌هزینه‌تر است.
+
+## 🧠 سوال 101
+
+**شناسه**: react-101
+**عنوان**: code splitting در React فراتر از `React.lazy` پایه چگونه کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Code splitting باندل را به chunk های کوچک‌تری می‌شکند که در صورت نیاز بارگیری می‌شوند. `React.lazy` نقطه شروع است، اما در استفاده واقعی معمولاً باید export های نام‌دار، preloading و بازیابی از خطاهای بارگیری chunk را هم مدیریت کنید.
+
+**Named export ها** چون `React.lazy` به default export نیاز دارد:
+
+```tsx
+export function lazyImport<T, I extends keyof T>(
+  factory: () => Promise<T>,
+  name: I,
+): React.LazyExoticComponent<any> {
+  return React.lazy(() =>
+    factory().then((module) => ({ default: module[name] as any })),
+  );
+}
+
+const UserProfile = lazyImport(() => import('./features/users'), 'UserProfile');
+```
+
+**Route-based splitting** که معمولاً بیشترین اثر را دارد:
+
+```jsx
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+function App() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </Suspense>
+  );
+}
+```
+
+**Preloading هنگام hover** برای حذف تاخیر بارگیری:
+
+```jsx
+const AdminPanel = lazy(() => import('./AdminPanel'));
+
+function NavItem() {
+  const preload = () => import('./AdminPanel');
+
+  return (
+    <Link to="/admin" onMouseEnter={preload} onFocus={preload}>
+      Admin
+    </Link>
+  );
+}
+```
+
+**مدیریت خطای بارگیری chunk:**
+
+```jsx
+<ErrorBoundary
+  fallbackRender={({ resetErrorBoundary }) => (
+    <button onClick={resetErrorBoundary}>Retry</button>
+  )}
+>
+  <Suspense fallback={<Spinner />}>
+    <HeavyComponent />
+  </Suspense>
+</ErrorBoundary>
+```
+
+**چه چیزهایی را split کنیم:** route ها، محتوای modal یا drawer، ویرایشگرها یا chart های سنگین، و بخش‌های ادمین.
+
+## 🧠 سوال 102
+
+**شناسه**: react-102
+**عنوان**: چگونه حجم bundle یک اپ React را تحلیل و کم می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+بزرگ شدن bundle یکی از مهم‌ترین مشکلات performance است. روند کار معمولاً این است: اندازه‌گیری → شناسایی → رفع → بررسی دوباره.
+
+**مرحله 1 — تصویری‌سازی bundle:**
+
+```bash
+npx vite-bundle-visualizer           # Vite
+npx webpack-bundle-analyzer          # Webpack
+npx source-map-explorer dist/**/*.js # عمومی
+```
+
+**مرحله 2 — مقصرهای رایج و راه‌حل‌ها:**
+
+**کتابخانه‌های بزرگ تاریخ:**
+
+```js
+// moment.js — بزرگ و همراه با locale های زیاد
+import moment from 'moment';
+
+// date-fns — قابل tree shaking و فقط آنچه لازم است وارد می‌شود
+import { format, parseISO } from 'date-fns';
+```
+
+**import کامل کتابخانه:**
+
+```js
+// بد — همه lodash را وارد می‌کند
+import _ from 'lodash';
+
+// خوب — فقط تابع لازم را وارد می‌کند
+import groupBy from 'lodash/groupBy';
+```
+
+**کتابخانه‌های icon بدون import بهینه:**
+
+```js
+// امن — import صریح و معمولاً قابل tree shaking
+import FiSearch from 'react-icons/fi/FiSearch';
+```
+
+**مرحله 3 — قبل از نصب پکیج جدید بررسی کنید:**
+
+قبل از اضافه کردن هر پکیج جدید، `bundlephobia.com` را چک کنید. خیلی از پکیج‌ها جایگزین‌های سبک‌تری دارند.
+
+**مرحله 4 — با Lighthouse تایید کنید:**
+
+بعد از بهینه‌سازی، FCP و TBT را در Lighthouse اندازه بگیرید تا مطمئن شوید بهبود واقعاً از دید کاربر محسوس بوده است.
+
+## 🧠 سوال 103
+
+**شناسه**: react-103
+**عنوان**: Core Web Vitals چگونه برای اپلیکیشن‌های React معنا پیدا می‌کنند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Core Web Vitals یا CWV متریک‌های گوگل برای تجربه کاربری هستند. اپ‌های React الگوهای خاصی دارند که روی هرکدام از این متریک‌ها اثر می‌گذارند.
+
+**LCP — Largest Contentful Paint** با هدف کمتر از `2.5s`:
+
+```jsx
+// هرگز عنصر LCP را به صورت lazy-load بارگذاری نکنید
+<img
+  src={hero}
+  loading="eager"
+  fetchpriority="high"
+  width={1200}
+  height={600}
+/>
+
+// تقسیم کد مبتنی بر مسیر، JS که رندر اول را مسدود می‌کند را کاهش می‌دهد
+```
+
+Code splitting در سطح route هم کمک می‌کند JavaScript کمتری رندر اولیه را block کند.
+
+**INP — Interaction to Next Paint** با هدف کمتر از `200ms`:
+
+```jsx
+// مشکل: محاسبه سنگین thread را block می‌کند
+function handleSearch(query) {
+  const results = searchAllItems(query);
+  setResults(results);
+}
+
+// راه‌حل: useTransition
+function handleSearch(query) {
+  setInputValue(query); // فوری
+  startTransition(() => {
+    setResults(searchAllItems(query)); // با اولویت پایین‌تر
+  });
+}
+```
+
+**CLS — Cumulative Layout Shift** با هدف کمتر از `0.1`:
+
+```jsx
+// مشکل: layout بعد از لود داده می‌پرد
+{isLoading ? null : <UserCard user={user} />}
+
+// راه‌حل: skeleton هم‌اندازه
+{isLoading ? <UserCardSkeleton /> : <UserCard user={user} />}
+
+// مشکل: تصویر بدون ابعاد
+<img src={avatar} />
+
+// راه‌حل: ابعاد صریح
+<img src={avatar} width={48} height={48} />
+```
+
+**اندازه‌گیری در production:**
+
+```jsx
+import { onLCP, onINP, onCLS } from 'web-vitals';
+
+onLCP((metric) =>
+  sendToAnalytics({ name: 'LCP', value: metric.value, rating: metric.rating }),
+);
+onINP((metric) =>
+  sendToAnalytics({ name: 'INP', value: metric.value, rating: metric.rating }),
+);
+onCLS((metric) =>
+  sendToAnalytics({ name: 'CLS', value: metric.value, rating: metric.rating }),
+);
+```
+
+## 🧠 سوال 104
+
+**شناسه**: react-104
+**عنوان**: تله‌های `React.memo` چیست و چگونه از تابع comparison آن استفاده می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+`React.memo` وقتی prop ها تغییر نکرده باشند، از re-render جلوگیری می‌کند و از shallow equality استفاده می‌کند. اما چند الگوی رایج وجود دارند که بی‌سروصدا آن را بی‌اثر می‌کنند.
+
+**تله — object و function های inline در هر render reference جدید می‌سازند:**
+
+```jsx
+// خراب — memo هیچ‌وقت skip نمی‌کند
+function Parent() {
+  return (
+    <MemoizedChild
+      style={{ color: 'red' }} // reference جدید در هر رندر
+      onClick={() => doSomething()} // reference جدید در هر رندر
+    />
+  );
+}
+
+// درست — reference پایدار با useMemo و useCallback
+function Parent() {
+  const style = useMemo(() => ({ color: 'red' }), []);
+  const onClick = useCallback(() => doSomething(), []);
+  return <MemoizedChild style={style} onClick={onClick} />;
+}
+```
+
+**تابع comparison سفارشی:**
+
+```jsx
+const MemoizedRow = React.memo(
+  function Row({ user, isSelected }) {
+    return <tr className={isSelected ? 'selected' : ''}>{user.name}</tr>;
+  },
+  (prevProps, nextProps) =>
+    prevProps.user.id === nextProps.user.id &&
+    prevProps.isSelected === nextProps.isSelected,
+);
+```
+
+**چه زمانی `React.memo` اوضاع را بدتر می‌کند:**
+
+- وقتی خود کامپوننت ارزان رندر می‌شود
+- وقتی prop ها تقریباً در هر render عوض می‌شوند
+- وقتی تعداد prop ها زیاد است و هزینه comparison بالا می‌رود
+
+**چه زمانی واقعاً کمک می‌کند:**
+
+- آیتم‌های گران داخل لیست که parent زیاد re-render می‌شود
+- کامپوننت‌های نمایشی pure با prop های پایدار
+
+همیشه قبل و بعد از استفاده از `memo` با React Profiler بررسی کنید.
+
+## 🧠 سوال 105
+
+**شناسه**: react-105
+**عنوان**: debounce و throttle را در hook های React چگونه پیاده‌سازی می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Debounce اجرای یک کار را تا بعد از یک مکث عقب می‌اندازد. Throttle اجرای آن را به حداکثر یک بار در هر بازه زمانی محدود می‌کند.
+
+**`useDebounce` — debounce کردن یک value:**
+
+```jsx
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+function SearchBox() {
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (debouncedQuery) search(debouncedQuery);
+  }, [debouncedQuery]);
+
+  return <input value={query} onChange={(e) => setQuery(e.target.value)} />;
+}
+```
+
+**`useDebouncedCallback` — debounce کردن یک تابع و جلوگیری از stale closure:**
+
+```jsx
+function useDebouncedCallback(callback, delay) {
+  const timerRef = useRef(null);
+  const callbackRef = useRef(callback);
+
+  useLayoutEffect(() => {
+    callbackRef.current = callback;
+  });
+
+  return useCallback(
+    (...args) => {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => callbackRef.current(...args), delay);
+    },
+    [delay],
+  );
+}
+```
+
+**`useThrottle` — throttle کردن یک value:**
+
+```jsx
+function useThrottle(value, interval) {
+  const [throttled, setThrottled] = useState(value);
+  const lastRun = useRef(Date.now());
+
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastRun.current >= interval) {
+      lastRun.current = now;
+      setThrottled(value);
+    } else {
+      const id = setTimeout(
+        () => {
+          lastRun.current = Date.now();
+          setThrottled(value);
+        },
+        interval - (now - lastRun.current),
+      );
+      return () => clearTimeout(id);
+    }
+  }, [value, interval]);
+
+  return throttled;
+}
+```
+
+**تله stale closure:** وقتی callback را debounce می‌کنید، با `ref` مطمئن شوید همیشه آخرین نسخه callback اجرا می‌شود.

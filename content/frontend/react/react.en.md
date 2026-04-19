@@ -5626,3 +5626,359 @@ function App() {
 - **Performance**: each micro-frontend adds bundle overhead
 
 **When to use:** Large organizations with multiple teams shipping independently. For most projects, a well-structured monolith is simpler and faster.
+
+## 🧠 Question 101
+
+**ID**: react-101
+**Title**: How does code splitting work in React beyond basic `React.lazy`?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Code splitting breaks a bundle into smaller chunks loaded on demand. `React.lazy` is the entry point, but real-world usage requires handling named exports, preloading, and error recovery.
+
+**Named exports (React.lazy requires default exports):**
+
+```tsx
+export function lazyImport<T, I extends keyof T>(
+  factory: () => Promise<T>,
+  name: I,
+): React.LazyExoticComponent<any> {
+  return React.lazy(() =>
+    factory().then((module) => ({ default: module[name] as any })),
+  );
+}
+
+const UserProfile = lazyImport(() => import('./features/users'), 'UserProfile');
+```
+
+**Route-based splitting (most impactful):**
+
+```jsx
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+function App() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </Suspense>
+  );
+}
+```
+
+**Preloading on hover (eliminates loading delay):**
+
+```jsx
+const AdminPanel = lazy(() => import('./AdminPanel'));
+
+function NavItem() {
+  const preload = () => import('./AdminPanel'); // starts download before click
+
+  return (
+    <Link to="/admin" onMouseEnter={preload} onFocus={preload}>
+      Admin
+    </Link>
+  );
+}
+```
+
+**Handling chunk load failures:**
+
+```jsx
+<ErrorBoundary
+  fallbackRender={({ resetErrorBoundary }) => (
+    <button onClick={resetErrorBoundary}>Retry</button>
+  )}
+>
+  <Suspense fallback={<Spinner />}>
+    <HeavyComponent />
+  </Suspense>
+</ErrorBoundary>
+```
+
+**What to split:** routes (always), modal/drawer content, complex editors or charts (Monaco, Chart.js), admin sections.
+
+## 🧠 Question 102
+
+**ID**: react-102
+**Title**: How do you analyze and reduce a React app's bundle size?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Bundle bloat is one of the most impactful performance problems. The workflow: measure → identify → fix → verify.
+
+**Step 1 — Visualize:**
+
+```bash
+npx vite-bundle-visualizer          # Vite
+npx webpack-bundle-analyzer         # Webpack
+npx source-map-explorer dist/**/*.js # universal
+```
+
+**Step 2 — Common culprits and fixes:**
+
+**Large date libraries:**
+
+```js
+// moment.js — 67kB gzipped, includes all locales
+import moment from 'moment';
+
+// date-fns — tree-shakeable, import only what you use (~5kB total)
+import { format, parseISO } from 'date-fns';
+```
+
+**Full library imports:**
+
+```js
+// Bad — imports all of lodash (~70kB)
+import _ from 'lodash';
+
+// Good — import only the function
+import groupBy from 'lodash/groupBy';
+```
+
+**Unoptimized icon libraries:**
+
+```js
+// Safe — explicit path import, always tree-shakeable
+import FiSearch from 'react-icons/fi/FiSearch';
+```
+
+**Step 3 — Check new packages before installing:**
+
+Check `bundlephobia.com` before adding any new npm package. Many packages have lighter alternatives.
+
+**Step 4 — Verify with Lighthouse:**
+
+After optimization, measure FCP and TBT in Lighthouse to confirm user-visible improvement.
+
+## 🧠 Question 103
+
+**ID**: react-103
+**Title**: How do Core Web Vitals apply to React applications?
+**Difficulty**: Hard
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Core Web Vitals (CWV) are Google's metrics for user experience. React apps have specific patterns that affect each one.
+
+**LCP — Largest Contentful Paint (target: < 2.5s):**
+
+```jsx
+// Never lazy-load the LCP element
+<img
+  src={hero}
+  loading="eager"
+  fetchpriority="high"
+  width={1200}
+  height={600}
+/>
+
+// Route-based code splitting reduces JS that blocks first render
+```
+
+Code splitting at the route level also helps ensure that less JavaScript blocks the initial render.
+
+**INP — Interaction to Next Paint (target: < 200ms):**
+
+```jsx
+// Problem: 300ms synchronous computation blocks the thread
+function handleSearch(query) {
+  const results = searchAllItems(query);
+  setResults(results);
+}
+
+// Fix: useTransition keeps UI responsive
+function handleSearch(query) {
+  setInputValue(query); // urgent — instant
+  startTransition(() => {
+    setResults(searchAllItems(query)); // deferred
+  });
+}
+```
+
+**CLS — Cumulative Layout Shift (target: < 0.1):**
+
+```jsx
+// Problem: content shifts when data loads
+{isLoading ? null : <UserCard user={user} />}
+
+// Fix: skeleton that matches the final element's size
+{isLoading ? <UserCardSkeleton /> : <UserCard user={user} />}
+
+// Problem: image without dimensions
+<img src={avatar} />
+
+// Fix: explicit dimensions prevent layout shift
+<img src={avatar} width={48} height={48} />
+```
+
+**Measuring in production:**
+
+```jsx
+import { onLCP, onINP, onCLS } from 'web-vitals';
+
+onLCP((metric) =>
+  sendToAnalytics({ name: 'LCP', value: metric.value, rating: metric.rating }),
+);
+onINP((metric) =>
+  sendToAnalytics({ name: 'INP', value: metric.value, rating: metric.rating }),
+);
+onCLS((metric) =>
+  sendToAnalytics({ name: 'CLS', value: metric.value, rating: metric.rating }),
+);
+```
+
+## 🧠 Question 104
+
+**ID**: react-104
+**Title**: What are the pitfalls of `React.memo` and how do you use its comparison function?
+**Difficulty**: Hard
+**Category**: Performance Optimization
+
+### Answer 📄
+
+`React.memo` prevents re-rendering when props haven't changed (shallow equality). But several common patterns silently break it.
+
+**Pitfall — inline objects and functions create new references every render:**
+
+```jsx
+// BROKEN — new object and function every render; memo never skips
+function Parent() {
+  return (
+    <MemoizedChild
+      style={{ color: 'red' }} // new reference every render
+      onClick={() => doSomething()} // new reference every render
+    />
+  );
+}
+
+// FIXED — stable references via useMemo and useCallback
+function Parent() {
+  const style = useMemo(() => ({ color: 'red' }), []);
+  const onClick = useCallback(() => doSomething(), []);
+  return <MemoizedChild style={style} onClick={onClick} />;
+}
+```
+
+**Custom comparison function:**
+
+```jsx
+const MemoizedRow = React.memo(
+  function Row({ user, isSelected }) {
+    return <tr className={isSelected ? 'selected' : ''}>{user.name}</tr>;
+  },
+  (prevProps, nextProps) =>
+    prevProps.user.id === nextProps.user.id &&
+    prevProps.isSelected === nextProps.isSelected,
+);
+```
+
+**When `React.memo` makes things WORSE:**
+
+- Component renders cheaply — comparison overhead exceeds the saving
+- Props change on nearly every render — memo never prevents re-renders
+- Component has many props — comparison cost grows linearly
+
+**When it genuinely helps:**
+
+- Expensive list items where parent re-renders frequently
+- Pure display components with stable prop values
+
+**Always verify with the React Profiler** before and after — don't add `memo` speculatively.
+
+## 🧠 Question 105
+
+**ID**: react-105
+**Title**: How do you implement debounce and throttle in React hooks?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Debounce delays execution until after a pause; throttle limits execution to once per interval.
+
+**`useDebounce` — debounce a value:**
+
+```jsx
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+function SearchBox() {
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 300);
+
+  useEffect(() => {
+    if (debouncedQuery) search(debouncedQuery);
+  }, [debouncedQuery]);
+
+  return <input value={query} onChange={(e) => setQuery(e.target.value)} />;
+}
+```
+
+**`useDebouncedCallback` — debounce a function (avoids stale closures):**
+
+```jsx
+function useDebouncedCallback(callback, delay) {
+  const timerRef = useRef(null);
+  const callbackRef = useRef(callback);
+
+  useLayoutEffect(() => {
+    callbackRef.current = callback;
+  });
+
+  return useCallback(
+    (...args) => {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => callbackRef.current(...args), delay);
+    },
+    [delay],
+  );
+}
+```
+
+**`useThrottle` — throttle a value:**
+
+```jsx
+function useThrottle(value, interval) {
+  const [throttled, setThrottled] = useState(value);
+  const lastRun = useRef(Date.now());
+
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastRun.current >= interval) {
+      lastRun.current = now;
+      setThrottled(value);
+    } else {
+      const id = setTimeout(
+        () => {
+          lastRun.current = Date.now();
+          setThrottled(value);
+        },
+        interval - (now - lastRun.current),
+      );
+      return () => clearTimeout(id);
+    }
+  }, [value, interval]);
+
+  return throttled;
+}
+```
+
+**Stale closure pitfall:** When debouncing a callback via `useCallback`, use a `ref` to always call the latest version of the callback (as shown in `useDebouncedCallback`).

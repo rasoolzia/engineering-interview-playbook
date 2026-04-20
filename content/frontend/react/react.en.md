@@ -5982,3 +5982,339 @@ function useThrottle(value, interval) {
 ```
 
 **Stale closure pitfall:** When debouncing a callback via `useCallback`, use a `ref` to always call the latest version of the callback (as shown in `useDebouncedCallback`).
+
+## 🧠 Question 106
+
+**ID**: react-106
+**Title**: How do you implement infinite scroll in React?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Infinite scroll loads more content as the user scrolls near the bottom. The modern approach uses `IntersectionObserver` to detect when a sentinel element enters the viewport.
+
+**Manual implementation:**
+
+```jsx
+function useInfiniteScroll(callback) {
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) callback();
+      },
+      { threshold: 0.1 },
+    );
+
+    if (sentinelRef.current) observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [callback]);
+
+  return sentinelRef;
+}
+
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const loadMore = useCallback(async () => {
+    const next = await fetchProducts(page);
+    if (!next.length) {
+      setHasMore(false);
+      return;
+    }
+    setProducts((prev) => [...prev, ...next]);
+    setPage((p) => p + 1);
+  }, [page]);
+
+  const sentinelRef = useInfiniteScroll(hasMore ? loadMore : () => {});
+
+  return (
+    <div>
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+      {hasMore && (
+        <div ref={sentinelRef}>
+          <Spinner />
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**With TanStack Query (recommended):**
+
+```jsx
+const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  useInfiniteQuery({
+    queryKey: ['products'],
+    queryFn: ({ pageParam = 1 }) => fetchProducts(pageParam),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.length + 1 : undefined,
+  });
+
+const products = data?.pages.flatMap((page) => page.items) ?? [];
+```
+
+**Infinite scroll vs pagination:** Use infinite scroll for feeds and exploratory browsing. Use pagination when users need to navigate to a specific page, share a URL to a position, or when new items appear at the top.
+
+## 🧠 Question 107
+
+**ID**: react-107
+**Title**: How do you use the React Profiler to find performance bottlenecks?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+The React Profiler (in React DevTools) records renders and shows which components rendered, how long they took, and why.
+
+**Using DevTools Profiler:**
+
+1. Open React DevTools → **Profiler** tab
+2. Click **Record** (⏺)
+3. Perform the slow interaction
+4. Click **Stop** and analyze
+
+**Reading the flame chart:**
+
+- **Width** = time spent rendering (wider = slower)
+- **Color** = gray (did not render this commit), yellow/orange (rendered — darker = slower)
+- **Hover** = shows exact render time and which prop/state triggered it
+
+**The `Profiler` component API:**
+
+```jsx
+import { Profiler } from 'react';
+
+function onRenderCallback(id, phase, actualDuration, baseDuration) {
+  // baseDuration = estimated time without memoization
+  // If actualDuration << baseDuration, memoization is working
+  if (actualDuration > 16)
+    console.warn(`${id} slow: ${actualDuration.toFixed(2)}ms`);
+}
+
+<Profiler id="ProductList" onRender={onRenderCallback}>
+  <ProductList />
+</Profiler>;
+```
+
+**Common findings and fixes:**
+
+| Finding                                   | Fix                                           |
+| ----------------------------------------- | --------------------------------------------- |
+| Component renders on every parent render  | `React.memo`                                  |
+| Object/function props change every render | `useMemo` / `useCallback`                     |
+| Many list items re-render on one change   | Virtualization + stable keys                  |
+| Context consumer re-renders unnecessarily | Split contexts                                |
+| High `actualDuration`, low `baseDuration` | Memoization working; base computation is slow |
+
+**Tip:** Enable "Record why each component rendered" in Profiler settings — it shows exactly which prop or state triggered each render.
+
+## 🧠 Question 108
+
+**ID**: react-108
+**Title**: What are the performance trade-offs of CSS-in-JS vs CSS Modules?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+CSS-in-JS and CSS Modules represent two fundamentally different styling approaches with distinct performance profiles.
+
+**Runtime CSS-in-JS (styled-components, Emotion):**
+
+```jsx
+const Button = styled.button`
+  background: ${(props) => (props.primary ? '#3b82f6' : '#e5e7eb')};
+`;
+```
+
+On every render, the library: interpolates the template literal, hashes it to a class name, checks if the class already exists in the stylesheet, and injects a `<style>` tag if not. This adds ~4-8ms of JavaScript execution per render for complex components, plus ~30kB bundle overhead.
+
+**Zero-runtime CSS-in-JS (vanilla-extract, linaria):**
+
+```js
+import { style } from '@vanilla-extract/css';
+
+export const button = style({ background: '#3b82f6' }); // extracted at build time
+```
+
+No runtime cost — produces a plain CSS file and class names.
+
+**CSS Modules:**
+
+```css
+/* Button.module.css */
+.button {
+  background: #3b82f6;
+}
+.buttonPrimary {
+  background: #1d4ed8;
+}
+```
+
+```jsx
+import styles from './Button.module.css';
+
+<button
+  className={`${styles.button} ${primary ? styles.buttonPrimary : ''}`}
+/>;
+```
+
+Zero runtime cost, fully static, excellent tree-shaking, no SSR style flash.
+
+**Recommendation:**
+
+| Concern                      | Winner                      |
+| ---------------------------- | --------------------------- |
+| Runtime performance          | CSS Modules or zero-runtime |
+| Dynamic styles (props-based) | Runtime CSS-in-JS           |
+| SSR compatibility            | CSS Modules                 |
+| Bundle size                  | CSS Modules                 |
+
+For performance-sensitive apps: CSS Modules + Tailwind or vanilla-extract.
+
+## 🧠 Question 109
+
+**ID**: react-109
+**Title**: How do you optimize images in a React application?
+**Difficulty**: Easy
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Images are often the largest assets and a primary cause of poor LCP and CLS scores.
+
+**1. Lazy loading:**
+
+```jsx
+<img src={product.image} alt={product.name} loading="lazy" />
+// Never lazy-load the LCP (above-fold) image
+<img src={hero} alt="Hero" loading="eager" fetchpriority="high" />
+```
+
+**2. Explicit dimensions to prevent CLS:**
+
+```jsx
+// Without dimensions: browser doesn't reserve space → layout shift
+// With dimensions: browser reserves correct space immediately
+<img src={avatar} alt="User" width={48} height={48} />
+```
+
+**3. Modern formats:**
+
+```jsx
+<picture>
+  <source srcSet={image.avif} type="image/avif" />
+  <source srcSet={image.webp} type="image/webp" />
+  <img src={image.jpg} alt={image.alt} width={800} height={600} />
+</picture>
+```
+
+**4. Responsive images:**
+
+```jsx
+<img
+  src={image.md}
+  srcSet={`${image.sm} 480w, ${image.md} 800w, ${image.lg} 1200w`}
+  sizes="(max-width: 480px) 480px, (max-width: 800px) 800px, 1200px"
+  alt={image.alt}
+/>
+```
+
+**5. Blur placeholder (LQIP):**
+
+```jsx
+function BlurImage({ src, lqip, alt, width, height }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <img
+        src={lqip}
+        aria-hidden
+        style={{
+          filter: 'blur(20px)',
+          opacity: loaded ? 0 : 1,
+          position: 'absolute',
+        }}
+      />
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        onLoad={() => setLoaded(true)}
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s' }}
+      />
+    </div>
+  );
+}
+```
+
+**Next.js:** The `<Image>` component handles all of the above automatically.
+
+## 🧠 Question 110
+
+**ID**: react-110
+**Title**: How does Streaming SSR work in React 18?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Traditional SSR generates a complete HTML string before sending anything to the client. Streaming SSR (React 18) sends HTML progressively as parts of the page become ready.
+
+**Traditional SSR:** Server renders everything (2000ms) → sends full HTML → client hydrates.
+
+**Streaming SSR:** Server sends shell (50ms) → streams content chunks as data resolves → client hydrates incrementally.
+
+**`renderToPipeableStream` (Node.js):**
+
+```jsx
+import { renderToPipeableStream } from 'react-dom/server';
+
+function handler(req, res) {
+  const { pipe, abort } = renderToPipeableStream(<App />, {
+    bootstrapScripts: ['/static/js/main.js'],
+
+    onShellReady() {
+      res.setHeader('Content-Type', 'text/html');
+      pipe(res); // start streaming immediately
+    },
+
+    onShellError(error) {
+      res.status(500).send('<h1>Something went wrong</h1>');
+    },
+  });
+
+  setTimeout(abort, 10000); // abort slow renders
+}
+```
+
+**Suspense as streaming boundaries:**
+
+```jsx
+function App() {
+  return (
+    <html>
+      <body>
+        <Header /> {/* sent in shell — immediately */}
+        <Suspense fallback={<ProductsSkeleton />}>
+          <ProductList /> {/* streamed when DB query resolves */}
+        </Suspense>
+        <Suspense fallback={<ReviewsSkeleton />}>
+          <Reviews /> {/* streamed independently */}
+        </Suspense>
+      </body>
+    </html>
+  );
+}
+```
+
+**Selective hydration:** React 18 doesn't hydrate the entire page at once. If a user clicks an element before its Suspense boundary is hydrated, React prioritizes hydrating that boundary first.

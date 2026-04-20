@@ -5982,3 +5982,339 @@ function useThrottle(value, interval) {
 ```
 
 **تله stale closure:** وقتی callback را debounce می‌کنید، با `ref` مطمئن شوید همیشه آخرین نسخه callback اجرا می‌شود.
+
+## 🧠 سوال 106
+
+**شناسه**: react-106
+**عنوان**: infinite scroll را در React چگونه پیاده‌سازی می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Infinite scroll با نزدیک شدن کاربر به انتهای لیست، محتوای بیشتری بار می‌کند. رویکرد مدرن معمولاً از `IntersectionObserver` برای تشخیص ورود یک sentinel به viewport استفاده می‌کند.
+
+**پیاده‌سازی دستی:**
+
+```jsx
+function useInfiniteScroll(callback) {
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) callback();
+      },
+      { threshold: 0.1 },
+    );
+
+    if (sentinelRef.current) observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [callback]);
+
+  return sentinelRef;
+}
+
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const loadMore = useCallback(async () => {
+    const next = await fetchProducts(page);
+    if (!next.length) {
+      setHasMore(false);
+      return;
+    }
+    setProducts((prev) => [...prev, ...next]);
+    setPage((p) => p + 1);
+  }, [page]);
+
+  const sentinelRef = useInfiniteScroll(hasMore ? loadMore : () => {});
+
+  return (
+    <div>
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+      {hasMore && (
+        <div ref={sentinelRef}>
+          <Spinner />
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**با TanStack Query** که معمولاً پیشنهاد بهتری است:
+
+```jsx
+const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  useInfiniteQuery({
+    queryKey: ['products'],
+    queryFn: ({ pageParam = 1 }) => fetchProducts(pageParam),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.length + 1 : undefined,
+  });
+
+const products = data?.pages.flatMap((page) => page.items) ?? [];
+```
+
+**Infinite scroll در برابر pagination:** برای feed ها و مرور اکتشافی مناسب‌تر است. اگر کاربر باید به یک صفحه خاص برود یا URL قابل اشتراک‌گذاری برای موقعیت داشته باشد، pagination بهتر است.
+
+## 🧠 سوال 107
+
+**شناسه**: react-107
+**عنوان**: چگونه از React Profiler برای پیدا کردن گلوگاه‌های performance استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+React Profiler در React DevTools رندرها را ضبط می‌کند و نشان می‌دهد کدام کامپوننت‌ها رندر شده‌اند، چقدر زمان برده‌اند و چرا.
+
+**استفاده از DevTools Profiler:**
+
+1. React DevTools را باز کنید و به تب **Profiler** بروید
+2. روی **Record** کلیک کنید
+3. interaction کند را انجام دهید
+4. روی **Stop** کلیک کنید و نتیجه را بررسی کنید
+
+**خواندن flame chart:**
+
+- **Width** یعنی زمان صرف‌شده برای render
+- **Color** یعنی اینکه آیا رندر شده و چقدر کند بوده
+- **Hover** زمان دقیق و علت render را نشان می‌دهد
+
+**API مربوط به `Profiler`:**
+
+```jsx
+import { Profiler } from 'react';
+
+function onRenderCallback(id, phase, actualDuration, baseDuration) {
+  // اگر actualDuration خیلی کمتر از baseDuration باشد، memoization موثر بوده
+  if (actualDuration > 16) {
+    console.warn(`${id} slow: ${actualDuration.toFixed(2)}ms`);
+  }
+}
+
+<Profiler id="ProductList" onRender={onRenderCallback}>
+  <ProductList />
+</Profiler>;
+```
+
+**یافته‌های رایج و راه‌حل‌ها:**
+
+| یافته                                        | راه‌حل                                         |
+| -------------------------------------------- | ---------------------------------------------- |
+| render شدن با هر render والد                 | `React.memo`                                   |
+| تغییر object/function prop در هر render      | `useMemo` / `useCallback`                      |
+| render شدن آیتم‌های زیاد لیست                | virtualization + key پایدار                    |
+| re-render غیرضروری مصرف‌کننده context        | split کردن context                             |
+| «مدت زمان واقعی» بالا، «مدت زمان پایه» پایین | به خاطر سپردن کار می‌کند؛ محاسبات پایه کند است |
+
+**نکته:** در تنظیمات Profiler گزینه "Record why each component rendered" را فعال کنید.
+
+## 🧠 سوال 108
+
+**شناسه**: react-108
+**عنوان**: trade-off های performance بین CSS-in-JS و CSS Modules چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+CSS-in-JS و CSS Modules دو رویکرد متفاوت برای styling هستند و profile عملکردی آن‌ها هم فرق دارد.
+
+**Runtime CSS-in-JS** مثل styled-components و Emotion:
+
+```jsx
+const Button = styled.button`
+  background: ${(props) => (props.primary ? '#3b82f6' : '#e5e7eb')};
+`;
+```
+
+در هر render، کتابخانه باید template را پردازش کند، class name را hash کند، بررسی کند style قبلاً وجود داشته یا نه، و در صورت نیاز style را inject کند. این کار هزینه runtime و bundle size اضافه دارد.
+
+**Zero-runtime CSS-in-JS** مثل vanilla-extract یا linaria:
+
+```js
+import { style } from '@vanilla-extract/css';
+
+export const button = style({ background: '#3b82f6' });
+```
+
+در این مدل، style ها در زمان build استخراج می‌شوند و هزینه runtime ندارند.
+
+**CSS Modules:**
+
+```css
+/* Button.module.css */
+.button {
+  background: #3b82f6;
+}
+.buttonPrimary {
+  background: #1d4ed8;
+}
+```
+
+```jsx
+import styles from './Button.module.css';
+
+<button
+  className={`${styles.button} ${primary ? styles.buttonPrimary : ''}`}
+/>;
+```
+
+این روش هزینه runtime ندارد، static است و برای tree shaking و SSR معمولاً خوب عمل می‌کند.
+
+**توصیه کلی:**
+
+| موضوع                         | انتخاب بهتر                 |
+| ----------------------------- | --------------------------- |
+| runtime performance           | CSS Modules یا zero-runtime |
+| استایل‌های پویا بر اساس props | runtime CSS-in-JS           |
+| سازگاری SSR                   | CSS Modules                 |
+| bundle size                   | CSS Modules                 |
+
+برای اپ‌های performance-sensitive، ترکیب CSS Modules با Tailwind یا ابزارهایی مثل vanilla-extract معمولاً انتخاب خوبی است.
+
+## 🧠 سوال 109
+
+**شناسه**: react-109
+**عنوان**: تصاویر را در یک اپ React چگونه بهینه می‌کنید؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+تصاویر اغلب بزرگ‌ترین asset ها هستند و یکی از علت‌های اصلی LCP و CLS ضعیف به حساب می‌آیند.
+
+**1. Lazy loading:**
+
+```jsx
+<img src={product.image} alt={product.name} loading="lazy" />
+// اما تصویر اصلی بالای صفحه را lazy-load نکنید
+<img src={hero} alt="Hero" loading="eager" fetchpriority="high" />
+```
+
+**2. تعیین ابعاد برای جلوگیری از CLS:**
+
+```jsx
+// بدون ابعاد: مرورگر فضا را رزرو نمی‌کند → تغییر طرح
+// با ابعاد: مرورگر بلافاصله فضای صحیح را رزرو می‌کند
+<img src={avatar} alt="User" width={48} height={48} />
+```
+
+**3. فرمت‌های مدرن:**
+
+```jsx
+<picture>
+  <source srcSet={image.avif} type="image/avif" />
+  <source srcSet={image.webp} type="image/webp" />
+  <img src={image.jpg} alt={image.alt} width={800} height={600} />
+</picture>
+```
+
+**4. Responsive images:**
+
+```jsx
+<img
+  src={image.md}
+  srcSet={`${image.sm} 480w, ${image.md} 800w, ${image.lg} 1200w`}
+  sizes="(max-width: 480px) 480px, (max-width: 800px) 800px, 1200px"
+  alt={image.alt}
+/>
+```
+
+**5. Blur placeholder یا LQIP:**
+
+```jsx
+function BlurImage({ src, lqip, alt, width, height }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <img
+        src={lqip}
+        aria-hidden
+        style={{
+          filter: 'blur(20px)',
+          opacity: loaded ? 0 : 1,
+          position: 'absolute',
+        }}
+      />
+      <img
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        onLoad={() => setLoaded(true)}
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s' }}
+      />
+    </div>
+  );
+}
+```
+
+در Next.js، کامپوننت `<Image>` بیشتر این کارها را به‌صورت خودکار انجام می‌دهد.
+
+## 🧠 سوال 110
+
+**شناسه**: react-110
+**عنوان**: Streaming SSR در React 18 چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+در SSR سنتی، سرور اول کل HTML را می‌سازد و بعد یکجا برای کلاینت می‌فرستد. در Streaming SSR که در React 18 معرفی شد، HTML به‌صورت تدریجی و هم‌زمان با آماده شدن بخش‌های مختلف صفحه ارسال می‌شود.
+
+**SSR سنتی:** سرور همه چیز را رندر می‌کند → کل HTML را می‌فرستد → کلاینت hydrate می‌کند.
+
+**Streaming SSR:** سرور shell اولیه را خیلی زود می‌فرستد → بقیه بخش‌ها را به‌مرور stream می‌کند → hydration هم می‌تواند تدریجی‌تر باشد.
+
+**`renderToPipeableStream` در Node.js:**
+
+```jsx
+import { renderToPipeableStream } from 'react-dom/server';
+
+function handler(req, res) {
+  const { pipe, abort } = renderToPipeableStream(<App />, {
+    bootstrapScripts: ['/static/js/main.js'],
+
+    onShellReady() {
+      res.setHeader('Content-Type', 'text/html');
+      pipe(res);
+    },
+
+    onShellError(error) {
+      res.status(500).send('<h1>Something went wrong</h1>');
+    },
+  });
+
+  setTimeout(abort, 10000);
+}
+```
+
+**Suspense به‌عنوان مرزهای streaming:**
+
+```jsx
+function App() {
+  return (
+    <html>
+      <body>
+        <Header />
+        <Suspense fallback={<ProductsSkeleton />}>
+          <ProductList />
+        </Suspense>
+        <Suspense fallback={<ReviewsSkeleton />}>
+          <Reviews />
+        </Suspense>
+      </body>
+    </html>
+  );
+}
+```
+
+**Selective hydration:** React 18 لازم نیست کل صفحه را یکجا hydrate کند. اگر کاربر قبل از hydrate شدن کامل روی بخشی تعامل کند، React می‌تواند همان مرز مرتبط را در اولویت hydrate کند.

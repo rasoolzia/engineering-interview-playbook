@@ -6318,3 +6318,346 @@ function App() {
 ```
 
 **Selective hydration:** React 18 لازم نیست کل صفحه را یکجا hydrate کند. اگر کاربر قبل از hydrate شدن کامل روی بخشی تعامل کند، React می‌تواند همان مرز مرتبط را در اولویت hydrate کند.
+
+## 🧠 سوال 111
+
+**شناسه**: react-111
+**عنوان**: tree shaking چیست و چگونه مطمئن می‌شوید در پروژه React کار می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Tree shaking کدهای مرده یا export های استفاده‌نشده را از bundle نهایی حذف می‌کند. Bundler ها این کار را برای ES module ها انجام می‌دهند، اما الگوهای رایجی وجود دارد که آن را خراب می‌کنند.
+
+**ES module ها تحلیل ایستا را ممکن می‌کنند:**
+
+```js
+// CommonJS — تحلیل ایستا سخت یا غیرممکن
+const { format } = require('date-fns');
+
+// ESM — bundler می‌تواند کد استفاده‌نشده را حذف کند
+import { format } from 'date-fns';
+```
+
+**چه چیزهایی tree shaking را خراب می‌کنند:**
+
+**1. نداشتن `sideEffects` در `package.json`:**
+
+```json
+{ "sideEffects": false }
+```
+
+یا می‌توانید فقط فایل‌های دارای side effect را مشخص کنید.
+
+**2. زنجیره‌های عمیق barrel با side effect:**
+
+```js
+export * from './Button';
+export * from './Modal';
+```
+
+اگر یکی از ماژول‌های re-export شده side effect داشته باشد، ممکن است کل barrel نگه داشته شود.
+
+**3. کتابخانه‌هایی که از `require()` شرطی استفاده می‌کنند:**
+
+این حالت تحلیل ایستا را سخت می‌کند. پکیج‌های ESM-first معمولاً بهتر هستند.
+
+**چگونه بررسی کنیم:**
+
+```bash
+npx vite-bundle-visualizer
+```
+
+اگر کتابخانه بزرگی را می‌بینید که فقط بخش کوچکی از آن را مصرف می‌کنید، احتمالاً tree shaking درست عمل نکرده است.
+
+**مثال عملی:**
+
+```js
+// react-icons — به درستی tree-shakeable
+import { FiSearch } from 'react-icons/fi'; // فقط FiSearch در bundle
+```
+
+## 🧠 سوال 112
+
+**شناسه**: react-112
+**عنوان**: performance انیمیشن را در React چگونه بهینه می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+انیمیشن‌هایی که در هر frame باعث محاسبه دوباره layout شوند، jank ایجاد می‌کنند. راه‌حل اصلی این است که فقط property هایی را animate کنید که روی compositor اجرا می‌شوند.
+
+**Property های مناسب برای انیمیشن روان:**
+
+```css
+/* فقط transform و opacity را می‌توان بدون layout/paint animated کرد */
+transform: translateX(100px) scale(1.1);
+opacity: 0.5;
+```
+
+**Property هایی که بهتر است animate نشوند:**
+
+```css
+/* این‌ها طرح‌بندی را در هر فریم دوباره محاسبه می‌کنند */
+width, height, top, left, margin, padding
+```
+
+**CSS transition** ساده و معمولاً سریع:
+
+```jsx
+function AnimatedCard({ isVisible }) {
+  return (
+    <div
+      style={{
+        transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+        opacity: isVisible ? 1 : 0,
+        transition: 'transform 300ms ease, opacity 300ms ease',
+        willChange: 'transform, opacity',
+      }}
+    >
+      Content
+    </div>
+  );
+}
+```
+
+**Framer Motion** برای انیمیشن declarative:
+
+```jsx
+import { motion, AnimatePresence } from 'framer-motion';
+
+<AnimatePresence>
+  {isVisible && (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      Content
+    </motion.div>
+  )}
+</AnimatePresence>;
+```
+
+**پرهیز از layout thrashing:**
+
+```js
+// بد — read و write درهم
+elements.forEach((el) => {
+  const h = el.offsetHeight;
+  el.style.height = h * 2 + 'px';
+});
+
+// خوب — اول همه read ها، بعد همه write ها
+const heights = elements.map((el) => el.offsetHeight);
+elements.forEach((el, i) => {
+  el.style.height = heights[i] * 2 + 'px';
+});
+```
+
+## 🧠 سوال 113
+
+**شناسه**: react-113
+**عنوان**: partial hydration و معماری islands چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+در SSR سنتی، کل صفحه به‌عنوان یک اپلیکیشن واحد hydrate می‌شود، حتی محتوای کاملاً ایستا. Partial hydration فقط بخش‌های واقعاً interactive را hydrate می‌کند.
+
+**مشکل full hydration:**
+
+```text
+سرور: ۱۰۰۰۰ کلمه + ۳ دکمه تعاملی را رندر می‌کند.
+کلاینت: تمام JS را دانلود می‌کند → همه چیز از جمله متن استاتیک را هیدراته می‌کند.
+(کار هدر رفته - متن استاتیک هرگز به جاوا اسکریپت نیاز ندارد)
+```
+
+**معماری Islands:**
+
+```text
+Page = 🌊 دریای HTML ایستا
+     + 🏝 جزیره (سبد خرید — interactive و hydrated)
+     + 🏝 جزیره (نوار جستجو — interactive و hydrated)
+     + 🌊 HTML ایستا برای بقیه بخش‌ها
+```
+
+**React Server Components به‌عنوان نوعی partial hydration:**
+
+```jsx
+// Server Component — به HTML رندر می‌شود و JS آن به کلاینت نمی‌رود
+async function BlogPost({ id }) {
+  const post = await db.posts.findById(id);
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p>
+      <CommentSection postId={id} />
+    </article>
+  );
+}
+
+('use client');
+function CommentSection({ postId }) {
+  const [comments, setComments] = useState([]);
+  // این بخش interactive است و همان جزیره به حساب می‌آید
+}
+```
+
+**چرا مهم است:** در صفحه‌های محتوامحور، partial hydration می‌تواند حجم JavaScript لازم را به‌شدت کم کند و FCP و Time to Interactive را بهبود دهد.
+
+## 🧠 سوال 114
+
+**شناسه**: react-114
+**عنوان**: long task ها را چگونه مدیریت می‌کنید تا اپ React responsive بماند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+Long task هر اجرای JavaScript ای است که بیشتر از `50ms` طول بکشد. این کار مرورگر را از پاسخ به input کاربر بازمی‌دارد و jank ایجاد می‌کند.
+
+**شناسایی long task:**
+
+```js
+const observer = new PerformanceObserver((list) => {
+  list.getEntries().forEach((entry) => {
+    console.warn(`Long task: ${entry.duration.toFixed(0)}ms`);
+  });
+});
+observer.observe({ entryTypes: ['longtask'] });
+```
+
+**استراتژی 1 — `useTransition`:**
+
+```jsx
+function handleSearch(query) {
+  setInputValue(query); // فوری
+  startTransition(() => {
+    setResults(heavySearch(query)); // deferred
+  });
+}
+```
+
+**استراتژی 2 — پردازش chunk شده:**
+
+```js
+async function processItems(items, CHUNK = 100) {
+  const results = [];
+  for (let i = 0; i < items.length; i += CHUNK) {
+    results.push(...items.slice(i, i + CHUNK).map(expensiveTransform));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  return results;
+}
+```
+
+**استراتژی 3 — Web Worker:**
+
+```js
+// worker.js
+self.onmessage = ({ data }) => self.postMessage(expensiveComputation(data));
+
+// Component
+function useWorker(url) {
+  const workerRef = useRef(null);
+  useEffect(() => {
+    workerRef.current = new Worker(url, { type: 'module' });
+    return () => workerRef.current.terminate();
+  }, [url]);
+
+  return useCallback(
+    (data) =>
+      new Promise((resolve) => {
+        workerRef.current.onmessage = ({ data }) => resolve(data);
+        workerRef.current.postMessage(data);
+      }),
+    [],
+  );
+}
+```
+
+**چارچوب تصمیم‌گیری:**
+
+- کمتر از `50ms`: معمولاً نیازی به اقدام نیست
+- بین `50` تا `200ms` برای state React: `useTransition`
+- بین `50` تا `200ms` برای پردازش داده: chunk کردن با `setTimeout`
+- بیشتر از `200ms` برای محاسبه خالص: Web Worker
+
+## 🧠 سوال 115
+
+**شناسه**: react-115
+**عنوان**: performance اپلیکیشن React را در production چگونه مانیتور می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+ابزارهای development فقط عملکرد را در شرایط کنترل‌شده نشان می‌دهند. مانیتورینگ production متریک‌های واقعی را از دستگاه‌ها و شبکه‌های واقعی کاربران جمع می‌کند.
+
+**Core Web Vitals در production:**
+
+```jsx
+import { onLCP, onINP, onCLS, onFCP, onTTFB } from 'web-vitals';
+
+function sendToAnalytics(metric) {
+  navigator.sendBeacon(
+    '/analytics',
+    JSON.stringify({
+      name: metric.name,
+      value: metric.value,
+      rating: metric.rating,
+      url: window.location.href,
+    }),
+  );
+}
+
+onLCP(sendToAnalytics);
+onINP(sendToAnalytics);
+onCLS(sendToAnalytics);
+```
+
+**مانیتورینگ خطا با Sentry:**
+
+```jsx
+import * as Sentry from '@sentry/react';
+
+Sentry.init({
+  dsn: 'your-dsn',
+  integrations: [Sentry.browserTracingIntegration()],
+  tracesSampleRate: 0.1,
+});
+
+const App = Sentry.withErrorBoundary(AppRoot, { fallback: <ErrorPage /> });
+```
+
+**استفاده از `Profiler` در production برای اندازه‌گیری هدفمند:**
+
+```jsx
+function onRender(id, phase, actualDuration) {
+  if (actualDuration > 16) {
+    // کندتر از یک فریم ۶۰ فریم بر ثانیه
+    logSlowRender({ component: id, duration: actualDuration, phase });
+  }
+}
+
+<Profiler id="CheckoutForm" onRender={onRender}>
+  <CheckoutForm />
+</Profiler>;
+```
+
+**performance mark سفارشی:**
+
+```js
+performance.mark('cart-open-start');
+openCart();
+performance.mark('cart-open-end');
+performance.measure('cart-open', 'cart-open-start', 'cart-open-end');
+
+const [m] = performance.getEntriesByName('cart-open');
+sendToAnalytics({ name: 'cart-open', value: m.duration });
+```

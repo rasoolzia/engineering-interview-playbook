@@ -6318,3 +6318,346 @@ function App() {
 ```
 
 **Selective hydration:** React 18 doesn't hydrate the entire page at once. If a user clicks an element before its Suspense boundary is hydrated, React prioritizes hydrating that boundary first.
+
+## 🧠 Question 111
+
+**ID**: react-111
+**Title**: What is tree shaking and how do you ensure it works in a React project?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Tree shaking eliminates dead code (unused exports) from the final bundle. Bundlers perform it automatically for ES modules — but common patterns break it.
+
+**ES modules enable static analysis:**
+
+```js
+// CommonJS — tree shaking impossible (dynamic, runtime)
+const { format } = require('date-fns'); // entire library included
+
+// ESM — static imports allow dead code elimination
+import { format } from 'date-fns'; // only `format` and its deps
+```
+
+**What breaks tree shaking:**
+
+**1. Missing `sideEffects` declaration:**
+
+```json
+// package.json
+{ "sideEffects": false }  // tells bundler: all files are side-effect free
+// or specify which files have side effects:
+{ "sideEffects": ["./src/polyfills.js", "*.css"] }
+```
+
+**2. Deep barrel chains with side effects:**
+
+```js
+// Risky: if any re-exported module has side effects, the whole barrel is kept
+export * from './Button';
+export * from './Modal'; // if Modal imports a side-effectful CSS file
+```
+
+**3. Libraries using `require()` conditionally:**
+
+Runtime requires prevent static analysis. Prefer ESM-only packages.
+
+**Verifying tree shaking:**
+
+```bash
+npx vite-bundle-visualizer
+```
+
+If you see a large library that you are only consuming a small portion of, tree shaking probably didn't work properly.
+
+**Practical example:**
+
+```js
+// react-icons — correctly tree-shakeable
+import { FiSearch } from 'react-icons/fi'; // only FiSearch in bundle
+```
+
+## 🧠 Question 112
+
+**ID**: react-112
+**Title**: How do you optimize animation performance in React?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Animations that trigger layout recalculation on every frame cause visible jank. The solution: only animate GPU-composited properties.
+
+**GPU-composited properties (animate these — 60fps):**
+
+```css
+/* Only transform and opacity can be animated without layout/paint */
+transform: translateX(100px) scale(1.1);
+opacity: 0.5;
+```
+
+**Properties to avoid animating (cause reflow):**
+
+```css
+/* These recalculate layout on every frame */
+width, height, top, left, margin, padding
+```
+
+**CSS transitions (simplest, best performance):**
+
+```jsx
+function AnimatedCard({ isVisible }) {
+  return (
+    <div
+      style={{
+        transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
+        opacity: isVisible ? 1 : 0,
+        transition: 'transform 300ms ease, opacity 300ms ease',
+        willChange: 'transform, opacity', // browser creates a new compositor layer
+      }}
+    >
+      Content
+    </div>
+  );
+}
+```
+
+**Framer Motion for declarative animations:**
+
+```jsx
+import { motion, AnimatePresence } from 'framer-motion';
+
+<AnimatePresence>
+  {isVisible && (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      Content
+    </motion.div>
+  )}
+</AnimatePresence>;
+```
+
+**Avoiding layout thrashing:**
+
+```js
+// Bad — read/write interleaved forces multiple reflows
+elements.forEach((el) => {
+  const h = el.offsetHeight; // read (forces layout)
+  el.style.height = h * 2 + 'px'; // write (invalidates layout)
+});
+
+// Good — batch all reads then all writes
+const heights = elements.map((el) => el.offsetHeight);
+elements.forEach((el, i) => {
+  el.style.height = heights[i] * 2 + 'px';
+});
+```
+
+## 🧠 Question 113
+
+**ID**: react-113
+**Title**: What is partial hydration and the islands architecture?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Traditional React SSR hydrates the **entire page** as one application — even static content. Partial hydration only hydrates truly interactive components.
+
+**The problem with full hydration:**
+
+```text
+Server: renders 10,000 words + 3 interactive buttons
+Client: downloads JS for ALL of it → hydrates everything including static text
+(wasted work — static text never needs JavaScript)
+```
+
+**Islands Architecture:**
+
+```text
+Page = 🌊 Static HTML ocean
+     + 🏝 Island (shopping cart — interactive, hydrated)
+     + 🏝 Island (search bar — interactive, hydrated)
+     + 🌊 Static HTML (rest — NO JavaScript needed)
+```
+
+**React Server Components as partial hydration:**
+
+```jsx
+// Server Component — rendered to HTML, NO JS sent to client
+async function BlogPost({ id }) {
+  const post = await db.posts.findById(id);
+  return (
+    <article>
+      <h1>{post.title}</h1>
+      <p>{post.content}</p> {/* static — zero JS hydration */}
+      <CommentSection postId={id} /> {/* 'use client' — this IS hydrated */}
+    </article>
+  );
+}
+
+('use client');
+function CommentSection({ postId }) {
+  const [comments, setComments] = useState([]);
+  // ...interactive — this is the "island"
+}
+```
+
+**Why it matters:** A content-heavy page may need < 10KB of JavaScript instead of 200KB+ when using partial hydration. First Contentful Paint and Time to Interactive improve dramatically.
+
+## 🧠 Question 114
+
+**ID**: react-114
+**Title**: How do you handle long tasks and keep React apps responsive?
+**Difficulty**: Hard
+**Category**: Performance Optimization
+
+### Answer 📄
+
+A long task is any JavaScript execution that takes more than 50ms. It blocks the browser from responding to user input, causing visible jank.
+
+**Identifying long tasks:**
+
+```js
+const observer = new PerformanceObserver((list) => {
+  list.getEntries().forEach((entry) => {
+    console.warn(`Long task: ${entry.duration.toFixed(0)}ms`);
+  });
+});
+observer.observe({ entryTypes: ['longtask'] });
+```
+
+**Strategy 1 — `useTransition` (React-managed deferral):**
+
+```jsx
+function handleSearch(query) {
+  setInputValue(query); // urgent — instant feedback
+  startTransition(() => {
+    setResults(heavySearch(query)); // deferred — can be interrupted
+  });
+}
+```
+
+**Strategy 2 — Chunked processing (yield to browser between chunks):**
+
+```js
+async function processItems(items, CHUNK = 100) {
+  const results = [];
+  for (let i = 0; i < items.length; i += CHUNK) {
+    results.push(...items.slice(i, i + CHUNK).map(expensiveTransform));
+    await new Promise((resolve) => setTimeout(resolve, 0)); // yield
+  }
+  return results;
+}
+```
+
+**Strategy 3 — Web Workers (move computation off the main thread):**
+
+```js
+// worker.js
+self.onmessage = ({ data }) => self.postMessage(expensiveComputation(data));
+
+// Component
+function useWorker(url) {
+  const workerRef = useRef(null);
+  useEffect(() => {
+    workerRef.current = new Worker(url, { type: 'module' });
+    return () => workerRef.current.terminate();
+  }, [url]);
+
+  return useCallback(
+    (data) =>
+      new Promise((resolve) => {
+        workerRef.current.onmessage = ({ data }) => resolve(data);
+        workerRef.current.postMessage(data);
+      }),
+    [],
+  );
+}
+```
+
+**Decision framework:**
+
+- < 50ms: no action needed
+- 50–200ms, React state: `useTransition`
+- 50–200ms, data processing: chunk with `setTimeout`
+- > 200ms, pure computation: Web Worker
+
+## 🧠 Question 115
+
+**ID**: react-115
+**Title**: How do you monitor React application performance in production?
+**Difficulty**: Medium
+**Category**: Performance Optimization
+
+### Answer 📄
+
+Development tools only show performance in controlled conditions. Production monitoring captures real-user metrics from actual devices and networks.
+
+**Core Web Vitals in production:**
+
+```jsx
+import { onLCP, onINP, onCLS, onFCP, onTTFB } from 'web-vitals';
+
+function sendToAnalytics(metric) {
+  navigator.sendBeacon(
+    '/analytics',
+    JSON.stringify({
+      name: metric.name,
+      value: metric.value,
+      rating: metric.rating, // 'good' | 'needs-improvement' | 'poor'
+      url: window.location.href,
+    }),
+  );
+}
+
+onLCP(sendToAnalytics);
+onINP(sendToAnalytics);
+onCLS(sendToAnalytics);
+```
+
+**Error monitoring with Sentry:**
+
+```jsx
+import * as Sentry from '@sentry/react';
+
+Sentry.init({
+  dsn: 'your-dsn',
+  integrations: [Sentry.browserTracingIntegration()],
+  tracesSampleRate: 0.1, // sample 10% of transactions
+});
+
+const App = Sentry.withErrorBoundary(AppRoot, { fallback: <ErrorPage /> });
+```
+
+**React Profiler API for production measurement:**
+
+```jsx
+function onRender(id, phase, actualDuration) {
+  if (actualDuration > 16) {
+    // slower than one 60fps frame
+    logSlowRender({ component: id, duration: actualDuration, phase });
+  }
+}
+
+<Profiler id="CheckoutForm" onRender={onRender}>
+  <CheckoutForm />
+</Profiler>;
+```
+
+**Custom performance marks:**
+
+```js
+performance.mark('cart-open-start');
+openCart();
+performance.mark('cart-open-end');
+performance.measure('cart-open', 'cart-open-start', 'cart-open-end');
+
+const [m] = performance.getEntriesByName('cart-open');
+sendToAnalytics({ name: 'cart-open', value: m.duration });
+```

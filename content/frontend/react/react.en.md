@@ -6661,3 +6661,363 @@ performance.measure('cart-open', 'cart-open-start', 'cart-open-end');
 const [m] = performance.getEntriesByName('cart-open');
 sendToAnalytics({ name: 'cart-open', value: m.duration });
 ```
+
+## 🧠 Question 116
+
+**ID**: react-116
+**Title**: What is the complete checklist for avoiding unnecessary re-renders in React?
+**Difficulty**: Hard
+**Category**: Performance Optimization
+
+### Answer 📄
+
+**1. Stable prop references — useMemo for objects/arrays:**
+
+```jsx
+const config = useMemo(() => ({ sortBy: 'name' }), []);
+<List config={config} />;
+```
+
+**2. Stable callback references — useCallback:**
+
+```jsx
+const handleClick = useCallback(() => doSomething(id), [id]);
+<Button onClick={handleClick} />;
+```
+
+**3. React.memo for expensive pure components:**
+
+```jsx
+const ExpensiveList = React.memo(({ items }) =>
+  items.map((i) => <Row key={i.id} item={i} />),
+);
+```
+
+**4. Split Context by update frequency:**
+
+```jsx
+<UserContext.Provider>   {/* changes rarely */}
+  <ThemeContext.Provider>  {/* changes on toggle */}
+    <CartContext.Provider> {/* changes often */}
+```
+
+**5. Pass children as JSX (not created inside the component):**
+
+```jsx
+// Child doesn't re-render when Parent's unrelated state changes
+function App() {
+  return (
+    <Parent>
+      <Child />
+    </Parent>
+  );
+}
+```
+
+**6. useMemo for derived state:**
+
+```jsx
+const sorted = useMemo(() => [...items].sort(compareFn), [items]);
+```
+
+**7. Define helper components outside the render scope:**
+
+```jsx
+// Row defined outside List — stable component type
+const Row = ({ item }) => <div>{item.name}</div>;
+function List({ items }) {
+  return items.map((i) => <Row key={i.id} item={i} />);
+}
+```
+
+**8. Zustand selectors — subscribe to slices:**
+
+```jsx
+const count = useStore((state) => state.count); // not the whole store
+```
+
+**9. Virtualize long lists:**
+
+Use `react-window` or `react-virtual` — only render visible items.
+
+**10. Use stable unique keys:**
+
+Never use array index as key for lists that can reorder or filter.
+
+**11. Avoid state in render:**
+
+Don't derive new values inline — memoize them.
+
+**12. Prefer composition over context for frequently-updated state:**
+
+Pass data through props or render props for subtrees that update often.
+
+## 🧠 Question 117
+
+**ID**: react-117
+**Title**: How do you use TypeScript with React for advanced type safety?
+**Difficulty**: Medium
+**Category**: Architecture & Patterns
+
+### Answer 📄
+
+**Component props — extending native HTML attributes:**
+
+```tsx
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'solid' | 'outline' | 'ghost';
+  isLoading?: boolean;
+}
+
+function Button({
+  variant = 'solid',
+  isLoading,
+  children,
+  ...props
+}: ButtonProps) {
+  return <button {...props}>{isLoading ? <Spinner /> : children}</button>;
+}
+```
+
+**Event handler types:**
+
+```tsx
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {};
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {};
+const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {};
+const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {};
+```
+
+**Generic components:**
+
+```tsx
+interface SelectProps<T> {
+  options: T[];
+  value: T | null;
+  onChange: (value: T) => void;
+  getLabel: (option: T) => string;
+}
+
+function Select<T>({ options, value, onChange, getLabel }: SelectProps<T>) {
+  return (
+    <select onChange={(e) => onChange(options[Number(e.target.value)])}>
+      {options.map((opt, i) => (
+        <option key={i} value={i}>
+          {getLabel(opt)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// TypeScript infers T as User
+<Select
+  options={users}
+  value={selected}
+  onChange={setSelected}
+  getLabel={(u) => u.name}
+/>;
+```
+
+**Discriminated unions for variant-driven components:**
+
+```tsx
+type AlertProps =
+  | { variant: 'info'; message: string }
+  | { variant: 'error'; message: string; onRetry: () => void }
+  | { variant: 'success'; message: string };
+
+function Alert(props: AlertProps) {
+  return (
+    <div className={`alert-${props.variant}`}>
+      {props.message}
+      {props.variant === 'error' && (
+        <button onClick={props.onRetry}>Retry</button> // TypeScript knows onRetry exists here
+      )}
+    </div>
+  );
+}
+```
+
+**`ComponentPropsWithoutRef` for wrapper components:**
+
+```tsx
+type CardProps = React.ComponentPropsWithoutRef<'div'> & { title: string };
+
+function Card({ title, className, children, ...props }: CardProps) {
+  return (
+    <div className={`card ${className ?? ''}`} {...props}>
+      {children}
+    </div>
+  );
+}
+```
+
+## 🧠 Question 118
+
+**ID**: react-118
+**Title**: What are the key differences between React DOM and React Native?
+**Difficulty**: Easy
+**Category**: React Basics
+
+### Answer 📄
+
+React DOM and React Native share the **same React reconciler** — same component model, same hooks, same rendering concepts — but use different **renderers** targeting different platforms.
+
+**Core differences:**
+
+|            | React DOM                    | React Native                          |
+| ---------- | ---------------------------- | ------------------------------------- |
+| Target     | Browser DOM                  | iOS / Android native views            |
+| Styling    | CSS (classes, inline style)  | StyleSheet API (JS objects, no units) |
+| Layout     | CSS Flexbox + Grid           | Flexbox only                          |
+| Components | `<div>`, `<span>`, `<input>` | `<View>`, `<Text>`, `<TextInput>`     |
+| Events     | `onClick`, `onChange`        | `onPress`, `onChangeText`             |
+| Navigation | React Router                 | React Navigation                      |
+
+**Styling differences:**
+
+```jsx
+// React DOM
+<div style={{ backgroundColor: 'blue', fontSize: 16 }}>Hello</div>;
+
+// React Native — no CSS, no units, flexbox default
+import { View, Text, StyleSheet } from 'react-native';
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: 'blue' },
+  text: { fontSize: 16, color: 'white' },
+});
+<View style={styles.container}>
+  <Text style={styles.text}>Hello</Text>
+</View>;
+```
+
+**Platform-specific code:**
+
+```jsx
+import { Platform } from 'react-native';
+const shadow = Platform.select({
+  ios: { shadowColor: '#000', shadowOpacity: 0.2 },
+  android: { elevation: 4 },
+});
+```
+
+**What transfers between platforms:**
+
+- Custom hooks (pure logic, no platform-specific APIs)
+- Business logic utilities
+- TypeScript types and interfaces
+- `react-native-web` renders React Native components in the browser
+
+## 🧠 Question 119
+
+**ID**: react-119
+**Title**: What does `StrictMode` actually do in React 18 and why do effects run twice?
+**Difficulty**: Medium
+**Category**: React Internals
+
+### Answer 📄
+
+`StrictMode` is a development-only tool that catches bugs early by intentionally invoking certain functions multiple times. In React 18 it introduces **double-invocation of effects**.
+
+**What StrictMode does in React 18:**
+
+1. **Renders components twice** — detects side effects in render
+2. **Mounts effects twice** (mount → cleanup → mount) — detects missing cleanup functions _(new in React 18)_
+3. Warns about deprecated APIs
+4. Warns about state updates in unexpected lifecycle positions
+
+**Why effects fire twice:**
+
+React 18 is designed for Concurrent Mode, where components may mount, unmount, and remount without user-visible change (for features like the upcoming `<Activity>` component). StrictMode simulates this to surface cleanup issues early.
+
+```jsx
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  console.log('connected'); // logs TWICE in dev StrictMode
+
+  return () => {
+    ws.close();
+    console.log('disconnected'); // logs ONCE (cleanup of first mount)
+  };
+}, [url]);
+```
+
+**What double-invocation catches:**
+
+```jsx
+// Bug: WebSocket opened twice, second connection leaks
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  // Missing: return () => ws.close();
+}, [url]);
+```
+
+**What double-invocation is NOT:**
+
+- Does not happen in production
+- Does not affect renders visible to users
+- Does not mean your component mounts twice for the user
+
+**Best practice:** if double-invocation breaks your effect, you have a missing cleanup function — fix it, don't disable `StrictMode`.
+
+## 🧠 Question 120
+
+**ID**: react-120
+**Title**: What are React's priority lanes and how does the concurrent scheduler work?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+React's concurrent scheduler uses a **lanes model** to assign priority to every update. Higher-priority updates interrupt lower-priority ones to keep the UI responsive.
+
+**Priority lanes (highest to lowest):**
+
+```
+SyncLane              — synchronous (flushSync, legacy mode)
+InputContinuousLane   — continuous input (typing, dragging)
+DefaultLane           — normal updates (setState in event handlers)
+TransitionLane        — useTransition / startTransition updates
+IdleLane              — offscreen, prefetching
+```
+
+**How lanes flow from user events:**
+
+```jsx
+function SearchBox() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    setQuery(e.target.value); // → InputContinuousLane (high priority)
+    startTransition(() => {
+      setResults(search(e.target.value)); // → TransitionLane (low priority)
+    });
+  }
+}
+```
+
+**How the scheduler works:**
+
+1. Every state update is tagged with a lane
+2. The scheduler processes the **highest-priority lane first**
+3. If a higher-priority update arrives during a lower-priority render, React **suspends the current work**, processes the urgent update, then **resumes or discards** the low-priority work
+4. **Time slicing**: React breaks long renders into ~5ms chunks, yielding to the browser between chunks to allow input handling
+
+**The work loop (simplified):**
+
+```js
+while (workInProgress !== null) {
+  if (shouldYieldToHost()) break; // yield every ~5ms
+  performUnitOfWork(workInProgress);
+}
+// Schedule the remaining work for the next frame
+```
+
+**Why this matters for applications:**
+
+Understanding lanes explains why `useTransition` works: wrapping an update in `startTransition` moves it from `DefaultLane` to `TransitionLane`, allowing React to interrupt it when the user types again — discarding the in-progress render and starting fresh with the new input value.

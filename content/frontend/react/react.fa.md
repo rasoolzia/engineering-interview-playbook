@@ -6661,3 +6661,363 @@ performance.measure('cart-open', 'cart-open-start', 'cart-open-end');
 const [m] = performance.getEntriesByName('cart-open');
 sendToAnalytics({ name: 'cart-open', value: m.duration });
 ```
+
+## 🧠 سوال 116
+
+**شناسه**: react-116
+**عنوان**: چک‌لیست کامل جلوگیری از re-render غیرضروری در React چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: بهینه‌سازی عملکرد
+
+### پاسخ 📄
+
+**1. reference پایدار برای object و array با `useMemo`:**
+
+```jsx
+const config = useMemo(() => ({ sortBy: 'name' }), []);
+<List config={config} />;
+```
+
+**2. reference پایدار برای callback با `useCallback`:**
+
+```jsx
+const handleClick = useCallback(() => doSomething(id), [id]);
+<Button onClick={handleClick} />;
+```
+
+**3. استفاده از `React.memo` برای کامپوننت‌های pure و گران:**
+
+```jsx
+const ExpensiveList = React.memo(({ items }) =>
+  items.map((i) => <Row key={i.id} item={i} />),
+);
+```
+
+**4. split کردن Context بر اساس نرخ تغییر:**
+
+```jsx
+<UserContext.Provider>
+  <ThemeContext.Provider>
+    <CartContext.Provider>
+```
+
+**5. پاس دادن children به‌صورت JSX:**
+
+```jsx
+// وقتی وضعیت نامرتبط والد تغییر می‌کند، فرزند دوباره رندر نمی‌شود
+function App() {
+  return (
+    <Parent>
+      <Child />
+    </Parent>
+  );
+}
+```
+
+**6. `useMemo` برای state مشتق‌شده:**
+
+```jsx
+const sorted = useMemo(() => [...items].sort(compareFn), [items]);
+```
+
+**7. تعریف helper component ها خارج از scope رندر:**
+
+```jsx
+// ردیف تعریف شده خارج از لیست — نوع کامپوننت پایدار
+const Row = ({ item }) => <div>{item.name}</div>;
+function List({ items }) {
+  return items.map((i) => <Row key={i.id} item={i} />);
+}
+```
+
+**8. selector در Zustand:**
+
+```jsx
+const count = useStore((state) => state.count);
+```
+
+**9. مجازی‌سازی لیست‌های طولانی:**
+
+از `react-window` یا `react-virtual` استفاده کنید — فقط موارد قابل مشاهده را رندر کنید.
+
+**10. از کلیدهای منحصر به فرد پایدار استفاده کنید:**
+
+هرگز از اندیس آرایه به عنوان کلید برای لیست‌هایی که می‌توانند مرتب‌سازی مجدد یا فیلتر شوند، استفاده نکنید.
+
+**11. از state در رندر اجتناب کنید:**
+
+مقادیر جدید را به صورت درون خطی استخراج نکنید - آنها را به خاطر بسپارید.
+
+**12. برای stateهایی که مرتباً به‌روزرسانی می‌شوند، ترکیب را به متن ترجیح دهید:**
+
+برای زیردرخت‌هایی که مرتباً به‌روزرسانی می‌شوند، داده‌ها را از طریق props یا render props ارسال کنید.
+
+## 🧠 سوال 117
+
+**شناسه**: react-117
+**عنوان**: چگونه از TypeScript همراه React برای type safety پیشرفته استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: معماری و الگوها
+
+### پاسخ 📄
+
+**Prop های کامپوننت با گسترش attribute های native HTML:**
+
+```tsx
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'solid' | 'outline' | 'ghost';
+  isLoading?: boolean;
+}
+
+function Button({
+  variant = 'solid',
+  isLoading,
+  children,
+  ...props
+}: ButtonProps) {
+  return <button {...props}>{isLoading ? <Spinner /> : children}</button>;
+}
+```
+
+**نوع‌های event handler:**
+
+```tsx
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {};
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {};
+const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {};
+const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {};
+```
+
+**کامپوننت generic:**
+
+```tsx
+interface SelectProps<T> {
+  options: T[];
+  value: T | null;
+  onChange: (value: T) => void;
+  getLabel: (option: T) => string;
+}
+
+function Select<T>({ options, value, onChange, getLabel }: SelectProps<T>) {
+  return (
+    <select onChange={(e) => onChange(options[Number(e.target.value)])}>
+      {options.map((opt, i) => (
+        <option key={i} value={i}>
+          {getLabel(opt)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// تایپ‌اسکریپت T را به عنوان کاربر استنباط می‌کند
+<Select
+  options={users}
+  value={selected}
+  onChange={setSelected}
+  getLabel={(u) => u.name}
+/>;
+```
+
+**Discriminated union برای variant-driven component:**
+
+```tsx
+type AlertProps =
+  | { variant: 'info'; message: string }
+  | { variant: 'error'; message: string; onRetry: () => void }
+  | { variant: 'success'; message: string };
+
+function Alert(props: AlertProps) {
+  return (
+    <div className={`alert-${props.variant}`}>
+      {props.message}
+      {props.variant === 'error' && (
+        <button onClick={props.onRetry}>Retry</button> // تایپ‌اسکریپت می‌داند که onRetry در اینجا وجود دارد
+      )}
+    </div>
+  );
+}
+```
+
+**`ComponentPropsWithoutRef` برای wrapper component ها:**
+
+```tsx
+type CardProps = React.ComponentPropsWithoutRef<'div'> & { title: string };
+
+function Card({ title, className, children, ...props }: CardProps) {
+  return (
+    <div className={`card ${className ?? ''}`} {...props}>
+      {children}
+    </div>
+  );
+}
+```
+
+## 🧠 سوال 118
+
+**شناسه**: react-118
+**عنوان**: تفاوت‌های کلیدی بین React DOM و React Native چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: مبانی React
+
+### پاسخ 📄
+
+React DOM و React Native از **یک reconciler مشترک React** استفاده می‌کنند؛ یعنی مدل کامپوننت، hook ها و مفاهیم رندر مشابه است، اما renderer آن‌ها برای پلتفرم‌های متفاوت هدف‌گیری شده است.
+
+**تفاوت‌های اصلی:**
+
+|             | React DOM                    | React Native                      |
+| ----------- | ---------------------------- | --------------------------------- |
+| هدف         | DOM مرورگر                   | view های بومی iOS / Android       |
+| استایل      | CSS                          | StyleSheet API                    |
+| layout      | Flexbox + Grid               | فقط Flexbox                       |
+| کامپوننت‌ها | `<div>`، `<span>`، `<input>` | `<View>`، `<Text>`، `<TextInput>` |
+| رویدادها    | `onClick`، `onChange`        | `onPress`، `onChangeText`         |
+| navigation  | React Router                 | React Navigation                  |
+
+**تفاوت در styling:**
+
+```jsx
+// React DOM
+<div style={{ backgroundColor: 'blue', fontSize: 16 }}>Hello</div>;
+
+// React Native
+import { View, Text, StyleSheet } from 'react-native';
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: 'blue' },
+  text: { fontSize: 16, color: 'white' },
+});
+<View style={styles.container}>
+  <Text style={styles.text}>Hello</Text>
+</View>;
+```
+
+**کد وابسته به پلتفرم:**
+
+```jsx
+import { Platform } from 'react-native';
+const shadow = Platform.select({
+  ios: { shadowColor: '#000', shadowOpacity: 0.2 },
+  android: { elevation: 4 },
+});
+```
+
+**چیزهایی که بین دو پلتفرم قابل انتقال‌اند:**
+
+- custom hook ها
+- منطق business
+- type ها و interface های TypeScript
+- `react-native-web` که بعضی کامپوننت‌های React Native را در مرورگر رندر می‌کند
+
+## 🧠 سوال 119
+
+**شناسه**: react-119
+**عنوان**: `StrictMode` در React 18 دقیقاً چه می‌کند و چرا effect ها دوبار اجرا می‌شوند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+`StrictMode` یک ابزار مخصوص development است که با صدا زدن عمدی بعضی بخش‌ها بیش از یک بار، کمک می‌کند باگ‌ها زودتر پیدا شوند. در React 18 مهم‌ترین تغییر آن **دوبار اجرا شدن effect ها** است.
+
+**StrictMode در React 18 این کارها را انجام می‌دهد:**
+
+1. کامپوننت‌ها را دوبار render می‌کند تا side effect داخل render مشخص شود
+2. effect ها را به‌صورت mount → cleanup → mount اجرا می‌کند تا cleanup ناقص پیدا شود
+3. درباره API های deprecated هشدار می‌دهد
+4. بعضی به‌روزرسانی‌های state در موقعیت‌های مشکوک را هشدار می‌دهد
+
+**چرا effect ها دوبار اجرا می‌شوند:**
+
+React 18 برای concurrent rendering طراحی شده و در آینده ممکن است mount/unmount/remount بدون تغییر قابل مشاهده برای کاربر بیشتر رخ دهد. StrictMode این شرایط را شبیه‌سازی می‌کند تا cleanup های ناقص زودتر آشکار شوند.
+
+```jsx
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  console.log('connected'); // در dev StrictMode دو بار لاگ می‌شود
+
+  return () => {
+    ws.close();
+    console.log('disconnected'); // cleanup مربوط به mount اول
+  };
+}, [url]);
+```
+
+**این رفتار چه باگ‌هایی را پیدا می‌کند:**
+
+```jsx
+// باگ: WebSocket دوبار باز می‌شود و cleanup ندارد
+useEffect(() => {
+  const ws = new WebSocket(url);
+  ws.onmessage = handleMessage;
+  // وارد نشده: return() => ws.close();
+}, [url]);
+```
+
+**این دوبار اجرا شدن چه چیزی نیست:**
+
+- در production اتفاق نمی‌افتد
+- به کاربر دو بار mount واقعی نشان نمی‌دهد
+- نشانه خراب بودن React نیست
+
+**بهترین روش:** اگر effect شما با دوبار اجرا شدن می‌شکند، cleanup آن ناقص است. مشکل را برطرف کنید، نه اینکه StrictMode را خاموش کنید.
+
+## 🧠 سوال 120
+
+**شناسه**: react-120
+**عنوان**: priority lane های React چیستند و concurrent scheduler چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+Concurrent scheduler در React از یک مدل به نام **lanes** استفاده می‌کند تا برای هر update یک اولویت تعیین کند. update های با اولویت بالاتر می‌توانند update های کم‌اولویت‌تر را قطع کنند تا UI responsive بماند.
+
+**Lane های اولویت از بالا به پایین:**
+
+```text
+SyncLane            — synchronous
+InputContinuousLane — ورودی‌های پیوسته مثل تایپ یا drag
+DefaultLane         — update های معمولی
+TransitionLane      — update های startTransition
+IdleLane            — کارهای کم‌اهمیت مثل prefetch
+```
+
+**جریان lane ها از event کاربر:**
+
+```jsx
+function SearchBox() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [isPending, startTransition] = useTransition();
+
+  function handleChange(e) {
+    setQuery(e.target.value); // lane با اولویت بالاتر
+    startTransition(() => {
+      setResults(search(e.target.value)); // TransitionLane
+    });
+  }
+}
+```
+
+**Scheduler چگونه کار می‌کند:**
+
+1. هر update با یک lane برچسب می‌خورد
+2. scheduler اول بالاترین lane را پردازش می‌کند
+3. اگر وسط یک render کم‌اولویت، update پر‌اولویت‌تری برسد، React کار فعلی را متوقف می‌کند و به سراغ update فوری می‌رود
+4. React کار render طولانی را به chunk های کوتاه تقسیم می‌کند و بین آن‌ها به مرورگر فرصت می‌دهد
+
+**حلقه کار به‌شکل ساده‌شده:**
+
+```js
+while (workInProgress !== null) {
+  if (shouldYieldToHost()) break;
+  performUnitOfWork(workInProgress);
+}
+// کارهای باقی مانده را برای فریم بعدی زمان‌بندی می‌کند
+```
+
+**چرا این موضوع برای برنامه‌ها مهم است:**
+
+درک Laneها توضیح می‌دهد که چرا `useTransition` کار می‌کند: قرار دادن یک به‌روزرسانی در `startTransition` آن را از `DefaultLane` به `TransitionLane` منتقل می‌کند و به React اجازه می‌دهد تا وقتی کاربر دوباره تایپ می‌کند، آن را متوقف کند - رندر در حال انجام را دور می‌اندازد و از نو با مقدار ورودی جدید شروع می‌کند.

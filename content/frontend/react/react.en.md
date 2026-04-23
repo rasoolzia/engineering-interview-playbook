@@ -7021,3 +7021,268 @@ while (workInProgress !== null) {
 **Why this matters for applications:**
 
 Understanding lanes explains why `useTransition` works: wrapping an update in `startTransition` moves it from `DefaultLane` to `TransitionLane`, allowing React to interrupt it when the user types again — discarding the in-progress render and starting fresh with the new input value.
+
+## 🧠 Question 121
+
+**ID**: react-121
+**Title**: What is a stale closure in React and how does it cause bugs in `useEffect`?
+**Difficulty**: Medium
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+A stale closure occurs when a function captures a variable from its surrounding scope at creation time, but that variable later changes — leaving the function referencing an outdated value.
+
+In React, this most commonly appears inside `useEffect` when the dependency array is incomplete:
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      console.log(count); // always logs 0 — stale closure!
+      setCount(count + 1); // always sets 1, never increments
+    }, 1000);
+    return () => clearInterval(id);
+  }, []); // count is captured once at mount
+}
+```
+
+**Why it happens:** The effect closes over `count` when it runs. Because `[]` means "run once", the closure is never re-created and `count` remains `0` forever.
+
+**Fix 1 — functional update form** (best when you only need the previous value):
+
+```jsx
+setCount((prev) => prev + 1); // no closure over count needed
+```
+
+**Fix 2 — add the dependency** (re-creates interval on each change):
+
+```jsx
+useEffect(() => {
+  const id = setInterval(() => setCount(count + 1), 1000);
+  return () => clearInterval(id); // cleanup the old one
+}, [count]);
+```
+
+**Fix 3 — ref to hold the latest value** (for callbacks that must not re-subscribe):
+
+```jsx
+const countRef = useRef(count);
+useEffect(() => {
+  countRef.current = count;
+}); // keep ref current
+
+useEffect(() => {
+  const id = setInterval(() => setCount(countRef.current + 1), 1000);
+  return () => clearInterval(id);
+}, []);
+```
+
+The `exhaustive-deps` ESLint rule catches most stale closure bugs at authoring time.
+
+## 🧠 Question 122
+
+**ID**: react-122
+**Title**: What causes infinite re-render loops in React and how do you fix them?
+**Difficulty**: Medium
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+An infinite loop occurs when a render triggers a state update, which triggers another render, endlessly.
+
+**Cause 1 — setState called unconditionally during render:**
+
+```jsx
+function Bad() {
+  const [count, setCount] = useState(0);
+  setCount(count + 1); // runs every render → triggers render → repeat
+}
+```
+
+Fix: move state updates into event handlers or effects.
+
+**Cause 2 — useEffect with a missing or unstable dependency:**
+
+```jsx
+useEffect(() => {
+  setData(transform(data)); // setData → re-render → same effect runs again
+}, [data]); // data is recreated every render if it is an object/array
+```
+
+Fix: memoize the dependency with `useMemo`, or use the functional update form.
+
+**Cause 3 — object/array created inline as a dependency:**
+
+```jsx
+useEffect(() => {
+  fetchUser(options);
+}, [{ id: 1 }]); // new object reference every render → effect always re-runs
+```
+
+Fix: move the object outside the component, or `useMemo` it inside.
+
+**Cause 4 — parent and child updating each other:**
+
+```jsx
+// Parent passes onChildChange; child calls it on render → parent updates state
+// → child re-renders → calls onChildChange again
+```
+
+Fix: memoize callbacks with `useCallback`, or restructure data flow to be unidirectional.
+
+**Debugging tip:** React DevTools Profiler shows which component is re-rendering and the reason. `console.count('render')` inside the component makes infinite loops immediately visible.
+
+## 🧠 Question 123
+
+**ID**: react-123
+**Title**: Why do object and array literals in JSX cause unnecessary re-renders?
+**Difficulty**: Easy
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+In JavaScript, object and array literals create a **new reference** every time they are evaluated. When you write them directly inside JSX, they are recreated on every render, so React's reference equality check (`===`) always sees them as changed.
+
+**The problem:**
+
+```jsx
+function Parent() {
+  return <Child style={{ color: 'red' }} />;
+  // { color: 'red' } is a NEW object on every Parent render
+}
+
+const Child = React.memo(({ style }) => <div style={style} />);
+// React.memo checks: prevStyle === nextStyle → false every time → re-renders anyway
+```
+
+**Same issue with arrays and callbacks:**
+
+```jsx
+<List items={[1, 2, 3]} /> // new array every render
+<Button onClick={() => doSomething()} /> // new function every render
+```
+
+**Fixes:**
+
+```jsx
+// 1. Move stable values outside the component
+const STYLE = { color: 'red' };
+function Parent() {
+  return <Child style={STYLE} />;
+}
+
+// 2. useMemo for computed objects
+const options = useMemo(() => ({ filter, page }), [filter, page]);
+
+// 3. useCallback for event handlers
+const handleClick = useCallback(() => doSomething(id), [id]);
+```
+
+This issue only matters for children wrapped in `React.memo` or values used in `useEffect` / `useMemo` dependency arrays. For plain components without memoization, the new reference is harmless — the real cost is breaking memoization that was intended to skip re-renders.
+
+## 🧠 Question 124
+
+**ID**: react-124
+**Title**: What happens when you update state inside a render function?
+**Difficulty**: Easy
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+Calling `setState` directly during the render body (outside any event handler or effect) causes React to immediately schedule a new render, creating an infinite loop and crashing the app.
+
+**Unconditional update — always wrong:**
+
+```jsx
+function Bad() {
+  const [count, setCount] = useState(0);
+  setCount(count + 1); // triggers re-render → setCount again → infinite loop
+  return <div>{count}</div>;
+}
+```
+
+**The one legitimate pattern — conditional update during render:**
+
+React explicitly supports a conditional `setState` during render as a replacement for the class-based `getDerivedStateFromProps`. React detects the synchronous update, re-renders the component immediately (without painting the intermediate state), and only allows this once per render cycle:
+
+```jsx
+function List({ items }) {
+  const [prevItems, setPrevItems] = useState(items);
+  const [selection, setSelection] = useState(null);
+
+  // Allowed: conditional, based on a prop change, runs synchronously
+  if (items !== prevItems) {
+    setPrevItems(items);
+    setSelection(null); // reset derived state when items change
+  }
+
+  return <ul>{/* ... */}</ul>;
+}
+```
+
+React allows this pattern only when the update is **conditional** and based on a **prop or previous state**. Even then, the React team recommends `useMemo` for derived values or `key`-based resets as cleaner alternatives.
+
+## 🧠 Question 125
+
+**ID**: react-125
+**Title**: How do race conditions occur in `useEffect` data fetching and how do you prevent them?
+**Difficulty**: Hard
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+A race condition in data fetching occurs when multiple async requests are in-flight simultaneously and an older, slower response overwrites a newer, faster one.
+
+**The scenario:**
+
+```jsx
+useEffect(() => {
+  fetch(`/api/user/${userId}`)
+    .then((res) => res.json())
+    .then((data) => setUser(data)); // whichever response arrives last wins
+}, [userId]);
+// User clicks: id=1 (slow) → id=2 (fast) → id=2's result is shown
+// → id=1 response arrives late and OVERWRITES with stale data
+```
+
+**Fix 1 — boolean ignore flag (simple, no extra APIs):**
+
+```jsx
+useEffect(() => {
+  let cancelled = false;
+
+  fetch(`/api/user/${userId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!cancelled) setUser(data); // discard if effect re-ran
+    });
+
+  return () => {
+    cancelled = true;
+  }; // cleanup: mark previous effect stale
+}, [userId]);
+```
+
+**Fix 2 — AbortController (cancels the network request itself):**
+
+```jsx
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch(`/api/user/${userId}`, { signal: controller.signal })
+    .then((res) => res.json())
+    .then((data) => setUser(data))
+    .catch((err) => {
+      if (err.name !== 'AbortError') throw err; // ignore intentional aborts
+    });
+
+  return () => controller.abort();
+}, [userId]);
+```
+
+**Fix 3 — use a data-fetching library:** TanStack Query, SWR, and React's `use()` hook all handle race conditions automatically. This is the recommended production approach.
+
+**React StrictMode** deliberately runs effects twice in development, which immediately exposes race conditions by triggering cleanup before the first response arrives.

@@ -7021,3 +7021,268 @@ while (workInProgress !== null) {
 **چرا این موضوع برای برنامه‌ها مهم است:**
 
 درک Laneها توضیح می‌دهد که چرا `useTransition` کار می‌کند: قرار دادن یک به‌روزرسانی در `startTransition` آن را از `DefaultLane` به `TransitionLane` منتقل می‌کند و به React اجازه می‌دهد تا وقتی کاربر دوباره تایپ می‌کند، آن را متوقف کند - رندر در حال انجام را دور می‌اندازد و از نو با مقدار ورودی جدید شروع می‌کند.
+
+## 🧠 سوال 121
+
+**شناسه**: react-121
+**عنوان**: stale closure در React چیست و چگونه در `useEffect` باعث باگ می‌شود؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+Stale closure زمانی رخ می‌دهد که یک تابع در لحظه ساخته شدن، مقداری را از scope اطرافش capture کند، اما بعداً آن مقدار عوض شود و تابع همچنان به نسخه قدیمی همان مقدار اشاره کند.
+
+در React این مشکل بیشتر داخل `useEffect` دیده می‌شود، مخصوصاً وقتی dependency array ناقص باشد:
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      console.log(count); // همیشه 0 را لاگ می‌کند — stale closure
+      setCount(count + 1); // همیشه 1 می‌شود و افزایش واقعی رخ نمی‌دهد
+    }, 1000);
+    return () => clearInterval(id);
+  }, []); // count فقط یک‌بار در mount capture شده
+}
+```
+
+**چرا رخ می‌دهد:** effect هنگام اجرا شدن روی `count` بسته می‌شود. چون `[]` یعنی فقط یک‌بار اجرا شود، closure هرگز دوباره ساخته نمی‌شود و `count` برای همیشه همان مقدار اولیه می‌ماند.
+
+**راه‌حل 1 — فرم functional update** وقتی فقط به مقدار قبلی نیاز دارید:
+
+```jsx
+setCount((prev) => prev + 1); // نیازی به closure روی شمارش نیست
+```
+
+**راه‌حل 2 — dependency را اضافه کنید** تا interval دوباره ساخته شود:
+
+```jsx
+useEffect(() => {
+  const id = setInterval(() => setCount(count + 1), 1000);
+  return () => clearInterval(id); // قدیمی را پاک کنید
+}, [count]);
+```
+
+**راه‌حل 3 — استفاده از ref برای نگه داشتن آخرین مقدار** وقتی callback نباید دوباره subscribe شود:
+
+```jsx
+const countRef = useRef(count);
+useEffect(() => {
+  countRef.current = count;
+});
+
+useEffect(() => {
+  const id = setInterval(() => setCount(countRef.current + 1), 1000);
+  return () => clearInterval(id);
+}, []);
+```
+
+قانون ESLint با نام `exhaustive-deps` بیشتر stale closure ها را همان موقع نوشتن کد پیدا می‌کند.
+
+## 🧠 سوال 122
+
+**شناسه**: react-122
+**عنوان**: چه چیزهایی باعث loop بی‌نهایت re-render در React می‌شوند و چگونه آن‌ها را درست می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+Loop بی‌نهایت زمانی رخ می‌دهد که یک render خودش باعث update شدن state شود و آن update یک render جدید ایجاد کند، و این چرخه بدون توقف تکرار شود.
+
+**علت 1 — صدا زدن `setState` بدون شرط در render:**
+
+```jsx
+function Bad() {
+  const [count, setCount] = useState(0);
+  setCount(count + 1); // در هر render اجرا می‌شود
+}
+```
+
+راه‌حل: update های state را به event handler یا effect منتقل کنید.
+
+**علت 2 — `useEffect` با dependency ناقص یا ناپایدار:**
+
+```jsx
+useEffect(() => {
+  setData(transform(data)); // setData → رندر مجدد → اجرای همان افکت
+}, [data]); // اگر داده‌ها یک شیء/آرایه باشند، در هر رندر دوباره ایجاد می‌شوند
+```
+
+راه حل: وابستگی را با استفاده از `useMemo` به خاطر بسپارید، یا از فرم به‌روزرسانی تابعی استفاده کنید.
+
+**علت 3 — object یا array ای که inline داخل dependency ساخته می‌شود:**
+
+```jsx
+useEffect(() => {
+  fetchUser(options);
+}, [{ id: 1 }]); // reference جدید در هر render
+```
+
+راه‌حل: object را بیرون از کامپوننت تعریف کنید یا با `useMemo` پایدارش کنید.
+
+**علت 4 — parent و child همدیگر را update می‌کنند:**
+
+```jsx
+// Parent یک callback می‌دهد، child آن را هنگام render صدا می‌زند
+// parent update می‌شود → child دوباره render می‌شود → callback دوباره اجرا می‌شود
+```
+
+راه‌حل: callback ها را با `useCallback` پایدار کنید یا جریان داده را یک‌طرفه‌تر طراحی کنید.
+
+**نکته برای دیباگ:** React DevTools Profiler و حتی `console.count('render')` می‌توانند loop بی‌نهایت را سریع مشخص کنند.
+
+## 🧠 سوال 123
+
+**شناسه**: react-123
+**عنوان**: چرا literal های object و array در JSX باعث re-render غیرضروری می‌شوند؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+در جاوااسکریپت، object و array literal ها هر بار که evaluate شوند، **reference جدید** می‌سازند. وقتی آن‌ها را مستقیم داخل JSX می‌نویسید، در هر render دوباره ساخته می‌شوند و مقایسه ارجاعی React یعنی `===` همیشه آن‌ها را متفاوت می‌بیند.
+
+**مشکل:**
+
+```jsx
+function Parent() {
+  return <Child style={{ color: 'red' }} />;
+  // { color: 'red' } در هر رندر والد، یک شیء جدید است
+}
+
+const Child = React.memo(({ style }) => <div style={style} />);
+// React.memo بررسی می‌کند: prevStyle === nextStyle → هر بار false → در هر صورت دوباره رندر می‌شود
+```
+
+**همین مشکل برای array و callback هم وجود دارد:**
+
+```jsx
+<List items={[1, 2, 3]} />
+<Button onClick={() => doSomething()} />
+```
+
+**راه‌حل‌ها:**
+
+```jsx
+// 1. تعریف مقدار پایدار بیرون از کامپوننت
+const STYLE = { color: 'red' };
+function Parent() {
+  return <Child style={STYLE} />;
+}
+
+// 2. استفاده از useMemo
+const options = useMemo(() => ({ filter, page }), [filter, page]);
+
+// 3. استفاده از useCallback
+const handleClick = useCallback(() => doSomething(id), [id]);
+```
+
+این مسئله بیشتر وقتی مهم می‌شود که child با `React.memo` پوشانده شده باشد یا همان مقدار در dependency array هوک‌هایی مثل `useEffect` و `useMemo` استفاده شود.
+
+## 🧠 سوال 124
+
+**شناسه**: react-124
+**عنوان**: اگر state را داخل تابع render به‌روزرسانی کنید چه اتفاقی می‌افتد؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+اگر `setState` را مستقیم داخل بدنه render صدا بزنید، React بلافاصله یک render جدید زمان‌بندی می‌کند و این معمولاً باعث loop بی‌نهایت و کرش برنامه می‌شود.
+
+**به‌روزرسانی بدون شرط — همیشه اشتباه:**
+
+```jsx
+function Bad() {
+  const [count, setCount] = useState(0);
+  setCount(count + 1); // رندر مجدد را فعال می‌کند → setCount دوباره → infinite
+  return <div>{count}</div>;
+}
+```
+
+**الگوی مجاز اما خاص — update شرطی داخل render:**
+
+React در یک حالت خاص، update شرطی داخل render را به‌عنوان جایگزینی برای `getDerivedStateFromProps` کلاس‌ها قبول می‌کند. React این update sync را تشخیص می‌دهد، دوباره render می‌کند و وضعیت میانی را paint نمی‌کند:
+
+```jsx
+function List({ items }) {
+  const [prevItems, setPrevItems] = useState(items);
+  const [selection, setSelection] = useState(null);
+
+  // مجاز: شرطی، بر اساس تغییر prop، به صورت همزمان اجرا می‌شود
+  if (items !== prevItems) {
+    setPrevItems(items);
+    setSelection(null);
+  }
+
+  return <ul>{/* ... */}</ul>;
+}
+```
+
+این الگو فقط وقتی مجاز است که update **شرطی** باشد و بر اساس **prop یا state قبلی** انجام شود. با این حال، تیم React معمولاً `useMemo` برای مقادیر مشتق‌شده یا reset مبتنی بر `key` را تمیزتر می‌داند.
+
+## 🧠 سوال 125
+
+**شناسه**: react-125
+**عنوان**: race condition در data fetching داخل `useEffect` چگونه رخ می‌دهد و چگونه جلوی آن را می‌گیرید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+Race condition در data fetching زمانی رخ می‌دهد که چند request async هم‌زمان در حال اجرا باشند و پاسخ قدیمی‌تر اما کندتر، نتیجه جدیدتر و درست‌تر را overwrite کند.
+
+**سناریو:**
+
+```jsx
+useEffect(() => {
+  fetch(`/api/user/${userId}`)
+    .then((res) => res.json())
+    .then((data) => setUser(data)); // هر کدام دیرتر برسد برنده می‌شود
+}, [userId]);
+// کلیک‌های کاربر: id=1 (کند) → id=2 (سریع) → نتیجه id=2 نمایش داده می‌شود
+// → پاسخ id=1 با تأخیر می‌رسد و با داده‌های قدیمی بازنویسی می‌شود
+```
+
+**راه‌حل 1 — فلگ boolean برای نادیده گرفتن پاسخ قدیمی:**
+
+```jsx
+useEffect(() => {
+  let cancelled = false;
+
+  fetch(`/api/user/${userId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!cancelled) setUser(data);
+    });
+
+  return () => {
+    cancelled = true;
+  }; // پاکسازی: اثر قبلی را بی‌اثر علامت‌گذاری کنید
+}, [userId]);
+```
+
+**راه‌حل 2 — `AbortController` برای لغو خود request:**
+
+```jsx
+useEffect(() => {
+  const controller = new AbortController();
+
+  fetch(`/api/user/${userId}`, { signal: controller.signal })
+    .then((res) => res.json())
+    .then((data) => setUser(data))
+    .catch((err) => {
+      if (err.name !== 'AbortError') throw err;
+    });
+
+  return () => controller.abort();
+}, [userId]);
+```
+
+**راه حل ۳ — از یک کتابخانه‌ی واکشی داده استفاده کنید:** کوئری TanStack، SWR و هوک `use()` در React، همگی به طور خودکار شرایط رقابتی را مدیریت می‌کنند. این رویکرد پیشنهادی برای تولید است.
+
+**React StrictMode** عمداً افکت‌ها را دو بار در توسعه اجرا می‌کند که بلافاصله با فعال کردن پاکسازی قبل از رسیدن اولین پاسخ، شرایط رقابتی را آشکار می‌کند.

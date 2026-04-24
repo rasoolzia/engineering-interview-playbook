@@ -7286,3 +7286,340 @@ useEffect(() => {
 **راه حل ۳ — از یک کتابخانه‌ی واکشی داده استفاده کنید:** کوئری TanStack، SWR و هوک `use()` در React، همگی به طور خودکار شرایط رقابتی را مدیریت می‌کنند. این رویکرد پیشنهادی برای تولید است.
 
 **React StrictMode** عمداً افکت‌ها را دو بار در توسعه اجرا می‌کند که بلافاصله با فعال کردن پاکسازی قبل از رسیدن اولین پاسخ، شرایط رقابتی را آشکار می‌کند.
+
+## 🧠 سوال 126
+
+**شناسه**: react-126
+**عنوان**: اشتباه‌های رایج هنگام به‌روزرسانی object و array در state React چیست؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+به‌روزرسانی state در React باید **immutable** باشد. یعنی نباید object یا array قبلی را مستقیم mutate کنید. چون React state را با reference مقایسه می‌کند، mutate کردن همان object قبلی معمولاً re-render ایجاد نمی‌کند.
+
+**Mutation — اشتباه:**
+
+```jsx
+// Object
+const [user, setUser] = useState({ name: 'Ali', age: 25 });
+user.age = 26;
+setUser(user); // همان reference قبلی
+
+// Array
+const [items, setItems] = useState([1, 2, 3]);
+items.push(4);
+setItems(items); // همان reference قبلی
+```
+
+**الگوهای درست و immutable:**
+
+```jsx
+// update یک فیلد object
+setUser((prev) => ({ ...prev, age: 26 }));
+
+// اضافه کردن به array
+setItems((prev) => [...prev, 4]);
+
+// حذف از array
+setItems((prev) => prev.filter((item) => item !== 2));
+
+// update یک آیتم در array
+setItems((prev) =>
+  prev.map((item) => (item.id === id ? { ...item, done: true } : item)),
+);
+
+// update تو‌در‌توی object
+setState((prev) => ({
+  ...prev,
+  address: { ...prev.address, city: 'Tehran' },
+}));
+```
+
+**برای تودرتوسازی عمیق**، کتابخانه Immer (که توسط Redux Toolkit استفاده می‌شود) به شما امکان می‌دهد کدی به سبک جهش بنویسید که به صورت داخلی به به‌روزرسانی‌های تغییرناپذیر تبدیل می‌شود:
+
+```jsx
+import produce from 'immer';
+
+setState(
+  produce((draft) => {
+    draft.user.address.city = 'Tehran';
+  }),
+);
+```
+
+## 🧠 سوال 127
+
+**شناسه**: react-127
+**عنوان**: خواندن state قدیمی داخل callback های async چگونه باعث باگ می‌شود؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+Callback های async مثل Promise، `setTimeout` یا event listener ها مقداری از state را capture می‌کنند که **در لحظه ساخته شدن callback** وجود داشته، نه در لحظه اجرا شدن آن. اگر قبل از اجرای callback، state عوض شود، callback هنوز مقدار قدیمی را می‌خواند.
+
+**باگ کلاسیک با `setTimeout`:**
+
+```jsx
+function App() {
+  const [count, setCount] = useState(0);
+
+  function handleClick() {
+    setTimeout(() => {
+      // شمارش در زمان کلیک ثبت می‌شود، مثلاً count = 3
+      alert(`Count is: ${count}`); // مقدار قدیمی را نشان می‌دهد
+    }, 3000);
+  }
+}
+```
+
+**باگ کلاسیک با `async/await`:**
+
+```jsx
+async function handleSubmit() {
+  const result = await saveToServer(formData);
+  // تا زمانی که تابع await به پایان برسد، ممکن است وضعیت کاربر تغییر کرده باشد.
+  console.log(user.id); // user ممکن است در این فاصله عوض شده باشد
+}
+```
+
+**راه‌حل 1 — functional update** وقتی می‌خواهید state را update کنید:
+
+```jsx
+setTimeout(() => {
+  setCount((prev) => prev + 1);
+}, 1000);
+```
+
+**راه‌حل 2 — استفاده از ref برای نگه داشتن آخرین مقدار:**
+
+```jsx
+const countRef = useRef(count);
+useEffect(() => {
+  countRef.current = count;
+});
+
+setTimeout(() => {
+  console.log(countRef.current);
+}, 3000);
+```
+
+**راه‌حل 3 — خواندن state در لحظه action و پاس دادن آن به callback** به‌جای خواندن آن در شکاف async.
+
+Ref ها escape hatch رایج برای مواقعی هستند که به آخرین مقدار داخل callback های طولانی‌عمر نیاز دارید، بدون اینکه لازم باشد دوباره subscribe شوند.
+
+## 🧠 سوال 128
+
+**شناسه**: react-128
+**عنوان**: قانون ESLint به نام `exhaustive-deps` چیست و چه زمانی، اگر اصلاً لازم باشد، باید آن را suppress کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: موارد لبه و تله‌ها
+
+### پاسخ 📄
+
+`exhaustive-deps` قانونی از `eslint-plugin-react-hooks` است که هشدار می‌دهد اگر در dependency array مربوط به `useEffect`، `useMemo` یا `useCallback` مقداری استفاده شده باشد اما در dependency ها ذکر نشده باشد.
+
+**چیزی که پیدا می‌کند:**
+
+```jsx
+const [userId, setUserId] = useState(1);
+
+useEffect(() => {
+  fetchUser(userId); // شناسه کاربری (userId) اینجا استفاده شده است
+}, []);
+// هشدار: هوک React به نام useEffect یک وابستگی از دست رفته دارد: 'userId'
+```
+
+این قانون قرارداد اصلی hook ها را enforce می‌کند: هر مقدار reactive که داخل effect استفاده می‌شود باید در dependency array باشد، تا effect هنگام تغییر آن مقدار دوباره اجرا شود. نبود dependency معمولاً یعنی stale closure.
+
+**رفع هشدار — ترجیحاً با بازطراحی، نه suppress کردن:**
+
+```jsx
+// راه حل اشتباه: نمایش هشدار را متوقف کنید
+// eslint-disable-next-line react-hooks/exhaustive-deps
+
+// راه درست 1: dependency را اضافه کنید
+useEffect(() => {
+  fetchUser(userId);
+}, [userId]);
+
+// راه درست 2: تابع را داخل effect ببرید
+useEffect(() => {
+  function load() {
+    fetchUser(userId);
+  }
+  load();
+}, [userId]);
+
+// راه درست 3: تابع را با useCallback پایدار کنید
+const loadUser = useCallback(() => fetchUser(userId), [userId]);
+useEffect(() => {
+  loadUser();
+}, [loadUser]);
+```
+
+**چه زمانی suppress کردن واقعاً قابل قبول است** که خیلی هم نادر است:
+
+- وقتی عمداً می‌خواهید effect فقط در mount اجرا شود و مقدار استفاده‌شده واقعاً پایدار است
+- هنگام integrate با کتابخانه‌ای که باید فقط یک‌بار initialize شود
+- وقتی با استدلال دقیق مطمئن هستید re-run شدن effect مضر است و cleanup مشکل stale بودن را پوشش می‌دهد
+
+حتی در این حالت‌ها هم بهتر است توضیح بدهید:
+
+```jsx
+useEffect(() => {
+  analytics.init(config);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+Suppress کردن بدون فهم هشدار، یکی از راه‌های رایج وارد کردن باگ stale closure به کد است.
+
+## 🧠 سوال 129
+
+**شناسه**: react-129
+**عنوان**: چگونه چند Context provider را split و compose می‌کنید تا re-render غیرضروری کم شود؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Context API
+
+### پاسخ 📄
+
+هر consumer یک context هر بار که **reference مربوط به value آن context** عوض شود، دوباره رندر می‌شود. اگر state های نامرتبط را در یک context بزرگ بگذارید، تغییر theme باعث re-render شدن مصرف‌کننده‌هایی می‌شود که فقط user را می‌خواهند.
+
+**الگوی اشتباه — یک context غول‌پیکر:**
+
+```jsx
+const AppContext = createContext();
+
+function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState('light');
+  const [cart, setCart] = useState([]);
+
+  // هر تغییر وضعیتی این شیء را دوباره ایجاد می‌کند → همه مصرف‌کنندگان دوباره رندر می‌شوند
+  return (
+    <AppContext.Provider
+      value={{ user, theme, cart, setUser, setTheme, setCart }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+}
+```
+
+**الگوی درست — یک context برای هر concern:**
+
+```jsx
+const UserContext = createContext();
+const ThemeContext = createContext();
+const CartContext = createContext();
+
+function AppProvider({ children }) {
+  return (
+    <UserProvider>
+      <ThemeProvider>
+        <CartProvider>{children}</CartProvider>
+      </ThemeProvider>
+    </UserProvider>
+  );
+}
+```
+
+**ابزار composer برای تمیز نگه داشتن nesting:**
+
+```jsx
+function combineProviders(...providers) {
+  return ({ children }) =>
+    providers.reduceRight(
+      (acc, Provider) => <Provider>{acc}</Provider>,
+      children,
+    );
+}
+
+const AppProvider = combineProviders(UserProvider, ThemeProvider, CartProvider);
+```
+
+**علاوه بر این — جدا کردن state از dispatch:**
+
+```jsx
+const CartStateContext = createContext(); // اغلب تغییر می‌کند → فقط رابط کاربری سبد خرید دوباره رندر می‌شود
+const CartDispatchContext = createContext(); // پایدار → سازندگان اکشن هرگز دوباره رندر نمی‌شوند
+
+// چون dispatch در useReducer بین render ها پایدار است، می‌توان آن را در context جدا گذاشت تا مصرف‌کننده action ها بی‌دلیل re-render نشوند.
+```
+
+این یکی از مهم‌ترین بهینه‌سازی‌ها برای اپ‌هایی است که زیاد از Context استفاده می‌کنند.
+
+## 🧠 سوال 130
+
+**شناسه**: react-130
+**عنوان**: چگونه `useContext` و `useReducer` را به‌عنوان یک راه‌حل سبک برای global state با هم ترکیب می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Context API
+
+### پاسخ 📄
+
+ترکیب `useReducer` با Context الگویی شبیه Redux به شما می‌دهد: state متمرکز، reducer خالص و action هایی که dispatch می‌شوند، بدون نیاز به کتابخانه خارجی.
+
+**راه‌اندازی:**
+
+```jsx
+// store/cartContext.jsx
+const CartStateContext = createContext();
+const CartDispatchContext = createContext();
+
+function cartReducer(state, action) {
+  switch (action.type) {
+    case 'ADD_ITEM':
+      return { ...state, items: [...state.items, action.payload] };
+    case 'REMOVE_ITEM':
+      return {
+        ...state,
+        items: state.items.filter((i) => i.id !== action.payload),
+      };
+    case 'CLEAR':
+      return { items: [] };
+    default:
+      throw new Error(`Unknown action: ${action.type}`);
+  }
+}
+
+export function CartProvider({ children }) {
+  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+
+  return (
+    <CartStateContext.Provider value={state}>
+      <CartDispatchContext.Provider value={dispatch}>
+        {children}
+      </CartDispatchContext.Provider>
+    </CartStateContext.Provider>
+  );
+}
+
+export const useCartState = () => useContext(CartStateContext);
+export const useCartDispatch = () => useContext(CartDispatchContext);
+```
+
+**استفاده:**
+
+```jsx
+function CartSummary() {
+  const { items } = useCartState();
+  return <span>{items.length} items</span>;
+}
+
+function AddToCartButton({ product }) {
+  const dispatch = useCartDispatch();
+  return (
+    <button onClick={() => dispatch({ type: 'ADD_ITEM', payload: product })}>
+      Add to cart
+    </button>
+  );
+}
+```
+
+**چه زمانی از این روش استفاده کنیم و چه زمانی سراغ کتابخانه برویم:**
+
+- برای اپ‌های با پیچیدگی متوسط و تیم‌هایی که dependency اضافی نمی‌خواهند، گزینه خوبی است
+- برای اپ‌های بزرگ‌تر، debugging پیشرفته، middleware یا flow های async پیچیده، Zustand یا Redux Toolkit مناسب‌ترند

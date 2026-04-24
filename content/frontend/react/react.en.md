@@ -7286,3 +7286,340 @@ useEffect(() => {
 **Fix 3 — use a data-fetching library:** TanStack Query, SWR, and React's `use()` hook all handle race conditions automatically. This is the recommended production approach.
 
 **React StrictMode** deliberately runs effects twice in development, which immediately exposes race conditions by triggering cleanup before the first response arrives.
+
+## 🧠 Question 126
+
+**ID**: react-126
+**Title**: What are common mistakes when updating objects and arrays in React state?
+**Difficulty**: Easy
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+React state updates must be **immutable** — you never mutate the existing state object directly. Mutations do not trigger re-renders because React compares state by reference, and a mutated object has the same reference as before.
+
+**Mutation (wrong):**
+
+```jsx
+// Objects
+const [user, setUser] = useState({ name: 'Ali', age: 25 });
+user.age = 26; // mutates existing object — React sees no change
+setUser(user); // same reference → no re-render
+
+// Arrays
+const [items, setItems] = useState([1, 2, 3]);
+items.push(4); // mutates in place
+setItems(items); // same reference → no re-render
+```
+
+**Correct immutable patterns:**
+
+```jsx
+// Update an object field
+setUser((prev) => ({ ...prev, age: 26 }));
+
+// Add to an array
+setItems((prev) => [...prev, 4]);
+
+// Remove from an array
+setItems((prev) => prev.filter((item) => item !== 2));
+
+// Update an item in an array
+setItems((prev) =>
+  prev.map((item) => (item.id === id ? { ...item, done: true } : item)),
+);
+
+// Nested object update
+setState((prev) => ({
+  ...prev,
+  address: { ...prev.address, city: 'Tehran' },
+}));
+```
+
+**For deep nesting**, the Immer library (used by Redux Toolkit) lets you write mutating-style code that is internally converted to immutable updates:
+
+```jsx
+import produce from 'immer';
+
+setState(
+  produce((draft) => {
+    draft.user.address.city = 'Tehran'; // safe — Immer handles immutability
+  }),
+);
+```
+
+## 🧠 Question 127
+
+**ID**: react-127
+**Title**: How does reading stale state inside async callbacks lead to bugs?
+**Difficulty**: Medium
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+Async callbacks — Promises, `setTimeout`, event listeners — capture the state value that existed **when the callback was created**, not when it runs. If state changes before the callback executes, it reads the old (stale) value.
+
+**Classic bug with setTimeout:**
+
+```jsx
+function App() {
+  const [count, setCount] = useState(0);
+
+  function handleClick() {
+    setTimeout(() => {
+      // count is captured at click time, e.g. count = 3
+      alert(`Count is: ${count}`); // shows 3 even if count is now 10
+    }, 3000);
+  }
+}
+```
+
+**Classic bug with async/await:**
+
+```jsx
+async function handleSubmit() {
+  const result = await saveToServer(formData);
+  // by the time await resolves, `user` state may have changed
+  console.log(user.id); // potentially stale user
+}
+```
+
+**Fix 1 — functional setState (for updates only):**
+
+```jsx
+setTimeout(() => {
+  setCount((prev) => prev + 1); // always uses current state, not captured value
+}, 1000);
+```
+
+**Fix 2 — ref to hold the latest value:**
+
+```jsx
+const countRef = useRef(count);
+useEffect(() => {
+  countRef.current = count;
+}); // keep ref current
+
+setTimeout(() => {
+  console.log(countRef.current); // always fresh
+}, 3000);
+```
+
+**Fix 3 — read state at action time, pass as argument** rather than reading inside the async gap.
+
+Refs are the standard escape hatch when you need the latest value inside a long-lived callback without re-subscribing it.
+
+## 🧠 Question 128
+
+**ID**: react-128
+**Title**: What is the `exhaustive-deps` ESLint rule and when (if ever) should you suppress it?
+**Difficulty**: Medium
+**Category**: Edge Cases & Pitfalls
+
+### Answer 📄
+
+`exhaustive-deps` is a rule from `eslint-plugin-react-hooks` that warns when a `useEffect`, `useMemo`, or `useCallback` dependency array is missing values that are referenced inside the callback.
+
+**What it catches:**
+
+```jsx
+const [userId, setUserId] = useState(1);
+
+useEffect(() => {
+  fetchUser(userId); // userId used here
+}, []);
+// Warning: React Hook useEffect has a missing dependency: 'userId'
+```
+
+The rule enforces the fundamental contract: every reactive value used inside an effect must be listed as a dependency so the effect re-runs when that value changes. Missing deps = stale closures.
+
+**Fixing violations — prefer restructuring over suppression:**
+
+```jsx
+// Wrong fix: suppress the warning
+// eslint-disable-next-line react-hooks/exhaustive-deps
+
+// Right fix 1: add the dependency
+useEffect(() => {
+  fetchUser(userId);
+}, [userId]);
+
+// Right fix 2: move the function inside the effect
+useEffect(() => {
+  function load() {
+    fetchUser(userId);
+  }
+  load();
+}, [userId]);
+
+// Right fix 3: wrap the function in useCallback
+const loadUser = useCallback(() => fetchUser(userId), [userId]);
+useEffect(() => {
+  loadUser();
+}, [loadUser]);
+```
+
+**When suppression is genuinely legitimate (rare):**
+
+- You intentionally run the effect only on mount and the referenced value is provably stable (e.g., a ref, a dispatch function from `useReducer`, or a value from outside React)
+- Integrating with a third-party library that must only be initialized once
+- You have verified through reasoning that re-running would be harmful and cleanup handles the staleness
+
+Even in these cases, add a comment explaining why:
+
+```jsx
+useEffect(() => {
+  analytics.init(config); // config is module-level constant, safe to omit
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+```
+
+Suppressing without understanding the warning is how stale closure bugs are introduced silently.
+
+## 🧠 Question 129
+
+**ID**: react-129
+**Title**: How do you split and compose multiple Context providers to avoid unnecessary re-renders?
+**Difficulty**: Medium
+**Category**: Context API
+
+### Answer 📄
+
+Every consumer of a context re-renders whenever that context's **value reference changes**. Putting unrelated state into a single large context means a theme change triggers re-renders in components that only care about the user, and vice versa.
+
+**Anti-pattern — one giant context:**
+
+```jsx
+const AppContext = createContext();
+
+function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState('light');
+  const [cart, setCart] = useState([]);
+
+  // Any state change recreates this object → ALL consumers re-render
+  return (
+    <AppContext.Provider
+      value={{ user, theme, cart, setUser, setTheme, setCart }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+}
+```
+
+**Correct pattern — one context per concern:**
+
+```jsx
+const UserContext = createContext();
+const ThemeContext = createContext();
+const CartContext = createContext();
+
+function AppProvider({ children }) {
+  return (
+    <UserProvider>
+      <ThemeProvider>
+        <CartProvider>{children}</CartProvider>
+      </ThemeProvider>
+    </UserProvider>
+  );
+}
+```
+
+**Composer utility to keep nesting clean:**
+
+```jsx
+function combineProviders(...providers) {
+  return ({ children }) =>
+    providers.reduceRight(
+      (acc, Provider) => <Provider>{acc}</Provider>,
+      children,
+    );
+}
+
+const AppProvider = combineProviders(UserProvider, ThemeProvider, CartProvider);
+```
+
+**Additionally — split state from dispatch:**
+
+```jsx
+const CartStateContext = createContext(); // changes often → only cart UI re-renders
+const CartDispatchContext = createContext(); // stable → action creators never re-render
+
+// dispatch from useReducer is stable across renders — safe to put in its own context
+```
+
+This is the single most impactful optimization for Context-heavy applications.
+
+## 🧠 Question 130
+
+**ID**: react-130
+**Title**: How do you combine `useContext` and `useReducer` as a lightweight global state solution?
+**Difficulty**: Medium
+**Category**: Context API
+
+### Answer 📄
+
+Pairing `useReducer` with Context gives you a Redux-like pattern — centralized state, a pure reducer, and dispatchable actions — without any external library.
+
+**Setup:**
+
+```jsx
+// store/cartContext.jsx
+const CartStateContext = createContext();
+const CartDispatchContext = createContext();
+
+function cartReducer(state, action) {
+  switch (action.type) {
+    case 'ADD_ITEM':
+      return { ...state, items: [...state.items, action.payload] };
+    case 'REMOVE_ITEM':
+      return {
+        ...state,
+        items: state.items.filter((i) => i.id !== action.payload),
+      };
+    case 'CLEAR':
+      return { items: [] };
+    default:
+      throw new Error(`Unknown action: ${action.type}`);
+  }
+}
+
+export function CartProvider({ children }) {
+  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+
+  return (
+    <CartStateContext.Provider value={state}>
+      <CartDispatchContext.Provider value={dispatch}>
+        {children}
+      </CartDispatchContext.Provider>
+    </CartStateContext.Provider>
+  );
+}
+
+export const useCartState = () => useContext(CartStateContext);
+export const useCartDispatch = () => useContext(CartDispatchContext);
+```
+
+**Usage:**
+
+```jsx
+function CartSummary() {
+  const { items } = useCartState(); // re-renders only when state changes
+  return <span>{items.length} items</span>;
+}
+
+function AddToCartButton({ product }) {
+  const dispatch = useCartDispatch(); // never re-renders — dispatch is stable
+  return (
+    <button onClick={() => dispatch({ type: 'ADD_ITEM', payload: product })}>
+      Add to cart
+    </button>
+  );
+}
+```
+
+**When to use vs. external libraries:**
+
+- ✅ Use for medium-complexity apps, teams avoiding extra dependencies, state that does not need DevTools or middleware
+- ✅ Reach for Zustand / Redux Toolkit for large apps, time-travel debugging, complex async flows, persistence middleware

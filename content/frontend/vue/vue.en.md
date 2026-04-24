@@ -1345,9 +1345,9 @@ This allows the application to become fully interactive while avoiding unnecessa
 
 ## 🧠 Question 46
 
-**ID**: vue-046
-**Title**: What is the `<Transition>` component and how does it work in Vue?
-**Difficulty**: Medium
+**ID**: vue-046  
+**Title**: What is the `<Transition>` component and how does it work in Vue?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -1385,9 +1385,9 @@ Example:
 
 ## 🧠 Question 47
 
-**ID**: vue-047
-**Title**: How does Vue handle errors and what is `onErrorCaptured`?
-**Difficulty**: Hard
+**ID**: vue-047  
+**Title**: How does Vue handle errors and what is `onErrorCaptured`?  
+**Difficulty**: Hard  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -1424,9 +1424,9 @@ app.config.errorHandler = (err, instance, info) => {
 
 ## 🧠 Question 48
 
-**ID**: vue-048
-**Title**: What are `shallowRef()` and `shallowReactive()` in Vue?
-**Difficulty**: Hard
+**ID**: vue-048  
+**Title**: What are `shallowRef()` and `shallowReactive()` in Vue?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1460,9 +1460,9 @@ form.user.name = 'Ali'; // does NOT trigger reactivity
 
 ## 🧠 Question 49
 
-**ID**: vue-049
-**Title**: What is `defineExpose()` in Vue 3 and why is it needed?
-**Difficulty**: Medium
+**ID**: vue-049  
+**Title**: What is `defineExpose()` in Vue 3 and why is it needed?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -1511,9 +1511,9 @@ function resetChild() {
 
 ## 🧠 Question 50
 
-**ID**: vue-050
-**Title**: What is programmatic navigation in Vue Router?
-**Difficulty**: Medium
+**ID**: vue-050  
+**Title**: What is programmatic navigation in Vue Router?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -1551,9 +1551,9 @@ router.replace('/login');
 
 ## 🧠 Question 51
 
-**ID**: vue-051
-**Title**: What is `nextTick()` and why is it needed in Vue?
-**Difficulty**: Medium
+**ID**: vue-051  
+**Title**: What is `nextTick()` and why is it needed in Vue?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1589,9 +1589,9 @@ async function updateMessage() {
 
 ## 🧠 Question 52
 
-**ID**: vue-052
-**Title**: What are the `deep`, `immediate`, and `flush` options in `watch`?
-**Difficulty**: Medium
+**ID**: vue-052  
+**Title**: What are the `deep`, `immediate`, and `flush` options in `watch`?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1624,9 +1624,9 @@ watch(
 
 ## 🧠 Question 53
 
-**ID**: vue-053
-**Title**: What are `markRaw()` and `toRaw()` and when should you use them?
-**Difficulty**: Hard
+**ID**: vue-053  
+**Title**: What are `markRaw()` and `toRaw()` and when should you use them?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1661,9 +1661,9 @@ console.log(raw === user); // false — proxy !== original
 
 ## 🧠 Question 54
 
-**ID**: vue-054
-**Title**: What is `readonly()` in Vue and when should you use it?
-**Difficulty**: Medium
+**ID**: vue-054  
+**Title**: What is `readonly()` in Vue and when should you use it?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1694,9 +1694,9 @@ provide('appState', readonly(state));
 
 ## 🧠 Question 55
 
-**ID**: vue-055
-**Title**: What is the Vue plugin system and how do you create a plugin?
-**Difficulty**: Medium
+**ID**: vue-055  
+**Title**: What is the Vue plugin system and how do you create a plugin?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -1738,9 +1738,9 @@ app.use(myPlugin, {
 
 ## 🧠 Question 56
 
-**ID**: vue-056
-**Title**: What is `effectScope()` and when is it useful?
-**Difficulty**: Hard
+**ID**: vue-056  
+**Title**: What is `effectScope()` and when is it useful?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1777,9 +1777,9 @@ scope.stop();
 
 ## 🧠 Question 57
 
-**ID**: vue-057
-**Title**: What are `:deep()`, `:slotted()`, and `:global()` in scoped styles?
-**Difficulty**: Medium
+**ID**: vue-057  
+**Title**: What are `:deep()`, `:slotted()`, and `:global()` in scoped styles?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -1815,9 +1815,9 @@ Example:
 
 ## 🧠 Question 58
 
-**ID**: vue-058
-**Title**: How do you lazy-load routes in Vue Router for code splitting?
-**Difficulty**: Medium
+**ID**: vue-058  
+**Title**: How do you lazy-load routes in Vue Router for code splitting?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -1859,9 +1859,9 @@ const router = createRouter({
 
 ## 🧠 Question 59
 
-**ID**: vue-059
-**Title**: What are functional components in Vue 3 and when should you use them?
-**Difficulty**: Hard
+**ID**: vue-059  
+**Title**: What are functional components in Vue 3 and when should you use them?  
+**Difficulty**: Hard  
 **Category**: Performance
 
 ### Answer 📄
@@ -1891,9 +1891,9 @@ Badge.props = ['type'];
 
 ## 🧠 Question 60
 
-**ID**: vue-060
-**Title**: What are `useAttrs()` and `useSlots()` in the Composition API?
-**Difficulty**: Medium
+**ID**: vue-060  
+**Title**: What are `useAttrs()` and `useSlots()` in the Composition API?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -1926,9 +1926,9 @@ const slots = useSlots();
 
 ## 🧠 Question 61
 
-**ID**: vue-061
-**Title**: How do you clean up side effects inside `watchEffect`?
-**Difficulty**: Hard
+**ID**: vue-061  
+**Title**: How do you clean up side effects inside `watchEffect`?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -1966,9 +1966,9 @@ watchEffect((onCleanup) => {
 
 ## 🧠 Question 62
 
-**ID**: vue-062
-**Title**: What are named views in Vue Router?
-**Difficulty**: Medium
+**ID**: vue-062  
+**Title**: What are named views in Vue Router?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -2010,9 +2010,9 @@ const router = createRouter({
 
 ## 🧠 Question 63
 
-**ID**: vue-063
-**Title**: How does `app.provide()` differ from component-level `provide`?
-**Difficulty**: Medium
+**ID**: vue-063  
+**Title**: How does `app.provide()` differ from component-level `provide`?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -2045,9 +2045,9 @@ const flags = inject('featureFlags');
 
 ## 🧠 Question 64
 
-**ID**: vue-064
-**Title**: How does Vue 3's reactivity system work internally using JavaScript Proxy?
-**Difficulty**: Hard
+**ID**: vue-064  
+**Title**: How does Vue 3's reactivity system work internally using JavaScript Proxy?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -2086,9 +2086,9 @@ function reactive(target) {
 
 ## 🧠 Question 65
 
-**ID**: vue-065
-**Title**: What are recursive components in Vue and how do you implement them?
-**Difficulty**: Hard
+**ID**: vue-065  
+**Title**: What are recursive components in Vue and how do you implement them?  
+**Difficulty**: Hard  
 **Category**: Components
 
 ### Answer 📄
@@ -2127,9 +2127,9 @@ defineProps({
 
 ## 🧠 Question 66
 
-**ID**: vue-066
-**Title**: What is the difference between `created`, `onBeforeMount`, and `mounted` lifecycle hooks?
-**Difficulty**: Medium
+**ID**: vue-066  
+**Title**: What is the difference between `created`, `onBeforeMount`, and `mounted` lifecycle hooks?  
+**Difficulty**: Medium  
 **Category**: Lifecycle
 
 ### Answer 📄
@@ -2160,9 +2160,9 @@ onMounted(() => {
 
 ## 🧠 Question 67
 
-**ID**: vue-067
-**Title**: What happens internally when a Vue 3 component mounts?
-**Difficulty**: Hard
+**ID**: vue-067  
+**Title**: What happens internally when a Vue 3 component mounts?  
+**Difficulty**: Hard  
 **Category**: Rendering & Internals
 
 ### Answer 📄
@@ -2181,9 +2181,9 @@ After mounting, any reactive dependency change triggers the component's render e
 
 ## 🧠 Question 68
 
-**ID**: vue-068
-**Title**: What are the key differences between Vuex and Pinia?
-**Difficulty**: Medium
+**ID**: vue-068  
+**Title**: What are the key differences between Vuex and Pinia?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -2232,9 +2232,9 @@ export const useCounterStore = defineStore('counter', () => {
 
 ## 🧠 Question 69
 
-**ID**: vue-069
-**Title**: How do dynamic route parameters work in Vue Router?
-**Difficulty**: Medium
+**ID**: vue-069  
+**Title**: How do dynamic route parameters work in Vue Router?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -2280,9 +2280,9 @@ watch(
 
 ## 🧠 Question 70
 
-**ID**: vue-070
-**Title**: What is the difference between route params and query params in Vue Router?
-**Difficulty**: Easy
+**ID**: vue-070  
+**Title**: What is the difference between route params and query params in Vue Router?  
+**Difficulty**: Easy  
 **Category**: Routing
 
 ### Answer 📄
@@ -2313,9 +2313,9 @@ Use params for resource identity (user ID, article slug) and query params for UI
 
 ## 🧠 Question 71
 
-**ID**: vue-071
-**Title**: How does Vue compile `.vue` templates into render functions?
-**Difficulty**: Hard
+**ID**: vue-071  
+**Title**: How does Vue compile `.vue` templates into render functions?  
+**Difficulty**: Hard  
 **Category**: Rendering & Internals
 
 ### Answer 📄
@@ -2355,9 +2355,9 @@ Static nodes are hoisted above the function so they are only created once, avoid
 
 ## 🧠 Question 72
 
-**ID**: vue-072
-**Title**: How does the Vue scheduler batch and defer reactive updates?
-**Difficulty**: Hard
+**ID**: vue-072  
+**Title**: How does the Vue scheduler batch and defer reactive updates?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -2393,9 +2393,9 @@ Pre-flush watchers (using `flush: 'pre'`, the default for `watch`) run before th
 
 ## 🧠 Question 73
 
-**ID**: vue-073
-**Title**: How does Vue 3's effect tracking work internally (activeEffect and dependency sets)?
-**Difficulty**: Hard
+**ID**: vue-073  
+**Title**: How does Vue 3's effect tracking work internally (activeEffect and dependency sets)?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -2438,9 +2438,9 @@ Using a `WeakMap` means the dependency map for an object is garbage-collected wh
 
 ## 🧠 Question 74
 
-**ID**: vue-074
-**Title**: What is the difference between Client-Side Rendering (CSR) and Server-Side Rendering (SSR) in Vue?
-**Difficulty**: Medium
+**ID**: vue-074  
+**Title**: What is the difference between Client-Side Rendering (CSR) and Server-Side Rendering (SSR) in Vue?  
+**Difficulty**: Medium  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -2462,9 +2462,9 @@ For non-Node SSR, `vue/server-renderer` can output HTML strings from any server 
 
 ## 🧠 Question 75
 
-**ID**: vue-075
-**Title**: What are advanced patterns for `provide` / `inject` — Symbol keys, reactive injection, and defaults?
-**Difficulty**: Hard
+**ID**: vue-075  
+**Title**: What are advanced patterns for `provide` / `inject` — Symbol keys, reactive injection, and defaults?  
+**Difficulty**: Hard  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -2518,9 +2518,9 @@ const config = inject('config', () => ({ debug: false }), true);
 
 ## 🧠 Question 76
 
-**ID**: vue-076
-**Title**: What is the Vue rendering pipeline from state change to DOM update?
-**Difficulty**: Hard
+**ID**: vue-076  
+**Title**: What is the Vue rendering pipeline from state change to DOM update?  
+**Difficulty**: Hard  
 **Category**: Rendering & Internals
 
 ### Answer 📄
@@ -2538,9 +2538,9 @@ The compiler's static hoisting and patch flags are critical for performance — 
 
 ## 🧠 Question 77
 
-**ID**: vue-077
-**Title**: What are the different component communication patterns in Vue?
-**Difficulty**: Medium
+**ID**: vue-077  
+**Title**: What are the different component communication patterns in Vue?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -2585,9 +2585,9 @@ formRef.value.validate();
 
 ## 🧠 Question 78
 
-**ID**: vue-078
-**Title**: What is `<Teleport>` and when should you use it?
-**Difficulty**: Medium
+**ID**: vue-078  
+**Title**: What is `<Teleport>` and when should you use it?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -2623,9 +2623,9 @@ Multiple teleports can target the same container and are appended in order.
 
 ## 🧠 Question 79
 
-**ID**: vue-079
-**Title**: What is `<Suspense>` and how does it handle async components?
-**Difficulty**: Hard
+**ID**: vue-079  
+**Title**: What is `<Suspense>` and how does it handle async components?  
+**Difficulty**: Hard  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -2664,9 +2664,9 @@ const data = await fetch('/api/dashboard').then((r) => r.json());
 
 ## 🧠 Question 80
 
-**ID**: vue-080
-**Title**: What are `v-model` modifiers and how do you create custom ones?
-**Difficulty**: Medium
+**ID**: vue-080  
+**Title**: What are `v-model` modifiers and how do you create custom ones?  
+**Difficulty**: Medium  
 **Category**: Directives
 
 ### Answer 📄
@@ -2713,9 +2713,9 @@ function handleInput(e) {
 
 ## 🧠 Question 81
 
-**ID**: vue-081
-**Title**: What is `<TransitionGroup>` and how does it differ from `<Transition>`?
-**Difficulty**: Medium
+**ID**: vue-081  
+**Title**: What is `<TransitionGroup>` and how does it differ from `<Transition>`?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -2756,9 +2756,9 @@ Key differences:
 
 ## 🧠 Question 82
 
-**ID**: vue-082
-**Title**: How do you use Vue 3 with TypeScript for props and emits?
-**Difficulty**: Medium
+**ID**: vue-082  
+**Title**: How do you use Vue 3 with TypeScript for props and emits?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -2804,9 +2804,9 @@ This syntax (added in Vue 3.3) uses a type with labeled tuple members instead of
 
 ## 🧠 Question 83
 
-**ID**: vue-083
-**Title**: What are composables in Vue 3 and what are best practices for writing them?
-**Difficulty**: Medium
+**ID**: vue-083  
+**Title**: What are composables in Vue 3 and what are best practices for writing them?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -2857,9 +2857,9 @@ export function useFetch(url) {
 
 ## 🧠 Question 84
 
-**ID**: vue-084
-**Title**: What are template refs and how do you use them in Composition API?
-**Difficulty**: Easy
+**ID**: vue-084  
+**Title**: What are template refs and how do you use them in Composition API?  
+**Difficulty**: Easy  
 **Category**: Composition API
 
 ### Answer 📄
@@ -2909,9 +2909,9 @@ const childRef = ref(null);
 
 ## 🧠 Question 85
 
-**ID**: vue-085
-**Title**: What is the `watch` flush option and when does each flush timing run?
-**Difficulty**: Hard
+**ID**: vue-085  
+**Title**: What is the `watch` flush option and when does each flush timing run?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -2944,9 +2944,9 @@ watchSyncEffect(() => {
 
 ## 🧠 Question 86
 
-**ID**: vue-086
-**Title**: What is `defineOptions` and what problems does it solve?
-**Difficulty**: Medium
+**ID**: vue-086  
+**Title**: What is `defineOptions` and what problems does it solve?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -2989,9 +2989,9 @@ It cannot declare `props`, `emits`, `expose`, or `setup` — those remain handle
 
 ## 🧠 Question 87
 
-**ID**: vue-087
-**Title**: What causes hydration mismatches in Vue SSR and how do you fix them?
-**Difficulty**: Hard
+**ID**: vue-087  
+**Title**: What causes hydration mismatches in Vue SSR and how do you fix them?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -3032,9 +3032,9 @@ Use `v-if="false"` with a `<ClientOnly>` wrapper (available in Nuxt) or the `sup
 
 ## 🧠 Question 88
 
-**ID**: vue-088
-**Title**: How does Vue handle array mutation reactivity?
-**Difficulty**: Medium
+**ID**: vue-088  
+**Title**: How does Vue handle array mutation reactivity?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -3069,9 +3069,9 @@ items.value = [...items.value, 'e']; // also reactive — replaces the whole arr
 
 ## 🧠 Question 89
 
-**ID**: vue-089
-**Title**: What is `shallowRef` and when should you use it over `ref`?
-**Difficulty**: Medium
+**ID**: vue-089  
+**Title**: What is `shallowRef` and when should you use it over `ref`?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -3106,9 +3106,9 @@ data.value = newDataset; // triggers a re-render
 
 ## 🧠 Question 90
 
-**ID**: vue-090
-**Title**: What are multi-root components (fragments) in Vue 3?
-**Difficulty**: Easy
+**ID**: vue-090  
+**Title**: What are multi-root components (fragments) in Vue 3?  
+**Difficulty**: Easy  
 **Category**: Components
 
 ### Answer 📄
@@ -3142,9 +3142,9 @@ Fragments reduce unnecessary wrapper `<div>` elements that were previously added
 
 ## 🧠 Question 91
 
-**ID**: vue-091
-**Title**: What is `app.config.errorHandler` and how do you use it for global error handling?
-**Difficulty**: Medium
+**ID**: vue-091  
+**Title**: What is `app.config.errorHandler` and how do you use it for global error handling?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -3182,9 +3182,9 @@ app.mount('#app');
 
 ## 🧠 Question 92
 
-**ID**: vue-092
-**Title**: What is the difference between `v-if` and `v-show` at the DOM level?
-**Difficulty**: Easy
+**ID**: vue-092  
+**Title**: What is the difference between `v-if` and `v-show` at the DOM level?  
+**Difficulty**: Easy  
 **Category**: Directives
 
 ### Answer 📄
@@ -3214,9 +3214,9 @@ app.mount('#app');
 
 ## 🧠 Question 93
 
-**ID**: vue-093
-**Title**: How does Vue's virtual DOM diffing (patching) algorithm work?
-**Difficulty**: Hard
+**ID**: vue-093  
+**Title**: How does Vue's virtual DOM diffing (patching) algorithm work?  
+**Difficulty**: Hard  
 **Category**: Rendering & Internals
 
 ### Answer 📄
@@ -3247,9 +3247,9 @@ The result is that Vue's runtime patch is much faster than a naive tree diff bec
 
 ## 🧠 Question 94
 
-**ID**: vue-094
-**Title**: What is the `Options API` vs `Composition API` and when should you choose each?
-**Difficulty**: Easy
+**ID**: vue-094  
+**Title**: What is the `Options API` vs `Composition API` and when should you choose each?  
+**Difficulty**: Easy  
 **Category**: Vue Basics
 
 ### Answer 📄
@@ -3304,9 +3304,9 @@ Both APIs are fully supported in Vue 3 and can be mixed within the same project.
 
 ## 🧠 Question 95
 
-**ID**: vue-095
-**Title**: How do you implement route-level code splitting with dynamic imports in Vue Router?
-**Difficulty**: Medium
+**ID**: vue-095  
+**Title**: How do you implement route-level code splitting with dynamic imports in Vue Router?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -3351,9 +3351,9 @@ component: () => import('./views/admin/Users.vue'),
 
 ## 🧠 Question 96
 
-**ID**: vue-096
-**Title**: What is a computed setter in Vue and when would you use one?
-**Difficulty**: Medium
+**ID**: vue-096  
+**Title**: What is a computed setter in Vue and when would you use one?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -3397,9 +3397,9 @@ const internalValue = computed({
 
 ## 🧠 Question 97
 
-**ID**: vue-097
-**Title**: How does `<KeepAlive>` work and what lifecycle hooks does it add?
-**Difficulty**: Medium
+**ID**: vue-097  
+**Title**: How does `<KeepAlive>` work and what lifecycle hooks does it add?  
+**Difficulty**: Medium  
 **Category**: Performance
 
 ### Answer 📄
@@ -3449,9 +3449,9 @@ onDeactivated(() => {
 
 ## 🧠 Question 98
 
-**ID**: vue-098
-**Title**: What is `onServerPrefetch` and how is it used in Vue SSR?
-**Difficulty**: Hard
+**ID**: vue-098  
+**Title**: What is `onServerPrefetch` and how is it used in Vue SSR?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -3484,9 +3484,9 @@ This is the Vue primitive behind Nuxt 3's `useAsyncData` and `useFetch` composab
 
 ## 🧠 Question 99
 
-**ID**: vue-099
-**Title**: How do you test Vue components with Vue Test Utils?
-**Difficulty**: Medium
+**ID**: vue-099  
+**Title**: How do you test Vue components with Vue Test Utils?  
+**Difficulty**: Medium  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -3544,9 +3544,9 @@ Use `flushPromises()` from `@vue/test-utils` to wait for async operations before
 
 ## 🧠 Question 100
 
-**ID**: vue-100
-**Title**: What strategies can you use to optimize a Vue application's performance?
-**Difficulty**: Hard
+**ID**: vue-100  
+**Title**: What strategies can you use to optimize a Vue application's performance?  
+**Difficulty**: Hard  
 **Category**: Performance
 
 ### Answer 📄
@@ -3597,9 +3597,9 @@ Vue applications can suffer from unnecessary re-renders, large bundle sizes, and
 
 ## 🧠 Question 101
 
-**ID**: vue-101
-**Title**: What is the `defineModel` macro and how does it simplify two-way binding?
-**Difficulty**: Medium
+**ID**: vue-101  
+**Title**: What is the `defineModel` macro and how does it simplify two-way binding?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -3653,9 +3653,9 @@ The parent uses these as:
 
 ## 🧠 Question 102
 
-**ID**: vue-102
-**Title**: How do multiple `v-model` bindings work on a single component?
-**Difficulty**: Medium
+**ID**: vue-102  
+**Title**: How do multiple `v-model` bindings work on a single component?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -3699,9 +3699,9 @@ Named `v-model` is ideal for form components, dialogs, and editors where a singl
 
 ## 🧠 Question 103
 
-**ID**: vue-103
-**Title**: What is `customRef` and when would you use it?
-**Difficulty**: Hard
+**ID**: vue-103  
+**Title**: What is `customRef` and when would you use it?  
+**Difficulty**: Hard  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -3749,9 +3749,9 @@ Other use cases include:
 
 ## 🧠 Question 104
 
-**ID**: vue-104
-**Title**: What is CSS `v-bind` in `<style>` blocks and how does it work?
-**Difficulty**: Medium
+**ID**: vue-104  
+**Title**: What is CSS `v-bind` in `<style>` blocks and how does it work?  
+**Difficulty**: Medium  
 **Category**: Vue Basics
 
 ### Answer 📄
@@ -3797,9 +3797,9 @@ const theme = reactive({ primary: '#ff0000', radius: '8px' });
 
 ## 🧠 Question 105
 
-**ID**: vue-105
-**Title**: What are CSS Modules in Vue SFCs?
-**Difficulty**: Medium
+**ID**: vue-105  
+**Title**: What are CSS Modules in Vue SFCs?  
+**Difficulty**: Medium  
 **Category**: Vue Basics
 
 ### Answer 📄
@@ -3853,9 +3853,9 @@ CSS Modules differ from scoped styles:
 
 ## 🧠 Question 106
 
-**ID**: vue-106
-**Title**: How does Vue's scoped CSS work internally?
-**Difficulty**: Hard
+**ID**: vue-106  
+**Title**: How does Vue's scoped CSS work internally?  
+**Difficulty**: Hard  
 **Category**: Rendering & Internals
 
 ### Answer 📄
@@ -3919,9 +3919,9 @@ p[data-v-7ba5bd90] {
 
 ## 🧠 Question 107
 
-**ID**: vue-107
-**Title**: What is the `v-memo` directive and how does it optimize rendering?
-**Difficulty**: Hard
+**ID**: vue-107  
+**Title**: What is the `v-memo` directive and how does it optimize rendering?  
+**Difficulty**: Hard  
 **Category**: Performance
 
 ### Answer 📄
@@ -3959,9 +3959,9 @@ p[data-v-7ba5bd90] {
 
 ## 🧠 Question 108
 
-**ID**: vue-108
-**Title**: What options does `defineAsyncComponent` support for loading, error, and timeout states?
-**Difficulty**: Medium
+**ID**: vue-108  
+**Title**: What options does `defineAsyncComponent` support for loading, error, and timeout states?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -4007,9 +4007,9 @@ When used inside `<Suspense>`, the loading/error component props are ignored —
 
 ## 🧠 Question 109
 
-**ID**: vue-109
-**Title**: What are all the lifecycle hooks available in a custom Vue directive?
-**Difficulty**: Medium
+**ID**: vue-109  
+**Title**: What are all the lifecycle hooks available in a custom Vue directive?  
+**Difficulty**: Medium  
 **Category**: Directives
 
 ### Answer 📄
@@ -4059,9 +4059,9 @@ app.directive('focus', (el) => {
 
 ## 🧠 Question 110
 
-**ID**: vue-110
-**Title**: How do you use Pinia's `$patch`, `$subscribe`, and `$onAction`?
-**Difficulty**: Medium
+**ID**: vue-110  
+**Title**: How do you use Pinia's `$patch`, `$subscribe`, and `$onAction`?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -4114,9 +4114,9 @@ store.$onAction(({ name, args, after, onError }) => {
 
 ## 🧠 Question 111
 
-**ID**: vue-111
-**Title**: How can Pinia stores use other stores (store composition)?
-**Difficulty**: Medium
+**ID**: vue-111  
+**Title**: How can Pinia stores use other stores (store composition)?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -4171,9 +4171,9 @@ export const useCartStore = defineStore('cart', () => {
 
 ## 🧠 Question 112
 
-**ID**: vue-112
-**Title**: What are `isRef`, `isReactive`, `unref`, and `toValue` and when do you use them?
-**Difficulty**: Medium
+**ID**: vue-112  
+**Title**: What are `isRef`, `isReactive`, `unref`, and `toValue` and when do you use them?  
+**Difficulty**: Medium  
 **Category**: Reactivity System
 
 ### Answer 📄
@@ -4221,9 +4221,9 @@ useFeature(42); // works — returns plain value
 
 ## 🧠 Question 113
 
-**ID**: vue-113
-**Title**: What are Vue Router route meta fields and how are they used?
-**Difficulty**: Medium
+**ID**: vue-113  
+**Title**: What are Vue Router route meta fields and how are they used?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -4279,9 +4279,9 @@ Child routes inherit parent `meta` fields through `route.matched` — use `to.ma
 
 ## 🧠 Question 114
 
-**ID**: vue-114
-**Title**: How do you control scroll behavior in Vue Router?
-**Difficulty**: Medium
+**ID**: vue-114  
+**Title**: How do you control scroll behavior in Vue Router?  
+**Difficulty**: Medium  
 **Category**: Routing
 
 ### Answer 📄
@@ -4331,9 +4331,9 @@ The return value can be:
 
 ## 🧠 Question 115
 
-**ID**: vue-115
-**Title**: What is SSR streaming in Vue and how does it improve performance?
-**Difficulty**: Hard
+**ID**: vue-115  
+**Title**: What is SSR streaming in Vue and how does it improve performance?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -4377,9 +4377,9 @@ return new Response(stream, {
 
 ## 🧠 Question 116
 
-**ID**: vue-116
-**Title**: What is `defineCustomElement` and how does Vue support Web Components?
-**Difficulty**: Hard
+**ID**: vue-116  
+**Title**: What is `defineCustomElement` and how does Vue support Web Components?  
+**Difficulty**: Hard  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -4423,9 +4423,9 @@ This makes Vue components reusable in non-Vue applications, design systems, or m
 
 ## 🧠 Question 117
 
-**ID**: vue-117
-**Title**: What is `getCurrentInstance` and when should you use it?
-**Difficulty**: Hard
+**ID**: vue-117  
+**Title**: What is `getCurrentInstance` and when should you use it?  
+**Difficulty**: Hard  
 **Category**: Advanced Patterns
 
 ### Answer 📄
@@ -4469,9 +4469,9 @@ Always prefer the public Composition API. `getCurrentInstance` accesses internal
 
 ## 🧠 Question 118
 
-**ID**: vue-118
-**Title**: What is `useTemplateRef` and how does it differ from using `ref` for template refs?
-**Difficulty**: Medium
+**ID**: vue-118  
+**Title**: What is `useTemplateRef` and how does it differ from using `ref` for template refs?  
+**Difficulty**: Medium  
 **Category**: Composition API
 
 ### Answer 📄
@@ -4525,9 +4525,9 @@ const tableRef = useTemplateRef<HTMLTableElement>('dataTable');
 
 ## 🧠 Question 119
 
-**ID**: vue-119
-**Title**: What are Vue 3.5's lazy hydration strategies?
-**Difficulty**: Hard
+**ID**: vue-119  
+**Title**: What are Vue 3.5's lazy hydration strategies?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -4572,9 +4572,9 @@ hydrate: hydrateOnMediaQuery('(max-width: 768px)');
 
 ## 🧠 Question 120
 
-**ID**: vue-120
-**Title**: How do you forward slots from a parent component to a deeply nested child?
-**Difficulty**: Hard
+**ID**: vue-120  
+**Title**: How do you forward slots from a parent component to a deeply nested child?  
+**Difficulty**: Hard  
 **Category**: Components
 
 ### Answer 📄

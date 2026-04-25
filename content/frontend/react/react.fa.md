@@ -7623,3 +7623,394 @@ function AddToCartButton({ product }) {
 
 - برای اپ‌های با پیچیدگی متوسط و تیم‌هایی که dependency اضافی نمی‌خواهند، گزینه خوبی است
 - برای اپ‌های بزرگ‌تر، debugging پیشرفته، middleware یا flow های async پیچیده، Zustand یا Redux Toolkit مناسب‌ترند
+
+## 🧠 سوال 131
+
+**شناسه**: react-131
+**عنوان**: context selector چیست و چرا React آن را به‌صورت native ندارد؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: Context API
+
+### پاسخ 📄
+
+Context selector به یک کامپوننت اجازه می‌دهد فقط به بخشی از value یک context subscribe شود و فقط زمانی re-render شود که همان بخش تغییر کند؛ شبیه `useSelector` در Redux.
+
+**مشکل فعلی در React:**
+
+```jsx
+const store = createContext({ user: null, theme: 'light', cart: [] });
+
+function UserAvatar() {
+  const { user } = useContext(store);
+  // با تغییر theme یا cart هم دوباره رندر می‌شود
+}
+```
+
+`useContext` روی **کل value context** مقایسه مرجعی انجام می‌دهد و راه داخلی‌ای برای subscribe شدن فقط به بخشی از آن ندارد.
+
+**چرا React آن را native اضافه نکرده است:**
+
+پیاده‌سازی selector معمولاً به یک مدل subscription یا memoization پیچیده‌تر نیاز دارد. React عمداً Context را ساده نگه داشته و معمولاً توصیه می‌کند به‌جای selector، context ها را split کنید.
+
+**راه‌حل با کتابخانه:**
+
+```jsx
+// use-context-selector (کتابخانه انجمن)
+import { createContext, useContextSelector } from 'use-context-selector';
+
+const StoreContext = createContext(null);
+
+function UserAvatar() {
+  const user = useContextSelector(StoreContext, (ctx) => ctx.user);
+  return <img src={user.avatar} />;
+  // فقط زمانی که context.user تغییر کند، دوباره رندر می‌شود
+}
+```
+
+**راه‌حل‌های پیشنهادی React:**
+
+1. split کردن context ها
+2. memoize کردن consumer ها با `React.memo`
+3. استفاده از کتابخانه‌هایی مثل Zustand که selector-based subscription را به‌صورت طبیعی ارائه می‌دهند
+
+برای subscription های خیلی granular در اپ‌های بزرگ، معمولاً Zustand یا Jotai راه عملی‌تری از زور زدن به Context هستند.
+
+## 🧠 سوال 132
+
+**شناسه**: react-132
+**عنوان**: چگونه یک کامپوننت مصرف‌کننده Context را تست می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Context API
+
+### پاسخ 📄
+
+کامپوننتی که `useContext` صدا می‌زند باید داخل Provider متناظر رندر شود. روش استاندارد این است که یک helper سفارشی برای `render` بسازید که در تست‌ها همه provider های لازم را wrap کند.
+
+**روش پایه — wrap کردن مستقیم با Provider:**
+
+```jsx
+import { render, screen } from '@testing-library/react';
+import { CartProvider } from './cartContext';
+import CartSummary from './CartSummary';
+
+test('shows item count', () => {
+  render(
+    <CartProvider>
+      <CartSummary />
+    </CartProvider>,
+  );
+  expect(screen.getByText('0 items')).toBeInTheDocument();
+});
+```
+
+**helper سفارشی برای render** که برای پروژه‌های بزرگ‌تر بهتر است:
+
+```jsx
+// test-utils.jsx
+import { render } from '@testing-library/react';
+import { CartProvider } from './cartContext';
+import { UserProvider } from './userContext';
+
+function AllProviders({ children }) {
+  return (
+    <UserProvider>
+      <CartProvider>{children}</CartProvider>
+    </UserProvider>
+  );
+}
+
+const customRender = (ui, options) =>
+  render(ui, { wrapper: AllProviders, ...options });
+
+export * from '@testing-library/react';
+export { customRender as render };
+```
+
+**استفاده در تست:**
+
+```jsx
+import { render, screen } from './test-utils';
+
+test('CartSummary shows 0 items initially', () => {
+  render(<CartSummary />);
+  expect(screen.getByText('0 items')).toBeInTheDocument();
+});
+```
+
+**تست با initial state خاص:**
+
+```jsx
+render(
+  <CartProvider initialState={{ items: [{ id: 1, name: 'Widget' }] }}>
+    <CartSummary />
+  </CartProvider>,
+);
+// CartProvider را ملزم به پذیرش یک prop به نام initialState می‌کند.
+```
+
+اگر Provider شما از اول prop ای مثل `initialState` بپذیرد، تست‌ها خیلی تمیزتر می‌شوند.
+
+## 🧠 سوال 133
+
+**شناسه**: react-133
+**عنوان**: React Hook Form چگونه کار می‌کند و چرا از controlled component ها سریع‌تر است؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: فرم‌ها و رویدادها
+
+### پاسخ 📄
+
+React Hook Form یا RHF state فرم را با **input های uncontrolled** و `ref` ها درونی مدیریت می‌کند و به همین خاطر از re-render شدن فرم در هر keystroke جلوگیری می‌کند.
+
+**فرم controlled — re-render در هر keystroke:**
+
+```jsx
+function ControlledForm() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+
+  return (
+    <form>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+    </form>
+  );
+}
+```
+
+**React Hook Form — re-render خیلی کمتر:**
+
+```jsx
+import { useForm } from 'react-hook-form';
+
+function RHFForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  return (
+    <form onSubmit={handleSubmit((data) => console.log(data))}>
+      <input {...register('name', { required: 'Name is required' })} />
+      {errors.name && <span>{errors.name.message}</span>}
+
+      <input
+        {...register('email', {
+          required: true,
+          pattern: { value: /^\\S+@\\S+$/, message: 'Invalid email' },
+        })}
+      />
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+**`register` چگونه کار می‌کند:** شیئی شامل `name`، `ref`، `onChange` و `onBlur` برمی‌گرداند و RHF به‌جای نگه داشتن هر حرف تایپ‌شده در state React، مقدار input ها را در زمان submit یا validation از طریق ref می‌خواند.
+
+**مقایسه performance:**
+
+- Controlled form: یک re-render برای هر keystroke و هر field
+- RHF: معمولاً نزدیک به صفر re-render هنگام تایپ، و re-render فقط در زمان submit یا تغییر error
+
+**اتصال به validation schema با Zod:**
+
+```jsx
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+});
+
+const { register, handleSubmit } = useForm({ resolver: zodResolver(schema) });
+```
+
+## 🧠 سوال 134
+
+**شناسه**: react-134
+**عنوان**: field های پویا در فرم، مثل اضافه/حذف سطر، را در React چگونه مدیریت می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: فرم‌ها و رویدادها
+
+### پاسخ 📄
+
+فرم‌های پویا معمولاً یک array در state نگه می‌دارند که هر entry آن معادل یک سطر از فرم است. مهم‌ترین چالش این است که identity هر ردیف پایدار بماند تا React هنگام حذف سطرها DOM اشتباه را reuse نکند.
+
+**روش دستی با `useState`:**
+
+```jsx
+function DynamicForm() {
+  const [fields, setFields] = useState([
+    { id: crypto.randomUUID(), value: '' },
+  ]);
+
+  const addField = () =>
+    setFields((prev) => [...prev, { id: crypto.randomUUID(), value: '' }]);
+
+  const removeField = (id) =>
+    setFields((prev) => prev.filter((f) => f.id !== id));
+
+  const updateField = (id, value) =>
+    setFields((prev) => prev.map((f) => (f.id === id ? { ...f, value } : f)));
+
+  return (
+    <form>
+      {fields.map((field) => (
+        <div key={field.id}>
+          {/* کلید پایدار — هرگز از اندیس آرایه استفاده نکنید */}
+          <input
+            value={field.value}
+            onChange={(e) => updateField(field.id, e.target.value)}
+          />
+          <button type="button" onClick={() => removeField(field.id)}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={addField}>
+        Add field
+      </button>
+    </form>
+  );
+}
+```
+
+**با React Hook Form و `useFieldArray`:**
+
+```jsx
+import { useForm, useFieldArray } from 'react-hook-form';
+
+function InvoiceForm() {
+  const { register, control, handleSubmit } = useForm({
+    defaultValues: { items: [{ description: '', amount: 0 }] },
+  });
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+
+  return (
+    <form onSubmit={handleSubmit(console.log)}>
+      {fields.map((field, index) => (
+        <div key={field.id}>
+          {/* RHF به طور خودکار شناسه‌های پایدار تولید می‌کند */}
+          <input {...register(`items.${index}.description`)} />
+          <input type="number" {...register(`items.${index}.amount`)} />
+          <button type="button" onClick={() => remove(index)}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => append({ description: '', amount: 0 })}
+      >
+        Add item
+      </button>
+    </form>
+  );
+}
+```
+
+`useFieldArray` تولید key پایدار، reorder و هم‌راستا نگه داشتن validation state با field های درست را خودش مدیریت می‌کند.
+
+**قاعده حیاتی:** همیشه از key یکتا و پایدار استفاده کنید و هرگز از index آرایه به‌عنوان key برای field های پویا استفاده نکنید.
+
+## 🧠 سوال 135
+
+**شناسه**: react-135
+**عنوان**: آپلود فایل را در React چگونه مدیریت می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: فرم‌ها و رویدادها
+
+### پاسخ 📄
+
+Input های فایل ذاتاً uncontrolled هستند و به دلایل امنیتی نمی‌توانید `value` آن‌ها را خودتان تنظیم کنید. React آن‌ها را از طریق `onChange` مدیریت می‌کند و فایل‌های انتخاب‌شده از `event.target.files` خوانده می‌شوند.
+
+**آپلود تک‌فایل ساده:**
+
+```jsx
+function FileUpload() {
+  const [preview, setPreview] = useState(null);
+
+  function handleFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // ساخت URL محلی برای preview
+    setPreview(URL.createObjectURL(file));
+
+    // آپلود با FormData
+    const formData = new FormData();
+    formData.append('file', file);
+    fetch('/api/upload', { method: 'POST', body: formData });
+  }
+
+  // برای جلوگیری از نشت حافظه، آدرس شیء را در هنگام پاکسازی لغو کنید
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  return (
+    <div>
+      <input type="file" accept="image/*" onChange={handleFileChange} />
+      {preview && <img src={preview} alt="preview" width={200} />}
+    </div>
+  );
+}
+```
+
+**چند فایل:**
+
+```jsx
+<input
+  type="file"
+  multiple
+  onChange={(e) => {
+    const files = Array.from(e.target.files);
+    files.forEach((file) => console.log(file.name, file.size));
+  }}
+/>
+```
+
+**آپلود drag-and-drop:**
+
+```jsx
+function DropZone({ onFiles }) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        onFiles(Array.from(e.dataTransfer.files));
+      }}
+      style={{
+        border: isDragging ? '2px solid blue' : '2px dashed gray',
+        padding: 20,
+      }}
+    >
+      Drop files here
+    </div>
+  );
+}
+```
+
+**همراه با React Hook Form:**
+
+```jsx
+const { register } = useForm();
+// توزیع ثبات روی ورودی — دسترسی به FileList از طریق getValues()
+<input type="file" {...register('avatar')} />;
+// const file = getValues('avatar')?.[0];
+```
+
+همیشه object URL هایی را که با `URL.createObjectURL` ساخته‌اید در cleanup آزاد کنید تا memory leak ایجاد نشود.

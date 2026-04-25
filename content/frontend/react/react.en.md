@@ -7623,3 +7623,394 @@ function AddToCartButton({ product }) {
 
 - ✅ Use for medium-complexity apps, teams avoiding extra dependencies, state that does not need DevTools or middleware
 - ✅ Reach for Zustand / Redux Toolkit for large apps, time-travel debugging, complex async flows, persistence middleware
+
+## 🧠 Question 131
+
+**ID**: react-131
+**Title**: What are context selectors and why does React not have them natively?
+**Difficulty**: Hard
+**Category**: Context API
+
+### Answer 📄
+
+A **context selector** lets a component subscribe to only a specific slice of a context value, re-rendering only when that slice changes — similar to how Redux's `useSelector` works.
+
+**The native problem:**
+
+```jsx
+const store = createContext({ user: null, theme: 'light', cart: [] });
+
+function UserAvatar() {
+  const { user } = useContext(store);
+  // Re-renders whenever theme OR cart changes — even though user did not
+}
+```
+
+React's `useContext` uses reference equality on the **entire context value**. There is no built-in way to subscribe to part of it.
+
+**Why React does not include it natively:**
+
+Implementing selectors requires either a subscription model (each consumer registers a selector and is notified individually) or memoization inside the context mechanism. React's model intentionally keeps Context simple — the team recommends solving the problem through context splitting rather than selectors.
+
+**Library solution:**
+
+```jsx
+// use-context-selector (community library)
+import { createContext, useContextSelector } from 'use-context-selector';
+
+const StoreContext = createContext(null);
+
+function UserAvatar() {
+  const user = useContextSelector(StoreContext, (ctx) => ctx.user);
+  return <img src={user.avatar} />;
+  // Only re-renders when context.user changes
+}
+```
+
+**React's recommended workarounds:**
+
+1. **Split contexts** — separate `UserContext`, `ThemeContext`, `CartContext` (most idiomatic)
+2. **Memoize children** — `React.memo` on consumers so they skip re-renders when their derived props have not changed
+3. **Use Zustand** — its subscription model is selector-based by design
+
+For truly granular subscriptions across a large app, Zustand or Jotai is the pragmatic answer over fighting Context's limitations.
+
+## 🧠 Question 132
+
+**ID**: react-132
+**Title**: How do you test a component that consumes a React Context?
+**Difficulty**: Medium
+**Category**: Context API
+
+### Answer 📄
+
+Components that call `useContext` need to be rendered inside the corresponding Provider. The standard approach is a custom `render` helper that wraps every test with all required providers.
+
+**Basic approach — wrap in Provider directly:**
+
+```jsx
+import { render, screen } from '@testing-library/react';
+import { CartProvider } from './cartContext';
+import CartSummary from './CartSummary';
+
+test('shows item count', () => {
+  render(
+    <CartProvider>
+      <CartSummary />
+    </CartProvider>,
+  );
+  expect(screen.getByText('0 items')).toBeInTheDocument();
+});
+```
+
+**Custom render helper (recommended for larger projects):**
+
+```jsx
+// test-utils.jsx
+import { render } from '@testing-library/react';
+import { CartProvider } from './cartContext';
+import { UserProvider } from './userContext';
+
+function AllProviders({ children }) {
+  return (
+    <UserProvider>
+      <CartProvider>{children}</CartProvider>
+    </UserProvider>
+  );
+}
+
+const customRender = (ui, options) =>
+  render(ui, { wrapper: AllProviders, ...options });
+
+export * from '@testing-library/react';
+export { customRender as render }; // override default render
+```
+
+**Usage in tests:**
+
+```jsx
+import { render, screen } from './test-utils'; // custom render
+
+test('CartSummary shows 0 items initially', () => {
+  render(<CartSummary />); // automatically wrapped in providers
+  expect(screen.getByText('0 items')).toBeInTheDocument();
+});
+```
+
+**Testing with a specific initial state** — pass a pre-seeded Provider:
+
+```jsx
+render(
+  <CartProvider initialState={{ items: [{ id: 1, name: 'Widget' }] }}>
+    <CartSummary />
+  </CartProvider>,
+);
+// requires CartProvider to accept an initialState prop
+```
+
+Adding an `initialState` prop to your Provider from the start is a low-cost change that makes testing significantly cleaner.
+
+## 🧠 Question 133
+
+**ID**: react-133
+**Title**: How does React Hook Form work and why does it outperform controlled components?
+**Difficulty**: Medium
+**Category**: Forms & Events
+
+### Answer 📄
+
+React Hook Form (RHF) manages form state using **uncontrolled inputs** with refs internally, avoiding the re-render-per-keystroke that controlled components (`useState` per field) produce.
+
+**Controlled component — re-renders on every keystroke:**
+
+```jsx
+function ControlledForm() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  // Every keystroke calls setState → re-renders the whole form
+  return (
+    <form>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+    </form>
+  );
+}
+```
+
+**React Hook Form — re-renders only on submit or error change:**
+
+```jsx
+import { useForm } from 'react-hook-form';
+
+function RHFForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  return (
+    <form onSubmit={handleSubmit((data) => console.log(data))}>
+      <input {...register('name', { required: 'Name is required' })} />
+      {errors.name && <span>{errors.name.message}</span>}
+
+      <input
+        {...register('email', {
+          required: true,
+          pattern: { value: /^\S+@\S+$/, message: 'Invalid email' },
+        })}
+      />
+
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+**How `register` works:** it returns `{ name, ref, onChange, onBlur }` spread onto the native input. RHF reads values via refs at submit time rather than tracking each keystroke in React state.
+
+**Performance comparison:**
+
+- Controlled: one re-render per keystroke × number of fields
+- RHF: ~0 re-renders during typing, 1 re-render on validation error change
+
+**Integration with schema validation (Zod):**
+
+```jsx
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+});
+
+const { register, handleSubmit } = useForm({ resolver: zodResolver(schema) });
+```
+
+## 🧠 Question 134
+
+**ID**: react-134
+**Title**: How do you handle dynamic form fields (add/remove rows) in React?
+**Difficulty**: Medium
+**Category**: Forms & Events
+
+### Answer 📄
+
+Dynamic forms require managing an array in state where each entry maps to a form row. The key challenge is maintaining stable identity (keys) so React does not reuse the wrong DOM elements when rows are removed.
+
+**Manual approach with useState:**
+
+```jsx
+function DynamicForm() {
+  const [fields, setFields] = useState([
+    { id: crypto.randomUUID(), value: '' },
+  ]);
+
+  const addField = () =>
+    setFields((prev) => [...prev, { id: crypto.randomUUID(), value: '' }]);
+
+  const removeField = (id) =>
+    setFields((prev) => prev.filter((f) => f.id !== id));
+
+  const updateField = (id, value) =>
+    setFields((prev) => prev.map((f) => (f.id === id ? { ...f, value } : f)));
+
+  return (
+    <form>
+      {fields.map((field) => (
+        <div key={field.id}>
+          {/* stable key — never use array index */}
+          <input
+            value={field.value}
+            onChange={(e) => updateField(field.id, e.target.value)}
+          />
+          <button type="button" onClick={() => removeField(field.id)}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={addField}>
+        Add field
+      </button>
+    </form>
+  );
+}
+```
+
+**With React Hook Form — `useFieldArray`:**
+
+```jsx
+import { useForm, useFieldArray } from 'react-hook-form';
+
+function InvoiceForm() {
+  const { register, control, handleSubmit } = useForm({
+    defaultValues: { items: [{ description: '', amount: 0 }] },
+  });
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+
+  return (
+    <form onSubmit={handleSubmit(console.log)}>
+      {fields.map((field, index) => (
+        <div key={field.id}>
+          {/* RHF generates stable IDs automatically */}
+          <input {...register(`items.${index}.description`)} />
+          <input type="number" {...register(`items.${index}.amount`)} />
+          <button type="button" onClick={() => remove(index)}>
+            Remove
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => append({ description: '', amount: 0 })}
+      >
+        Add item
+      </button>
+    </form>
+  );
+}
+```
+
+`useFieldArray` handles key generation, re-ordering, and keeps validation state aligned with the correct fields automatically.
+
+**Critical rule:** always use a stable unique ID (not array index) as the `key`. Index keys cause React to reuse the wrong input DOM nodes when rows are removed from the middle.
+
+## 🧠 Question 135
+
+**ID**: react-135
+**Title**: How do you handle file uploads in React?
+**Difficulty**: Medium
+**Category**: Forms & Events
+
+### Answer 📄
+
+File inputs are inherently uncontrolled — you cannot set `value` on a file input for security reasons. React handles them via the `onChange` event which exposes the selected files through `event.target.files`.
+
+**Basic single file upload:**
+
+```jsx
+function FileUpload() {
+  const [preview, setPreview] = useState(null);
+
+  function handleFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Create a local preview URL
+    setPreview(URL.createObjectURL(file));
+
+    // Upload to server via FormData
+    const formData = new FormData();
+    formData.append('file', file);
+    fetch('/api/upload', { method: 'POST', body: formData });
+  }
+
+  // Revoke the object URL on cleanup to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  return (
+    <div>
+      <input type="file" accept="image/*" onChange={handleFileChange} />
+      {preview && <img src={preview} alt="preview" width={200} />}
+    </div>
+  );
+}
+```
+
+**Multiple files:**
+
+```jsx
+<input
+  type="file"
+  multiple
+  onChange={(e) => {
+    const files = Array.from(e.target.files);
+    files.forEach((file) => console.log(file.name, file.size));
+  }}
+/>
+```
+
+**Drag-and-drop upload:**
+
+```jsx
+function DropZone({ onFiles }) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        onFiles(Array.from(e.dataTransfer.files));
+      }}
+      style={{
+        border: isDragging ? '2px solid blue' : '2px dashed gray',
+        padding: 20,
+      }}
+    >
+      Drop files here
+    </div>
+  );
+}
+```
+
+**With React Hook Form:**
+
+```jsx
+const { register } = useForm();
+// Spread register onto the input — access the FileList via getValues()
+<input type="file" {...register('avatar')} />;
+// const file = getValues('avatar')?.[0];
+```
+
+Always revoke object URLs created with `URL.createObjectURL` in a cleanup function to prevent memory leaks in long-running sessions.

@@ -1,7 +1,7 @@
 ---
 topic: react
 language: fa
-version: 3.6
+version: 3.7
 ---
 
 # سوالات مصاحبه React

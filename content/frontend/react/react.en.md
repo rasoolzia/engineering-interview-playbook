@@ -8014,3 +8014,378 @@ const { register } = useForm();
 ```
 
 Always revoke object URLs created with `URL.createObjectURL` in a cleanup function to prevent memory leaks in long-running sessions.
+
+## 🧠 Question 136
+
+**ID**: react-136
+**Title**: How do you cancel a fetch request when a component unmounts using `AbortController`?
+**Difficulty**: Medium
+**Category**: Effects & Lifecycle
+
+### Answer 📄
+
+When a component unmounts while a `fetch` is still in-flight, the request completes and tries to call `setState` on an unmounted component. Modern React does not crash on this, but it wastes resources and can cause incorrect state updates if the component remounts quickly. `AbortController` lets you cancel the network request itself in the cleanup function.
+
+**Pattern:**
+
+```jsx
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadUser() {
+      try {
+        const res = await fetch(`/api/users/${userId}`, {
+          signal: controller.signal, // attach the abort signal
+        });
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        if (err.name === 'AbortError') return; // ignore intentional abort
+        setError(err.message);
+      }
+    }
+
+    loadUser();
+    return () => controller.abort(); // cancel on unmount or userId change
+  }, [userId]);
+
+  if (error) return <div>Error: {error}</div>;
+  if (!user) return <div>Loading...</div>;
+  return <div>{user.name}</div>;
+}
+```
+
+**What happens on abort:** `fetch` rejects its Promise with an `AbortError`. The guard `if (err.name === 'AbortError') return` ensures deliberate cancellation is not treated as a real error.
+
+**React StrictMode** mounts → unmounts → mounts in development, so the first fetch is aborted immediately. This is intentional — it verifies your cleanup is correct.
+
+**Alternative — boolean cancelled flag** (for environments that do not support AbortController):
+
+```jsx
+useEffect(() => {
+  let cancelled = false;
+  fetch(`/api/users/${userId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!cancelled) setUser(data);
+    });
+  return () => {
+    cancelled = true;
+  };
+}, [userId]);
+```
+
+`AbortController` is preferred because it actually cancels the network request, saving bandwidth and server resources — not just the state update.
+
+## 🧠 Question 137
+
+**ID**: react-137
+**Title**: What is the synchronization mental model for `useEffect` and how is it different from lifecycle thinking?
+**Difficulty**: Medium
+**Category**: Effects & Lifecycle
+
+### Answer 📄
+
+The **lifecycle mental model** asks _"When should I run this code?"_ — leading to thinking in terms of mount, update, and unmount events.
+
+The **synchronization mental model** asks _"What external system does this component need to stay in sync with?"_ — this is the model React's documentation teaches and what `useEffect` is designed around.
+
+**Lifecycle thinking (leads to bugs):**
+
+```jsx
+useEffect(() => {
+  // "I want this to run on mount"
+  subscribeToChat(roomId);
+  return () => unsubscribeFromChat(roomId);
+}, []); // if roomId changes, the subscription is never updated
+```
+
+**Synchronization thinking (correct):**
+
+```jsx
+useEffect(() => {
+  // "The component must always be subscribed to the current roomId"
+  subscribeToChat(roomId);
+  return () => unsubscribeFromChat(roomId); // undo the previous sync
+}, [roomId]); // re-sync whenever roomId changes
+```
+
+**The mental model in three questions:**
+
+1. **What external system is being synchronized?** (WebSocket, timer, document title, localStorage)
+2. **What values determine the sync state?** → those are your dependencies
+3. **How do you undo the sync?** → that is your cleanup function
+
+**Mapping between models:**
+
+| Lifecycle thinking      | Synchronization thinking                 |
+| ----------------------- | ---------------------------------------- |
+| "Run on mount"          | "Sync with [] — nothing external varies" |
+| "Run when prop changes" | "Re-sync when this dependency changes"   |
+| "Run on unmount"        | "Cleanup function stops the sync"        |
+
+Every `useEffect` should be readable as: _"Keep [external system] synchronized with [these values]."_ If you cannot phrase it that way, the code may belong in an event handler instead.
+
+## 🧠 Question 138
+
+**ID**: react-138
+**Title**: How do you migrate class component lifecycle methods to hooks?
+**Difficulty**: Easy
+**Category**: Effects & Lifecycle
+
+### Answer 📄
+
+Each class lifecycle method has a functional equivalent, though the mental model shifts from event-based to synchronization-based.
+
+**`componentDidMount` → `useEffect` with `[]`:**
+
+```jsx
+// Class
+componentDidMount() {
+  this.subscription = subscribe(this.props.id);
+}
+
+// Hooks
+useEffect(() => {
+  const sub = subscribe(id);
+  return () => sub.unsubscribe(); // cleanup added naturally
+}, []);
+```
+
+**`componentDidUpdate` → `useEffect` with dependencies:**
+
+```jsx
+// Class
+componentDidUpdate(prevProps) {
+  if (prevProps.id !== this.props.id) {
+    this.refetch(this.props.id);
+  }
+}
+
+// Hooks — the condition is implicit in the dependency array
+useEffect(() => {
+  refetch(id);
+}, [id]); // only runs when id changes
+```
+
+**`componentWillUnmount` → cleanup function:**
+
+```jsx
+// Class
+componentWillUnmount() {
+  this.subscription.remove();
+}
+
+// Hooks
+useEffect(() => {
+  const sub = subscribe(id);
+  return () => sub.remove(); // runs on unmount and before each re-run
+}, [id]);
+```
+
+**`shouldComponentUpdate` → `React.memo`:**
+
+```jsx
+// Class
+shouldComponentUpdate(nextProps) {
+  return nextProps.id !== this.props.id;
+}
+
+// Hooks / function component
+const MyComponent = React.memo(
+  function MyComponent({ id }) { return <div>{id}</div>; },
+  (prev, next) => prev.id === next.id // optional custom comparison
+);
+```
+
+**`getDerivedStateFromProps` → conditional setState during render:**
+
+```jsx
+const [prevProp, setPrevProp] = useState(prop);
+if (prevProp !== prop) {
+  setPrevProp(prop);
+  setDerivedState(compute(prop)); // runs synchronously before paint
+}
+```
+
+**`getSnapshotBeforeUpdate` → `useLayoutEffect` with a ref:**
+
+```jsx
+const snapshot = useRef(null);
+useLayoutEffect(() => {
+  snapshot.current = listRef.current.scrollTop; // read before DOM changes apply
+});
+```
+
+## 🧠 Question 139
+
+**ID**: react-139
+**Title**: What are the rules of the Client/Server boundary and the `"use client"` directive?
+**Difficulty**: Medium
+**Category**: Server Components
+
+### Answer 📄
+
+In React's Server Components model, **all components are Server Components by default**. Adding `"use client"` at the top of a file marks it — and everything imported from it — as a Client Component that is included in the JavaScript bundle sent to the browser.
+
+**Rules of the boundary:**
+
+```jsx
+// ServerComponent.jsx — no directive needed, runs only on server
+async function ServerComponent() {
+  const data = await db.query('SELECT * FROM products'); // server-only API ✅
+  return <ClientComponent items={data} />;
+}
+```
+
+```jsx
+'use client'; // marks this file and all its imports as client-side
+
+import { useState } from 'react'; // hooks are allowed ✅
+
+export function ClientComponent({ items }) {
+  const [selected, setSelected] = useState(null);
+  return (
+    <ul>
+      {items.map((i) => (
+        <li key={i.id}>{i.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**What Server Components CAN do (Client Components CANNOT):**
+
+- `async/await` at the component level
+- Direct database, filesystem, or server-only API access
+- Import server-only packages (zero bundle impact)
+- Access secrets and environment variables safely
+
+**What Client Components CAN do (Server Components CANNOT):**
+
+- Use hooks (`useState`, `useEffect`, `useRef`, etc.)
+- Use browser APIs (`window`, `document`, `localStorage`)
+- Attach event handlers
+
+**Passing data across the boundary — only serializable props:**
+
+```jsx
+// ✅ Works — strings, numbers, plain objects, arrays
+<ClientComponent title="Hello" count={42} items={[1, 2, 3]} />
+
+// ❌ Fails — functions are not serializable
+<ClientComponent onClick={() => console.log('hi')} />
+```
+
+**The children composition pattern:**
+
+```jsx
+// ServerPage.jsx
+export default async function ServerPage() {
+  const data = await fetchData();
+  return (
+    <ClientWrapper>
+      {/* Client Component */}
+      <ServerList items={data} /> {/* Server Component as children ✅ */}
+    </ClientWrapper>
+  );
+}
+```
+
+Server Components passed as `children` to a Client Component are rendered on the server and sent as pre-rendered RSC payload — they are not re-rendered on the client when the Client Component re-renders.
+
+## 🧠 Question 140
+
+**ID**: react-140
+**Title**: How do React Server Components handle data fetching compared to client components?
+**Difficulty**: Medium
+**Category**: Server Components
+
+### Answer 📄
+
+Server Components can fetch data **directly and asynchronously** at the component level — no `useEffect`, no loading state boilerplate, and no client-side hydration overhead for the data itself.
+
+**Client component data fetching (before RSC):**
+
+```jsx
+'use client';
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data) => {
+        setProducts(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <Spinner />;
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>{p.name}</li>
+      ))}
+    </ul>
+  );
+}
+// Drawbacks: adds JS bundle, causes loading flash, client-server waterfall
+```
+
+**Server Component data fetching:**
+
+```jsx
+// No "use client" — this is a Server Component
+async function ProductList() {
+  const products = await db.query('SELECT * FROM products WHERE active = true');
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>{p.name}</li>
+      ))}
+    </ul>
+  );
+}
+// Zero client JS for fetching, no loading state, no waterfall
+```
+
+**Parallel fetching inside a Server Component:**
+
+```jsx
+async function Dashboard() {
+  // All three run in parallel — no waterfall
+  const [user, orders, analytics] = await Promise.all([
+    fetchUser(),
+    fetchOrders(),
+    fetchAnalytics(),
+  ]);
+
+  return (
+    <>
+      <UserCard user={user} />
+      <OrderList orders={orders} />
+      <AnalyticsChart data={analytics} />
+    </>
+  );
+}
+```
+
+**Key differences:**
+
+|                      | Client Components        | Server Components            |
+| -------------------- | ------------------------ | ---------------------------- |
+| Where data fetches   | Browser (after JS loads) | Server (before HTML is sent) |
+| Loading state needed | Yes                      | No (or via Suspense)         |
+| Secrets/tokens safe  | No                       | Yes                          |
+| Adds to JS bundle    | Yes                      | No                           |
+| Can use hooks        | Yes                      | No                           |
+| Direct DB access     | No                       | Yes                          |
+
+**Caching in Next.js:** `fetch` in Server Components is extended with automatic caching, request deduplication across the same render, and revalidation via `next: { revalidate: 60 }`.

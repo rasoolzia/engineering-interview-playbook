@@ -8014,3 +8014,378 @@ const { register } = useForm();
 ```
 
 همیشه object URL هایی را که با `URL.createObjectURL` ساخته‌اید در cleanup آزاد کنید تا memory leak ایجاد نشود.
+
+## 🧠 سوال 136
+
+**شناسه**: react-136
+**عنوان**: چگونه با `AbortController` هنگام unmount شدن کامپوننت یک fetch را لغو می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+اگر کامپوننت در حالی unmount شود که یک `fetch` هنوز در حال اجرا است، request کامل می‌شود و ممکن است بعداً تلاش کند state را روی کامپوننتی که دیگر وجود ندارد update کند. `AbortController` اجازه می‌دهد خود request شبکه را در cleanup لغو کنید.
+
+**الگوی استاندارد:**
+
+```jsx
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadUser() {
+      try {
+        const res = await fetch(`/api/users/${userId}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setError(err.message);
+      }
+    }
+
+    loadUser();
+    return () => controller.abort();
+  }, [userId]);
+
+  if (error) return <div>Error: {error}</div>;
+  if (!user) return <div>Loading...</div>;
+  return <div>{user.name}</div>;
+}
+```
+
+**در زمان abort چه می‌شود:** `fetch` Promise را با خطایی از نوع `AbortError` reject می‌کند. شرط `if (err.name === 'AbortError') return` باعث می‌شود لغو عمدی request به‌عنوان خطای واقعی در نظر گرفته نشود.
+
+StrictMode در React در development یک‌بار mount → unmount → mount انجام می‌دهد، بنابراین fetch اول بلافاصله abort می‌شود. این رفتار عمدی است و برای تست cleanup درست مفید است.
+
+**جایگزین — فلگ boolean `cancelled`:**
+
+```jsx
+useEffect(() => {
+  let cancelled = false;
+  fetch(`/api/users/${userId}`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (!cancelled) setUser(data);
+    });
+  return () => {
+    cancelled = true;
+  };
+}, [userId]);
+```
+
+با این حال `AbortController` بهتر است، چون خود request را لغو می‌کند و فقط جلوی `setState` را نمی‌گیرد.
+
+## 🧠 سوال 137
+
+**شناسه**: react-137
+**عنوان**: مدل ذهنی synchronization برای `useEffect` چیست و چه تفاوتی با lifecycle thinking دارد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+مدل ذهنی lifecycle می‌پرسد: «این کد را چه زمانی اجرا کنم؟» و شما را به فکر mount، update و unmount می‌برد.
+
+مدل ذهنی synchronization می‌پرسد: «این کامپوننت باید با چه سیستم خارجی همگام بماند؟» و این همان مدلی است که مستندات React برای `useEffect` پیشنهاد می‌کنند.
+
+**Lifecycle thinking** که می‌تواند به باگ منجر شود:
+
+```jsx
+useEffect(() => {
+  // "می‌خواهم این برنامه روی mount اجرا شود"
+  subscribeToChat(roomId);
+  return () => unsubscribeFromChat(roomId);
+}, []); // اگر roomId عوض شود subscription به‌روز نمی‌شود
+```
+
+**Synchronization thinking** که درست‌تر است:
+
+```jsx
+useEffect(() => {
+  // "این کامپوننت همیشه باید در roomId فعلی مشترک باشد"
+  subscribeToChat(roomId);
+  return () => unsubscribeFromChat(roomId);
+}, [roomId]); // هر بار roomId عوض شود دوباره sync می‌شود
+```
+
+**سه سوال اصلی این مدل:**
+
+1. چه سیستم خارجی‌ای باید sync شود؟
+2. چه value هایی وضعیت sync را تعیین می‌کنند؟
+3. چگونه این sync را undo می‌کنید؟
+
+**نگاشت بین دو مدل:**
+
+| Lifecycle thinking       | Synchronization thinking              |
+| ------------------------ | ------------------------------------- |
+| «در mount اجرا شود»      | «با `[]` sync بماند»                  |
+| «با تغییر prop اجرا شود» | «با تغییر dependency دوباره sync شود» |
+| «در unmount اجرا شود»    | «cleanup sync را متوقف کند»           |
+
+هر `useEffect` باید تقریباً این‌طور خوانده شود: «[سیستم خارجی] را با [این value ها] همگام نگه دار.» اگر نتوانید این جمله را برای effect خود بنویسید، شاید آن کد اصلاً باید داخل event handler باشد نه effect.
+
+## 🧠 سوال 138
+
+**شناسه**: react-138
+**عنوان**: چگونه lifecycle method های class component را به hook ها مهاجرت می‌دهید؟
+**سطح دشواری**: آسان
+**دسته‌بندی**: Effects و چرخه حیات
+
+### پاسخ 📄
+
+برای بیشتر lifecycle method های کلاس، معادل function-based وجود دارد، هرچند مدل ذهنی از event-based به synchronization-based تغییر می‌کند.
+
+**`componentDidMount` → `useEffect` با `[]`:**
+
+```jsx
+// Class
+componentDidMount() {
+  this.subscription = subscribe(this.props.id);
+}
+
+// Hooks
+useEffect(() => {
+  const sub = subscribe(id);
+  return () => sub.unsubscribe();
+}, []);
+```
+
+**`componentDidUpdate` → `useEffect` با dependency:**
+
+```jsx
+// Class
+componentDidUpdate(prevProps) {
+  if (prevProps.id !== this.props.id) {
+    this.refetch(this.props.id);
+  }
+}
+
+// Hooks
+useEffect(() => {
+  refetch(id);
+}, [id]);
+```
+
+**`componentWillUnmount` → cleanup function:**
+
+```jsx
+// Class
+componentWillUnmount() {
+  this.subscription.remove();
+}
+
+// Hooks
+useEffect(() => {
+  const sub = subscribe(id);
+  return () => sub.remove();
+}, [id]);
+```
+
+**`shouldComponentUpdate` → `React.memo`:**
+
+```jsx
+// Class
+shouldComponentUpdate(nextProps) {
+  return nextProps.id !== this.props.id;
+}
+
+// Hooks / function component
+const MyComponent = React.memo(
+  function MyComponent({ id }) { return <div>{id}</div>; },
+  (prev, next) => prev.id === next.id, // مقایسه سفارشی اختیاری
+);
+```
+
+**`getDerivedStateFromProps` → update شرطی state هنگام render:**
+
+```jsx
+const [prevProp, setPrevProp] = useState(prop);
+if (prevProp !== prop) {
+  setPrevProp(prop);
+  setDerivedState(compute(prop));
+}
+```
+
+**`getSnapshotBeforeUpdate` → `useLayoutEffect` همراه با ref:**
+
+```jsx
+const snapshot = useRef(null);
+useLayoutEffect(() => {
+  snapshot.current = listRef.current.scrollTop;
+});
+```
+
+## 🧠 سوال 139
+
+**شناسه**: react-139
+**عنوان**: قواعد مرز Client/Server و دستور `"use client"` چیست؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Server Components
+
+### پاسخ 📄
+
+در مدل Server Components، **همه کامپوننت‌ها به‌صورت پیش‌فرض Server Component هستند**. اگر در ابتدای فایل `"use client"` بنویسید، آن فایل و هر چیزی که از آن import شود به Client Component تبدیل می‌شود و داخل باندل جاوااسکریپت مرورگر قرار می‌گیرد.
+
+**قواعد این مرز:**
+
+```jsx
+// ServerComponent.jsx — بدون directive، فقط روی سرور اجرا می‌شود
+async function ServerComponent() {
+  const data = await db.query('SELECT * FROM products');
+  return <ClientComponent items={data} />;
+}
+```
+
+```jsx
+'use client';
+
+import { useState } from 'react';
+
+export function ClientComponent({ items }) {
+  const [selected, setSelected] = useState(null);
+  return (
+    <ul>
+      {items.map((i) => (
+        <li key={i.id}>{i.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Server Component ها چه کارهایی می‌توانند بکنند که Client Component ها نمی‌توانند:**
+
+- استفاده از `async/await` در سطح خود کامپوننت
+- دسترسی مستقیم به دیتابیس، فایل‌سیستم و API های سروری
+- import کردن پکیج‌های server-only بدون افزایش باندل مرورگر
+- استفاده امن از secret ها و environment variable ها
+
+**Client Component ها چه کارهایی می‌توانند بکنند که Server Component ها نمی‌توانند:**
+
+- استفاده از hook ها مثل `useState` و `useEffect`
+- استفاده از API های مرورگر مثل `window` و `document`
+- اتصال event handler
+
+**عبور دادن داده از این مرز — فقط prop های serializable:**
+
+```jsx
+// ✅ درست
+<ClientComponent title="Hello" count={42} items={[1, 2, 3]} />
+
+// ❌ غلط — function serializable نیست
+<ClientComponent onClick={() => console.log('hi')} />
+```
+
+**الگوی composition با children:**
+
+```jsx
+// ServerPage.jsx
+export default async function ServerPage() {
+  const data = await fetchData();
+  return (
+    <ClientWrapper>
+      {/* کامپوننت کلاینت */}
+      <ServerList items={data} />
+    </ClientWrapper>
+  );
+}
+```
+
+اگر Server Component را به‌عنوان `children` به یک Client Component بدهید، آن بخش روی سرور رندر می‌شود و به شکل payload مخصوص RSC ارسال می‌شود، نه اینکه روی کلاینت دوباره از نو رندر شود.
+
+## 🧠 سوال 140
+
+**شناسه**: react-140
+**عنوان**: React Server Components داده را چگونه نسبت به client component ها fetch می‌کنند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Server Components
+
+### پاسخ 📄
+
+Server Component ها می‌توانند داده را **مستقیم و async** در سطح خود کامپوننت fetch کنند؛ بدون `useEffect`، بدون boilerplate مربوط به loading state، و بدون hydration سمت کلاینت برای خود fetch.
+
+**fetch داده در Client Component** قبل از RSC:
+
+```jsx
+'use client';
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data) => {
+        setProducts(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <Spinner />;
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>{p.name}</li>
+      ))}
+    </ul>
+  );
+}
+//این روش JS بیشتری به کلاینت می‌فرستد و معمولاً باعث loading flash و waterfall می‌شود.
+```
+
+**fetch داده در Server Component:**
+
+```jsx
+// بدون "use client" — این یک Server Component است
+async function ProductList() {
+  const products = await db.query('SELECT * FROM products WHERE active = true');
+  return (
+    <ul>
+      {products.map((p) => (
+        <li key={p.id}>{p.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+در این حالت برای fetch داده، JavaScript اضافی به کلاینت ارسال نمی‌شود و نیازی به loading state محلی هم نیست، مگر اینکه خودتان با Suspense آن را مدل کنید.
+
+**Parallel fetching داخل Server Component:**
+
+```jsx
+async function Dashboard() {
+  const [user, orders, analytics] = await Promise.all([
+    fetchUser(),
+    fetchOrders(),
+    fetchAnalytics(),
+  ]);
+
+  return (
+    <>
+      <UserCard user={user} />
+      <OrderList orders={orders} />
+      <AnalyticsChart data={analytics} />
+    </>
+  );
+}
+```
+
+**تفاوت‌های کلیدی:**
+
+|                       | Client Components | Server Components       |
+| --------------------- | ----------------- | ----------------------- |
+| محل fetch داده        | مرورگر            | سرور                    |
+| نیاز به loading state | بله               | نه، یا از طریق Suspense |
+| امنیت secret/token    | خیر               | بله                     |
+| افزودن به JS bundle   | بله               | خیر                     |
+| امکان استفاده از hook | بله               | خیر                     |
+| دسترسی مستقیم به DB   | خیر               | بله                     |
+
+**Caching در Next.js:** تابع `fetch` در Server Component ها با قابلیت‌هایی مثل caching خودکار، deduplication در همان render و revalidation ارائه می‌شود.

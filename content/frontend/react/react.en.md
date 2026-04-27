@@ -8389,3 +8389,331 @@ async function Dashboard() {
 | Direct DB access     | No                       | Yes                          |
 
 **Caching in Next.js:** `fetch` in Server Components is extended with automatic caching, request deduplication across the same render, and revalidation via `next: { revalidate: 60 }`.
+
+## 🧠 Question 141
+
+**ID**: react-141
+**Title**: How do you pass data from a Server Component to a Client Component?
+**Difficulty**: Medium
+**Category**: Server Components
+
+### Answer 📄
+
+The only way to pass data from a Server Component to a Client Component is through **props** — and those props must be **serializable** because they cross the server/client boundary via a JSON-like wire format.
+
+**Serializable (safe to pass as props):**
+
+- Strings, numbers, booleans, `null`, `undefined`
+- Plain objects and arrays containing the above
+- `Date` objects (serialized to ISO string by most frameworks)
+
+**Not serializable (cannot be passed as props):**
+
+- Functions
+- Class instances
+- `Map`, `Set`, `Symbol`, `RegExp`
+- React elements created on the server that contain event handlers
+
+**Correct pattern:**
+
+```jsx
+// page.jsx — Server Component
+import ProductCard from './ProductCard'; // "use client"
+
+export default async function ProductPage({ params }) {
+  const product = await db.products.findById(params.id);
+
+  return (
+    <ProductCard
+      id={product.id} // ✅ number
+      name={product.name} // ✅ string
+      price={product.price} // ✅ number
+      tags={product.tags} // ✅ plain array
+      // onBuy={handleBuy}     // ❌ function — not serializable
+    />
+  );
+}
+```
+
+```jsx
+'use client';
+export function ProductCard({ id, name, price, tags }) {
+  const [added, setAdded] = useState(false);
+  return (
+    <div>
+      <h2>
+        {name} — ${price}
+      </h2>
+      <button
+        onClick={() => {
+          addToCart(id);
+          setAdded(true);
+        }}
+      >
+        {added ? 'Added!' : 'Add to cart'}
+      </button>
+    </div>
+  );
+}
+```
+
+**The children composition pattern — passing Server Components into Client Components:**
+
+```jsx
+// layout.jsx — Server Component
+export default async function Layout() {
+  const nav = await fetchNavItems();
+  return (
+    <ClientShell>
+      {/* Client Component */}
+      <ServerNav items={nav} /> {/* Server Component passed as children ✅ */}
+    </ClientShell>
+  );
+}
+```
+
+`ServerNav` is rendered on the server and passed to `ClientShell` as an already-computed React element in the RSC payload. When `ClientShell` re-renders on the client (e.g., due to state change), `ServerNav` does not re-render — it remains the static output from the server.
+
+## 🧠 Question 142
+
+**ID**: react-142
+**Title**: What is the difference between server state and client state, and which tools handle each?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+**Client state** is data that originates in and is owned by the browser: UI state like modal open/closed, selected tab, form input values, or theme preference. It is synchronous, always available, and your app controls it entirely.
+
+**Server state** is data that lives on a remote server: users, products, orders, messages. It is asynchronous, can become stale, may change without your app's knowledge, and requires network requests to read or write.
+
+**Why the distinction matters:**
+
+Managing server state with `useState` + `useEffect` means manually implementing caching, request deduplication, background refetching, cache invalidation, loading/error states, optimistic updates, and pagination — all problems that dedicated libraries solve out of the box.
+
+| Concern             | Client State   | Server State             |
+| ------------------- | -------------- | ------------------------ |
+| Source of truth     | Browser memory | Remote server / database |
+| Async?              | No             | Yes                      |
+| Can go stale?       | No             | Yes                      |
+| Needs caching?      | No             | Yes                      |
+| Shared across tabs? | No (usually)   | Yes                      |
+
+**Tools for each:**
+
+```jsx
+// CLIENT STATE — own it completely
+const [isOpen, setIsOpen] = useState(false); // useState
+const { theme } = useThemeStore(); // Zustand
+dispatch({ type: 'TOGGLE_MENU' }); // Redux Toolkit
+
+// SERVER STATE — async, cached, synchronized
+const { data, isLoading } = useQuery({
+  // TanStack Query
+  queryKey: ['user', userId],
+  queryFn: () => fetchUser(userId),
+  staleTime: 60_000, // treat as fresh for 60s before background refetch
+});
+
+const { data } = useSWR('/api/user', fetcher); // SWR — simpler alternative
+```
+
+**The rule of thumb:** if the data exists on a server and could change without your app's knowledge, it is server state. Use `useState` only for data your app owns and mutates locally.
+
+## 🧠 Question 143
+
+**ID**: react-143
+**Title**: What is normalized state and why does it matter in large React applications?
+**Difficulty**: Hard
+**Category**: State Management
+
+### Answer 📄
+
+Normalized state stores each entity **once** in a flat lookup table keyed by ID, with relationships expressed as arrays of IDs rather than nested objects. It applies the relational database model to frontend state.
+
+**Unnormalized (nested) state — problems:**
+
+```js
+const state = {
+  posts: [
+    {
+      id: 1,
+      title: 'Hello',
+      author: { id: 42, name: 'Ali' }, // duplicated in every post
+      comments: [{ id: 101, text: 'Great!', author: { id: 42, name: 'Ali' } }],
+    },
+    {
+      id: 2,
+      title: 'World',
+      author: { id: 42, name: 'Ali' }, // same author — duplicated again
+    },
+  ],
+};
+// To update Ali's name: must find and patch every nested occurrence
+```
+
+**Normalized state — each entity exists exactly once:**
+
+```js
+const state = {
+  users: { 42: { id: 42, name: 'Ali' } },
+  posts: {
+    1: { id: 1, title: 'Hello', authorId: 42, commentIds: [101] },
+    2: { id: 2, title: 'World', authorId: 42 },
+  },
+  comments: { 101: { id: 101, text: 'Great!', authorId: 42 } },
+  postIds: [1, 2], // ordered list for rendering
+};
+// To update Ali's name: update users[42].name — one operation, instantly consistent
+```
+
+**Benefits:**
+
+- **Single source of truth** — one update propagates everywhere
+- **O(1) lookups** by ID instead of O(n) array searches
+- **No duplication** — data stays consistent across the UI
+
+**Implementation with Redux Toolkit's `createEntityAdapter`:**
+
+```js
+import { createEntityAdapter, createSlice } from '@reduxjs/toolkit';
+
+const usersAdapter = createEntityAdapter();
+// Auto-generates: selectAll, selectById, selectIds, addOne, updateOne, removeOne…
+
+const usersSlice = createSlice({
+  name: 'users',
+  initialState: usersAdapter.getInitialState(),
+  reducers: {
+    userAdded: usersAdapter.addOne,
+    userUpdated: usersAdapter.updateOne,
+    userRemoved: usersAdapter.removeOne,
+  },
+});
+```
+
+**When it matters most:** apps with many entity types, real-time WebSocket updates, shared data (the same entity appearing in many places), and complex relationships. For simple CRUD UIs, the overhead of normalization may outweigh the benefits.
+
+## 🧠 Question 144
+
+**ID**: react-144
+**Title**: How does Jotai's atomic model differ from Redux and Zustand?
+**Difficulty**: Medium
+**Category**: State Management
+
+### Answer 📄
+
+Jotai uses an **atomic** model where state is split into small, independent units called atoms. Components subscribe to individual atoms rather than a global store, and derived state is expressed as computed atoms — a bottom-up composition model.
+
+**Jotai — atomic, bottom-up:**
+
+```jsx
+import { atom, useAtom } from 'jotai';
+
+const countAtom = atom(0);
+const userAtom = atom(null);
+
+// Derived atom — computed automatically from other atoms
+const doubleCountAtom = atom((get) => get(countAtom) * 2);
+
+// Async atom — suspends the component until resolved
+const userDataAtom = atom(async (get) => {
+  const user = get(userAtom);
+  return user ? await fetchUser(user.id) : null;
+});
+
+function Counter() {
+  const [count, setCount] = useAtom(countAtom);
+  // Only re-renders when countAtom changes — not when userAtom changes
+  return <button onClick={() => setCount((c) => c + 1)}>{count}</button>;
+}
+```
+
+**Redux Toolkit — centralized, top-down:**
+
+```js
+// One store with a root reducer combining slices
+const store = configureStore({
+  reducer: { counter: counterReducer, user: userReducer },
+});
+const count = useSelector((state) => state.counter.value); // memoized selector
+```
+
+**Zustand — store-based, minimal:**
+
+```js
+const useStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+const count = useStore((state) => state.count); // selector-based subscription
+```
+
+**Comparison:**
+
+|               | Jotai                                  | Redux Toolkit                                    | Zustand                                |
+| ------------- | -------------------------------------- | ------------------------------------------------ | -------------------------------------- |
+| Model         | Atoms (bottom-up)                      | Single store (top-down)                          | Store per concern                      |
+| Boilerplate   | Minimal                                | Moderate                                         | Minimal                                |
+| DevTools      | Limited                                | Excellent                                        | Good                                   |
+| Derived state | Computed atoms                         | Reselect selectors                               | Computed in selectors                  |
+| Async state   | Async atoms (+ Suspense)               | RTK Query / thunks                               | External or middleware                 |
+| Best for      | Granular, component-local shared state | Large teams, complex apps, time-travel debugging | Simple global state, small–medium apps |
+
+Jotai feels like `useState` that can be shared across components — the right fit when you want cross-component reactivity without the ceremony of a global store.
+
+## 🧠 Question 145
+
+**ID**: react-145
+**Title**: How are React hooks implemented internally using a linked list?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+React stores each component's hook state in a **linked list** of hook objects attached to the component's Fiber node (`fiber.memoizedState`). The position of each hook in the list is its sole identity — React has no names or keys for hooks.
+
+**Hook object structure (simplified):**
+
+```js
+{
+  memoizedState: <current value>,   // the actual state / ref / memo value
+  queue: <update queue>,            // pending state updates (for useState)
+  next: <pointer to next hook>      // linked list pointer
+}
+```
+
+**First render (mount) — React creates nodes and links them:**
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0); // node 1: { memoizedState: 0, next → }
+  const [name, setName] = useState('Ali'); // node 2: { memoizedState: 'Ali', next → }
+  const ref = useRef(null); // node 3: { memoizedState: {current:null}, next: null }
+}
+// fiber.memoizedState → node1 → node2 → node3
+```
+
+**Re-renders — React walks the existing list in order:**
+
+```js
+// Pseudocode of useState during re-render
+function useState(initialValue) {
+  const hook = currentHook; // read the current node
+  currentHook = currentHook.next; // advance the pointer
+
+  // Apply any queued updates
+  const pending = hook.queue.pending;
+  if (pending) {
+    hook.memoizedState = pending.action(hook.memoizedState);
+  }
+
+  return [hook.memoizedState, hook.queue.dispatch];
+}
+```
+
+**Why call order is the only identity:**
+
+React uses position in the linked list, not names or keys. Each render must call the hooks in exactly the same order so each call aligns with its node. If a hook is skipped (conditional) or added (loop), every subsequent hook reads the wrong node — state is completely misaligned.
+
+`useEffect`, `useMemo`, and `useCallback` follow the same pattern, each storing their value, dependency array, and cleanup function in their own node in the same linked list.

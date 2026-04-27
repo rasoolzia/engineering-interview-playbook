@@ -8389,3 +8389,331 @@ async function Dashboard() {
 | دسترسی مستقیم به DB   | خیر               | بله                     |
 
 **Caching در Next.js:** تابع `fetch` در Server Component ها با قابلیت‌هایی مثل caching خودکار، deduplication در همان render و revalidation ارائه می‌شود.
+
+## 🧠 سوال 141
+
+**شناسه**: react-141
+**عنوان**: چگونه از یک Server Component به یک Client Component داده پاس می‌دهید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: Server Components
+
+### پاسخ 📄
+
+تنها راه پاس دادن داده از Server Component به Client Component از طریق **props** است — و این props باید **serializable** باشند، چون از مرز سرور/کلاینت با یک فرمت wire شبیه JSON عبور می‌کنند.
+
+**Serializable و قابل ارسال به‌عنوان prop:**
+
+- رشته، عدد، boolean، `null` و `undefined`
+- object و array ساده که از مقادیر بالا تشکیل شده‌اند
+- آبجکت‌های `Date` که در اغلب framework ها به رشته ISO تبدیل می‌شوند
+
+**غیر serializable و غیرقابل ارسال به‌عنوان prop:**
+
+- function ها
+- instance های کلاس
+- `Map`، `Set`، `Symbol` و `RegExp`
+- React element هایی که روی سرور ساخته شده‌اند و event handler دارند
+
+**الگوی درست:**
+
+```jsx
+// page.jsx — Server Component
+import ProductCard from './ProductCard'; // "use client"
+
+export default async function ProductPage({ params }) {
+  const product = await db.products.findById(params.id);
+
+  return (
+    <ProductCard
+      id={product.id} // ✅ number
+      name={product.name} // ✅ string
+      price={product.price} // ✅ number
+      tags={product.tags} // ✅ plain array
+      // onBuy={handleBuy}   // ❌ function — serializable نیست
+    />
+  );
+}
+```
+
+```jsx
+'use client';
+export function ProductCard({ id, name, price, tags }) {
+  const [added, setAdded] = useState(false);
+  return (
+    <div>
+      <h2>
+        {name} — ${price}
+      </h2>
+      <button
+        onClick={() => {
+          addToCart(id);
+          setAdded(true);
+        }}
+      >
+        {added ? 'Added!' : 'Add to cart'}
+      </button>
+    </div>
+  );
+}
+```
+
+**الگوی composition با `children` — پاس دادن Server Component به Client Component:**
+
+```jsx
+// layout.jsx — Server Component
+export default async function Layout() {
+  const nav = await fetchNavItems();
+  return (
+    <ClientShell>
+      {/* کامپوننت کلاینت */}
+      <ServerNav items={nav} /> {/* کامپوننت سرور به عنوان فرزند ارسال شد ✅ */}
+    </ClientShell>
+  );
+}
+```
+
+`ServerNav` روی سرور رندر می‌شود و به‌عنوان یک React element از پیش محاسبه‌شده در payload مربوط به RSC به `ClientShell` می‌رسد. وقتی `ClientShell` روی کلاینت دوباره رندر شود، `ServerNav` از نو روی کلاینت رندر نمی‌شود.
+
+## 🧠 سوال 142
+
+**شناسه**: react-142
+**عنوان**: تفاوت server state و client state چیست و چه ابزارهایی هرکدام را مدیریت می‌کنند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت State
+
+### پاسخ 📄
+
+**Client state** داده‌ای است که در مرورگر به‌وجود می‌آید و مالک آن خود اپلیکیشن است؛ مثل باز یا بسته بودن modal، tab انتخاب‌شده، مقدار input فرم یا ترجیح theme.
+
+**Server state** داده‌ای است که روی یک سرور راه دور زندگی می‌کند؛ مثل users، products، orders و messages. این داده async است، می‌تواند stale شود، ممکن است بدون اطلاع اپ تغییر کند و برای خواندن یا نوشتن به request شبکه نیاز دارد.
+
+**چرا این تفاوت مهم است:**
+
+اگر server state را با `useState` و `useEffect` مدیریت کنید، باید caching، deduplication، background refetch، invalidation، loading/error state، optimistic update و pagination را خودتان دستی بسازید. کتابخانه‌های مخصوص این کارها را آماده می‌دهند.
+
+| موضوع                 | Client State | Server State   |
+| --------------------- | ------------ | -------------- |
+| منبع حقیقت            | حافظه مرورگر | سرور / دیتابیس |
+| async است؟            | نه           | بله            |
+| ممکن است stale شود؟   | نه           | بله            |
+| به caching نیاز دارد؟ | نه           | بله            |
+| بین tab ها مشترک است؟ | معمولاً نه   | بله            |
+
+**ابزارهای مناسب هرکدام:**
+
+```jsx
+// CLIENT STATE — own it completely
+const [isOpen, setIsOpen] = useState(false); // useState
+const { theme } = useThemeStore(); // Zustand
+dispatch({ type: 'TOGGLE_MENU' }); // Redux Toolkit
+
+// SERVER STATE — async, cached, synchronized
+const { data, isLoading } = useQuery({
+  // TanStack Query
+  queryKey: ['user', userId],
+  queryFn: () => fetchUser(userId),
+  staleTime: 60_000, // قبل از بازیابی پس‌زمینه، به مدت ۶۰ ثانیه آن را تازه در نظر بگیرید
+});
+
+const { data } = useSWR('/api/user', fetcher); // SWR — جایگزین ساده‌تر
+```
+
+**قاعده کلی:** اگر داده روی سرور وجود دارد و ممکن است بدون اطلاع اپ شما عوض شود، server state است. از `useState` فقط برای داده‌ای استفاده کنید که خود اپلیکیشن به‌صورت محلی مالک آن است.
+
+## 🧠 سوال 143
+
+**شناسه**: react-143
+**عنوان**: normalized state چیست و چرا در اپلیکیشن‌های بزرگ React مهم است؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: مدیریت State
+
+### پاسخ 📄
+
+Normalized state یعنی هر entity فقط **یک‌بار** در یک lookup table تخت و مبتنی بر ID ذخیره شود و رابطه‌ها با آرایه‌ای از ID ها نمایش داده شوند، نه با object های تو‌در‌تو. این همان مدل دیتابیس رابطه‌ای است که به state فرانت‌اند آورده می‌شود.
+
+**State غیر normalized یا nested — مشکل‌دار:**
+
+```js
+const state = {
+  posts: [
+    {
+      id: 1,
+      title: 'Hello',
+      author: { id: 42, name: 'Ali' }, // در هر پست تکرار شده است
+      comments: [{ id: 101, text: 'Great!', author: { id: 42, name: 'Ali' } }],
+    },
+    {
+      id: 2,
+      title: 'World',
+      author: { id: 42, name: 'Ali' }, // همان نویسنده - دوباره کپی شده است
+    },
+  ],
+};
+// برای به‌روزرسانی نام علی: باید هر رخداد تودرتو را پیدا و وصله‌بندی کند
+```
+
+**State normalized — هر entity فقط یک‌بار:**
+
+```js
+const state = {
+  users: { 42: { id: 42, name: 'Ali' } },
+  posts: {
+    1: { id: 1, title: 'Hello', authorId: 42, commentIds: [101] },
+    2: { id: 2, title: 'World', authorId: 42 },
+  },
+  comments: { 101: { id: 101, text: 'Great!', authorId: 42 } },
+  postIds: [1, 2], // لیست مرتب برای رندر کردن
+};
+// برای به‌روزرسانی نام علی: update users[42].name — یک عملیات، فوراً سازگار
+```
+
+**مزیت‌ها:**
+
+- **Single source of truth**
+- lookup سریع با ID
+- عدم تکرار داده و در نتیجه consistency بهتر
+
+**پیاده‌سازی با `createEntityAdapter` در Redux Toolkit:**
+
+```js
+import { createEntityAdapter, createSlice } from '@reduxjs/toolkit';
+
+const usersAdapter = createEntityAdapter();
+// تولید خودکار: selectAll، selectById، selectIds، addOne، updateOne، removeOne…
+
+const usersSlice = createSlice({
+  name: 'users',
+  initialState: usersAdapter.getInitialState(),
+  reducers: {
+    userAdded: usersAdapter.addOne,
+    userUpdated: usersAdapter.updateOne,
+    userRemoved: usersAdapter.removeOne,
+  },
+});
+```
+
+**بیشتر چه زمانی اهمیت دارد:** در اپ‌هایی با entity های زیاد، update بلادرنگ، داده مشترک در چند بخش UI و رابطه‌های پیچیده. برای CRUD های ساده شاید overhead آن ارزش نداشته باشد.
+
+## 🧠 سوال 144
+
+**شناسه**: react-144
+**عنوان**: مدل atomic در Jotai چه تفاوتی با Redux و Zustand دارد؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: مدیریت State
+
+### پاسخ 📄
+
+Jotai از یک مدل **atomic** استفاده می‌کند؛ یعنی state به واحدهای کوچک و مستقل به نام atom شکسته می‌شود. کامپوننت‌ها فقط به atom های مورد نیاز خود subscribe می‌شوند و state مشتق‌شده با atom های computed ساخته می‌شود.
+
+**Jotai — atomic و bottom-up:**
+
+```jsx
+import { atom, useAtom } from 'jotai';
+
+const countAtom = atom(0);
+const userAtom = atom(null);
+
+// اتم مشتق شده — به طور خودکار از اتم‌های دیگر محاسبه می‌شود
+const doubleCountAtom = atom((get) => get(countAtom) * 2);
+
+// اتم ناهمگام - کامپوننت را تا زمان حل شدن به حالت تعلیق در می‌آورد
+const userDataAtom = atom(async (get) => {
+  const user = get(userAtom);
+  return user ? await fetchUser(user.id) : null;
+});
+
+function Counter() {
+  const [count, setCount] = useAtom(countAtom);
+  // فقط زمانی که countAtom تغییر کند، دوباره رندر می‌شود — نه زمانی که userAtom تغییر کند
+  return <button onClick={() => setCount((c) => c + 1)}>{count}</button>;
+}
+```
+
+**Redux Toolkit — متمرکز و top-down:**
+
+```js
+// One store with a root reducer combining slices
+const store = configureStore({
+  reducer: { counter: counterReducer, user: userReducer },
+});
+const count = useSelector((state) => state.counter.value); // memoized selector
+```
+
+**Zustand — store-based و مینیمال:**
+
+```js
+const useStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+const count = useStore((state) => state.count);
+```
+
+**مقایسه:**
+
+| مورد           | Jotai                             | Redux Toolkit                                            | Zustand                                       |
+| -------------- | --------------------------------- | -------------------------------------------------------- | --------------------------------------------- |
+| مدل            | Atom ها                           | Store واحد                                               | Store بر اساس concern                         |
+| boilerplate    | کم                                | متوسط                                                    | کم                                            |
+| DevTools       | محدود                             | عالی                                                     | خوب                                           |
+| state مشتق‌شده | Computed atom                     | Selector                                                 | Selector / computed                           |
+| async state    | Async atom                        | RTK Query / thunk                                        | middleware یا بیرونی                          |
+| Best for       | حالت اشتراکی جزئی و محلی کامپوننت | تیم‌های بزرگ، برنامه‌های پیچیده، اشکال‌زدایی سفر در زمان | حالت سراسری ساده، برنامه‌های کوچک تا متوسط ​​ |
+
+Jotai شبیه `useState` ای است که می‌تواند بین چند کامپوننت share شود؛ مناسب وقتی است که reactivity بین چند بخش لازم دارید اما نمی‌خواهید سراغ ceremony زیاد یک global store بروید.
+
+## 🧠 سوال 145
+
+**شناسه**: react-145
+**عنوان**: hook های React در داخل چگونه با linked list پیاده‌سازی می‌شوند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+React وضعیت هر hook مربوط به یک کامپوننت را در یک **linked list** از object های hook ذخیره می‌کند که به Fiber همان کامپوننت وصل شده‌اند. هویت هر hook فقط با **موقعیتش در این لیست** مشخص می‌شود.
+
+**ساختار ساده‌شده یک hook object:**
+
+```js
+{
+  memoizedState: <current value>,
+  queue: <update queue>,
+  next: <pointer to next hook>
+}
+```
+
+**در mount اول** React node ها را می‌سازد و به هم وصل می‌کند:
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0);
+  const [name, setName] = useState('Ali');
+  const ref = useRef(null);
+}
+// fiber.memoizedState → node1 → node2 → node3
+```
+
+**در re-render** React همین لیست را به‌ترتیب طی می‌کند:
+
+```js
+// شبه‌کد useState در حین رندر مجدد
+function useState(initialValue) {
+  const hook = currentHook; // node فعلی را بخوانید
+  currentHook = currentHook.next; // اشاره‌گر را به جلو می‌برد
+
+  // اعمال هرگونه به‌روزرسانی در صف انتظار
+  const pending = hook.queue.pending;
+  if (pending) {
+    hook.memoizedState = pending.action(hook.memoizedState);
+  }
+
+  return [hook.memoizedState, hook.queue.dispatch];
+}
+```
+
+**چرا ترتیب فراخوانی تنها هویت hook است:**
+
+React برای hook ها نام یا key جداگانه ندارد. اگر یک hook جا بیفتد یا وسط راه اضافه شود، همه hook های بعدی node اشتباه را می‌خوانند و state به‌کلی به‌هم می‌ریزد.
+
+`useEffect`، `useMemo` و `useCallback` هم در همین linked list node های خودشان را دارند و dependency ها و cleanup را همان‌جا نگه می‌دارند.

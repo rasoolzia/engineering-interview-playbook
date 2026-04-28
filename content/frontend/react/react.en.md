@@ -8717,3 +8717,344 @@ function useState(initialValue) {
 React uses position in the linked list, not names or keys. Each render must call the hooks in exactly the same order so each call aligns with its node. If a hook is skipped (conditional) or added (loop), every subsequent hook reads the wrong node — state is completely misaligned.
 
 `useEffect`, `useMemo`, and `useCallback` follow the same pattern, each storing their value, dependency array, and cleanup function in their own node in the same linked list.
+
+## 🧠 Question 146
+
+**ID**: react-146
+**Title**: Why must hooks be called in the same order every render — what breaks internally if you don't?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+The Rules of Hooks — no hooks inside conditions, loops, or nested functions — exist because React identifies each hook call by its **position** in the linked list. Changing the call order breaks the mapping between hook invocations and their stored state.
+
+**What breaks with a conditional hook:**
+
+```jsx
+function UserProfile({ isLoggedIn }) {
+  if (isLoggedIn) {
+    const [name, setName] = useState(''); // Hook 1 — only when logged in
+  }
+  const [age, setAge] = useState(0); // Hook 2 when logged in, Hook 1 when not
+  const ref = useRef(null); // Hook 3 when logged in, Hook 2 when not
+}
+```
+
+**First render (isLoggedIn = true) — list has 3 nodes:**
+
+```
+node1 = { memoizedState: '' }   ← name
+node2 = { memoizedState: 0 }    ← age
+node3 = { memoizedState: {current:null} } ← ref
+```
+
+**Re-render (isLoggedIn = false) — only 2 hook calls, but list still has 3 nodes:**
+
+```
+Call 1 (useState 0) reads node1 → gets '' (name's value) ← WRONG
+Call 2 (useRef)     reads node2 → gets 0  (age's value)  ← WRONG
+node3 is never read — ref is orphaned
+```
+
+React reads the wrong stored value for every hook after the skipped one. State is completely corrupted.
+
+**React's detection:** In development, React counts the hooks called per render. If the count changes, it throws:
+
+```
+React has detected a change in the order of Hooks called by UserProfile.
+```
+
+**The correct pattern — move the condition inside the hook:**
+
+```jsx
+function UserProfile({ isLoggedIn }) {
+  const [name, setName] = useState(''); // always called — node 1
+  const [age, setAge] = useState(0); // always called — node 2
+  const ref = useRef(null); // always called — node 3
+
+  useEffect(() => {
+    if (isLoggedIn) loadUserData(); // condition lives inside the effect
+  }, [isLoggedIn]);
+}
+```
+
+## 🧠 Question 147
+
+**ID**: react-147
+**Title**: How does Suspense work internally — what is the "throw a Promise" mechanism?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+Suspense works through a protocol where a component signals "I am not ready yet" by **throwing a Promise** (or any thenable). React catches this throw at the nearest `<Suspense>` boundary, renders the fallback, and re-renders the component when the Promise resolves.
+
+**The protocol (simplified cache):**
+
+```js
+function createResource(promise) {
+  let status = 'pending';
+  let result;
+
+  promise.then(
+    (data) => {
+      status = 'success';
+      result = data;
+    },
+    (err) => {
+      status = 'error';
+      result = err;
+    },
+  );
+
+  return {
+    read() {
+      if (status === 'pending') throw promise; // ← THROW a Promise
+      if (status === 'error') throw result; // ← THROW an Error
+      return result; // ← return data when ready
+    },
+  };
+}
+```
+
+**Component using the resource:**
+
+```jsx
+const userResource = createResource(fetchUser(1));
+
+function UserCard() {
+  const user = userResource.read(); // throws Promise → fallback shown
+  return <div>{user.name}</div>; // runs after promise resolves
+}
+
+function App() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <UserCard />
+    </Suspense>
+  );
+}
+```
+
+**What React does internally:**
+
+1. Begins rendering `UserCard`
+2. `userResource.read()` throws a Promise
+3. React catches the throw inside its render loop (try/catch)
+4. Traverses up the fiber tree to find the nearest `<Suspense>` boundary
+5. Renders the `fallback` prop in place of the boundary's subtree
+6. Attaches `.then()` to the caught Promise
+7. When the Promise resolves, React re-renders `UserCard` from the boundary
+8. `read()` now returns data → render succeeds
+
+**React 19's `use()` hook** is the official API for reading Promises in render — you no longer need a custom cache wrapper:
+
+```jsx
+import { use } from 'react';
+
+function UserCard({ userPromise }) {
+  const user = use(userPromise); // suspends if not resolved
+  return <div>{user.name}</div>;
+}
+```
+
+**Always pair `<Suspense>` with an `<ErrorBoundary>`** above it — if the Promise rejects, the error propagates to the nearest Error Boundary, not the Suspense boundary.
+
+## 🧠 Question 148
+
+**ID**: react-148
+**Title**: How would you build a minimal React renderer from scratch?
+**Difficulty**: Hard
+**Category**: React Internals
+
+### Answer 📄
+
+Building a minimal renderer demonstrates how `createElement`, reconciliation, and the commit phase work together. The key insight is that `React.createElement` just produces a plain JavaScript object tree — the renderer's job is to turn that tree into real DOM.
+
+**Step 1 — createElement (produces the VDOM tree):**
+
+```js
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children: children.map((child) =>
+        typeof child === 'object' ? child : createTextElement(child),
+      ),
+    },
+  };
+}
+
+function createTextElement(text) {
+  return { type: 'TEXT_ELEMENT', props: { nodeValue: text, children: [] } };
+}
+```
+
+**Step 2 — createDom (creates a real DOM node from a fiber):**
+
+```js
+function createDom(fiber) {
+  const dom =
+    fiber.type === 'TEXT_ELEMENT'
+      ? document.createTextNode('')
+      : document.createElement(fiber.type);
+
+  Object.keys(fiber.props)
+    .filter((key) => key !== 'children')
+    .forEach((name) => {
+      dom[name] = fiber.props[name];
+    });
+
+  return dom;
+}
+```
+
+**Step 3 — reconcileChildren (diff old tree vs new tree, tag each fiber):**
+
+```js
+function reconcileChildren(wipFiber, elements) {
+  let oldFiber = wipFiber.alternate?.child;
+
+  elements.forEach((element, index) => {
+    const sameType = oldFiber && element.type === oldFiber.type;
+
+    const newFiber = sameType
+      ? { ...oldFiber, props: element.props, effectTag: 'UPDATE' } // reuse DOM node
+      : {
+          type: element.type,
+          props: element.props,
+          dom: null,
+          effectTag: 'PLACEMENT',
+        };
+
+    if (oldFiber) oldFiber = oldFiber.sibling;
+    // attach to fiber tree (child / sibling links omitted for brevity)
+  });
+}
+```
+
+**Step 4 — commitWork (apply DOM mutations atomically):**
+
+```js
+function commitWork(fiber) {
+  if (!fiber) return;
+  const parent = fiber.parent.dom;
+
+  if (fiber.effectTag === 'PLACEMENT') parent.appendChild(fiber.dom);
+  else if (fiber.effectTag === 'UPDATE')
+    updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+  else if (fiber.effectTag === 'DELETION') parent.removeChild(fiber.dom);
+
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+```
+
+**The two-phase model:**
+
+| Render phase                         | Commit phase                             |
+| ------------------------------------ | ---------------------------------------- |
+| Pure, interruptible                  | Side-effectful, synchronous              |
+| Builds work-in-progress fiber tree   | Applies all DOM mutations at once        |
+| No DOM mutations                     | Runs `useLayoutEffect` cleanup and setup |
+| Can be paused / resumed (Concurrent) | Cannot be interrupted                    |
+
+**Takeaway:** React separates computation (render phase) from side effects (commit phase) so that the render phase can be safely interrupted by higher-priority updates. Libraries like `react-three-fiber`, `react-pdf`, and `ink` use React's `react-reconciler` package to target non-DOM environments using this exact same extension point.
+
+## 🧠 Question 149
+
+**ID**: react-149
+**Title**: What triggers a re-render in React, and how can you prevent unnecessary ones?
+**Difficulty**: Medium
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+A React component re-renders when any of these occur:
+
+**1. Its own state changes** (`useState`, `useReducer`)
+
+```jsx
+const [count, setCount] = useState(0);
+setCount(1); // triggers re-render
+```
+
+**2. Its parent re-renders**
+By default, whenever a parent re-renders, ALL its children re-render — even if props haven't changed. This is the most common source of unnecessary re-renders.
+
+**3. A consumed Context value changes**
+Every component that calls `useContext(Ctx)` re-renders when the context value changes — even if the specific slice it uses didn't change.
+
+**4. `key` prop changes**
+React unmounts and remounts the component entirely.
+
+**Preventing unnecessary re-renders:**
+
+| Tool                    | What it prevents                                 |
+| ----------------------- | ------------------------------------------------ |
+| `React.memo(Comp)`      | Re-render when parent re-renders with same props |
+| `useMemo(fn, deps)`     | Recomputing expensive derived values             |
+| `useCallback(fn, deps)` | Recreating function references passed as props   |
+| Context splitting       | Consumers re-rendering on unrelated changes      |
+| State co-location       | Pushing state down to minimize re-render scope   |
+
+**The golden rule:** Profile before optimizing. `React.memo` has overhead and can cause bugs if comparisons are wrong. Use React DevTools Profiler to identify actual bottlenecks.
+
+```jsx
+// memo only helps if props are referentially stable
+const Child = React.memo(({ onClick }) => (
+  <button onClick={onClick}>Click</button>
+));
+
+function Parent() {
+  // Without useCallback, onClick is a new function every render → memo is bypassed
+  const onClick = useCallback(() => console.log('click'), []);
+  return <Child onClick={onClick} />;
+}
+```
+
+## 🧠 Question 150
+
+**ID**: react-150
+**Title**: Walk through the React rendering pipeline from state change to painted pixels.
+**Difficulty**: Medium
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+React's rendering pipeline has three distinct phases:
+
+**Phase 1 — Trigger**
+Something schedules a render: `setState`, `dispatch`, or the root `ReactDOM.createRoot().render()`. React does NOT immediately render — it schedules work via its internal scheduler.
+
+**Phase 2 — Render (pure, interruptible)**
+React calls your component functions to produce a new React element tree (virtual DOM). No DOM mutations happen here.
+
+```jsx
+// React calls this and collects the output
+function Counter({ count }) {
+  return <div>{count}</div>; // React element, not a real DOM node
+}
+```
+
+In Concurrent Mode, this phase can be **paused and resumed** if a higher-priority update arrives. Components must be pure (no side effects in render) for this to be safe.
+
+**Phase 3 — Commit (side-effectful, synchronous)**
+React diffs the new element tree against the previous one and applies changes in three sub-phases:
+
+1. **beforeMutation**: reads DOM (getSnapshotBeforeUpdate), schedules `useLayoutEffect` cleanup
+2. **mutation**: applies DOM insertions, updates, deletions
+3. **layout**: runs `useLayoutEffect` synchronously after DOM mutations
+4. **passive effects**: schedules `useEffect` to run asynchronously after paint
+
+```text
+Trigger → Render (pure) → Reconcile (diff) → Commit (DOM) → Paint → useEffect
+                                                   ↑
+                                            useLayoutEffect (sync, before paint)
+```
+
+**Key insight:** `useLayoutEffect` runs before the browser paints. `useEffect` runs after paint. This is why reading DOM measurements in `useLayoutEffect` avoids visual flicker.
+
+**`flushSync`** forces a synchronous commit, bypassing batching — useful for third-party DOM integrations but should be rare.

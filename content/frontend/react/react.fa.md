@@ -8717,3 +8717,344 @@ function useState(initialValue) {
 React برای hook ها نام یا key جداگانه ندارد. اگر یک hook جا بیفتد یا وسط راه اضافه شود، همه hook های بعدی node اشتباه را می‌خوانند و state به‌کلی به‌هم می‌ریزد.
 
 `useEffect`، `useMemo` و `useCallback` هم در همین linked list node های خودشان را دارند و dependency ها و cleanup را همان‌جا نگه می‌دارند.
+
+## 🧠 سوال 146
+
+**شناسه**: react-146
+**عنوان**: چرا hook ها باید در هر render با همان ترتیب فراخوانی شوند و اگر نشوند چه چیزی در داخل React خراب می‌شود؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+قوانین hook ها، مثل اینکه داخل شرط یا حلقه hook صدا نزنید، به این خاطر وجود دارند که React هر hook را با **موقعیت آن در linked list** شناسایی می‌کند. اگر ترتیب عوض شود، نگاشت بین فراخوانی hook و state ذخیره‌شده به‌هم می‌ریزد.
+
+**نمونه‌ای از خرابی با hook شرطی:**
+
+```jsx
+function UserProfile({ isLoggedIn }) {
+  if (isLoggedIn) {
+    const [name, setName] = useState(''); // Hook 1 — only when logged in
+  }
+  const [age, setAge] = useState(0); // Hook 2 when logged in, Hook 1 when not
+  const ref = useRef(null); // Hook 3 when logged in, Hook 2 when not
+}
+```
+
+**render اول** با `isLoggedIn = true` سه node دارد:
+
+```text
+node1 = { memoizedState: '' }   ← name
+node2 = { memoizedState: 0 }    ← age
+node3 = { memoizedState: {current:null} } ← ref
+```
+
+**render بعدی** با `isLoggedIn = false` فقط دو hook صدا زده می‌شود، اما linked list قبلی هنوز سه node دارد:
+
+```text
+Call 1 → node1 را می‌خواند اما انتظار age را دارد
+Call 2 → node2 را می‌خواند اما انتظار ref را دارد
+node3 هرگز خوانده نمی‌شود - ref یتیم می‌شود.
+```
+
+در نتیجه هر hook بعد از hook حذف‌شده، state اشتباه می‌گیرد.
+
+در development، React این موضوع را تشخیص می‌دهد و خطایی شبیه این می‌دهد:
+
+```text
+React has detected a change in the order of Hooks called by UserProfile.
+```
+
+**الگوی درست — شرط را داخل hook ببرید:**
+
+```jsx
+function UserProfile({ isLoggedIn }) {
+  const [name, setName] = useState('');
+  const [age, setAge] = useState(0);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (isLoggedIn) loadUserData();
+  }, [isLoggedIn]);
+}
+```
+
+## 🧠 سوال 147
+
+**شناسه**: react-147
+**عنوان**: Suspense در داخل چگونه کار می‌کند — مکانیزم «throw کردن Promise» چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+Suspense با پروتکلی کار می‌کند که در آن یک کامپوننت وقتی هنوز آماده رندر نیست، **یک Promise یا thenable را throw می‌کند**. React این throw را در نزدیک‌ترین مرز `<Suspense>` می‌گیرد، fallback را رندر می‌کند و بعد از resolve شدن Promise دوباره render را امتحان می‌کند.
+
+**پروتکل ساده‌شده با cache:**
+
+```js
+function createResource(promise) {
+  let status = 'pending';
+  let result;
+
+  promise.then(
+    (data) => {
+      status = 'success';
+      result = data;
+    },
+    (err) => {
+      status = 'error';
+      result = err;
+    },
+  );
+
+  return {
+    read() {
+      if (status === 'pending') throw promise; // ← THROW a Promise
+      if (status === 'error') throw result; // ← THROW an Error
+      return result; // ← return data when ready
+    },
+  };
+}
+```
+
+**کامپوننتی که از resource استفاده می‌کند:**
+
+```jsx
+const userResource = createResource(fetchUser(1));
+
+function UserCard() {
+  const user = userResource.read(); // throws Promise → fallback shown
+  return <div>{user.name}</div>; // runs after promise resolves
+}
+
+function App() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <UserCard />
+    </Suspense>
+  );
+}
+```
+
+**React در داخل چه می‌کند:**
+
+1. render `UserCard` را شروع می‌کند
+2. `read()` یک Promise throw می‌کند
+3. React آن را داخل render loop می‌گیرد
+4. به بالا در tree می‌رود تا نزدیک‌ترین `<Suspense>` را پیدا کند
+5. fallback آن مرز را نشان می‌دهد
+6. روی Promise یک `.then()` می‌گذارد
+7. بعد از resolve شدن Promise دوباره از همان مرز render را امتحان می‌کند
+8. این بار `read()` داده واقعی را برمی‌گرداند
+
+**در React 19، hook `use()`** API رسمی برای خواندن Promise در render است:
+
+```jsx
+import { use } from 'react';
+
+function UserCard({ userPromise }) {
+  const user = use(userPromise); // در صورت عدم حل شدن، به حالت تعلیق در می‌آید
+  return <div>{user.name}</div>;
+}
+```
+
+همیشه بهتر است `<Suspense>` را همراه با `<ErrorBoundary>` استفاده کنید، چون اگر Promise reject شود، خطا به Error Boundary می‌رود نه به خود Suspense.
+
+## 🧠 سوال 148
+
+**شناسه**: react-148
+**عنوان**: چگونه یک renderer مینیمال شبیه React را از صفر می‌سازید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: داخلی‌های React
+
+### پاسخ 📄
+
+ساختن یک renderer مینیمال کمک می‌کند بفهمیم `createElement`، reconciliation و commit phase چطور با هم کار می‌کنند. نکته اصلی این است که `React.createElement` فقط یک درخت object جاوااسکریپتی می‌سازد و renderer باید آن را به DOM واقعی تبدیل کند.
+
+**مرحله 1 — `createElement`:**
+
+```js
+function createElement(type, props, ...children) {
+  return {
+    type,
+    props: {
+      ...props,
+      children: children.map((child) =>
+        typeof child === 'object' ? child : createTextElement(child),
+      ),
+    },
+  };
+}
+
+function createTextElement(text) {
+  return { type: 'TEXT_ELEMENT', props: { nodeValue: text, children: [] } };
+}
+```
+
+**مرحله 2 — `createDom`:**
+
+```js
+function createDom(fiber) {
+  const dom =
+    fiber.type === 'TEXT_ELEMENT'
+      ? document.createTextNode('')
+      : document.createElement(fiber.type);
+
+  Object.keys(fiber.props)
+    .filter((key) => key !== 'children')
+    .forEach((name) => {
+      dom[name] = fiber.props[name];
+    });
+
+  return dom;
+}
+```
+
+**مرحله 3 — `reconcileChildren`:**
+
+```js
+function reconcileChildren(wipFiber, elements) {
+  let oldFiber = wipFiber.alternate?.child;
+
+  elements.forEach((element, index) => {
+    const sameType = oldFiber && element.type === oldFiber.type;
+
+    const newFiber = sameType
+      ? { ...oldFiber, props: element.props, effectTag: 'UPDATE' } // reuse DOM node
+      : {
+          type: element.type,
+          props: element.props,
+          dom: null,
+          effectTag: 'PLACEMENT',
+        };
+
+    if (oldFiber) oldFiber = oldFiber.sibling;
+    // به درخت فیبر متصل می‌شود (لینک‌های فرزند / خواهر و برادر برای اختصار حذف شده‌اند)
+  });
+}
+```
+
+**مرحله 4 — `commitWork`:**
+
+```js
+function commitWork(fiber) {
+  if (!fiber) return;
+  const parent = fiber.parent.dom;
+
+  if (fiber.effectTag === 'PLACEMENT') parent.appendChild(fiber.dom);
+  else if (fiber.effectTag === 'UPDATE')
+    updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+  else if (fiber.effectTag === 'DELETION') parent.removeChild(fiber.dom);
+
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+```
+
+**مدل دو مرحله‌ای:**
+
+| Render phase                | Commit phase               |
+| --------------------------- | -------------------------- |
+| خالص و قابل قطع             | دارای side effect و sync   |
+| ساخت work-in-progress tree  | اعمال همه mutation های DOM |
+| بدون تغییر DOM              | اجرای effect های layout    |
+| قابل مکث/از سرگیری (همزمان) | قابل قطع نیست              |
+
+**نکته اصلی:** React محاسبه را از side effect جدا می‌کند تا render phase بتواند با ورود update های مهم‌تر قطع یا از سر گرفته شود. کتابخانه‌هایی مثل `react-three-fiber` یا `react-pdf` هم از همین نقطه گسترش استفاده می‌کنند.
+
+## 🧠 سوال 149
+
+**شناسه**: react-149
+**عنوان**: چه چیزهایی در React باعث re-render می‌شوند و چگونه از re-render غیرضروری جلوگیری می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+یک کامپوننت React در این حالت‌ها re-render می‌شود:
+
+**1. وقتی state خودش تغییر کند** مثل `useState` یا `useReducer`
+
+```jsx
+const [count, setCount] = useState(0);
+setCount(1); // رندر مجدد را فعال می‌کند
+```
+
+**2. وقتی parent آن re-render شود**
+به‌صورت پیش‌فرض، هر بار parent رندر شود، همه child ها هم رندر می‌شوند؛ حتی اگر prop ها تغییر نکرده باشند.
+
+**3. وقتی value مربوط به یک Context مصرف‌شده تغییر کند**
+هر کامپوننتی که `useContext` صدا بزند با تغییر value مربوطه re-render می‌شود.
+
+**4. وقتی prop `key` عوض شود**
+در این حالت React کامپوننت را unmount و remount می‌کند.
+
+**جلوگیری از re-render غیرضروری:**
+
+| ابزار              | کاری که انجام می‌دهد                     |
+| ------------------ | ---------------------------------------- |
+| `React.memo`       | جلوگیری از render مجدد با prop های یکسان |
+| `useMemo`          | جلوگیری از محاسبه مجدد مقدار مشتق‌شده    |
+| `useCallback`      | جلوگیری از ساخته شدن function جدید       |
+| split کردن Context | کاهش re-render consumer های نامرتبط      |
+| state colocation   | محدود کردن محدوده re-render              |
+
+**قاعده طلایی:** قبل از بهینه‌سازی profile بگیرید. `React.memo` سربار دارد و اگر بی‌جا استفاده شود، فایده‌ای ندارد.
+
+```jsx
+// memo فقط در صورتی مفید است که props از نظر ارجاعی پایدار باشند
+const Child = React.memo(({ onClick }) => (
+  <button onClick={onClick}>Click</button>
+));
+
+function Parent() {
+  // بدون useCallback، تابع onClick در هر رندر یک تابع جدید است → memo نادیده گرفته می‌شود
+  const onClick = useCallback(() => console.log('click'), []);
+  return <Child onClick={onClick} />;
+}
+```
+
+## 🧠 سوال 150
+
+**شناسه**: react-150
+**عنوان**: خط لوله رندر React را از تغییر state تا painted pixel ها توضیح بده.
+**سطح دشواری**: متوسط
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+Pipeline رندر React سه فاز اصلی دارد:
+
+**فاز 1 — Trigger**
+چیزی مثل `setState`، `dispatch` یا `root.render()` باعث زمان‌بندی render می‌شود. React فوراً DOM را تغییر نمی‌دهد، بلکه work را از طریق scheduler داخلی برنامه‌ریزی می‌کند.
+
+**فاز 2 — Render** که خالص و قابل قطع است
+React تابع کامپوننت‌ها را صدا می‌زند و یک درخت جدید از React element ها می‌سازد. در این مرحله هیچ mutation ای روی DOM واقعی انجام نمی‌شود.
+
+```jsx
+// React این را فراخوانی می‌کند و خروجی را جمع‌آوری می‌کند
+function Counter({ count }) {
+  return <div>{count}</div>; // React element، یک node DOM واقعی نیست
+}
+```
+
+در concurrent rendering این فاز می‌تواند pause یا resume شود.
+
+**فاز 3 — Commit** که دارای side effect و sync است
+React درخت جدید را با قبلی diff می‌کند و تغییرات را در چند زیرمرحله اعمال می‌کند:
+
+1. `beforeMutation` — خواندن DOM و cleanup مربوط به `useLayoutEffect`
+2. `mutation` — اعمال insert، update و delete روی DOM
+3. `layout` — اجرای sync مربوط به `useLayoutEffect`
+4. `passive effects` — زمان‌بندی `useEffect` بعد از paint
+
+```text
+Trigger → Render (pure) → Reconcile (diff) → Commit (DOM) → Paint → useEffect
+                                                   ↑
+                                            useLayoutEffect (sync, before paint)
+```
+
+**نکته کلیدی:** `useLayoutEffect` قبل از paint اجرا می‌شود، اما `useEffect` بعد از paint. به همین دلیل اندازه‌گیری DOM در `useLayoutEffect` از flicker جلوگیری می‌کند.
+
+`flushSync` می‌تواند commit را sync و فوری کند، ولی باید به‌ندرت استفاده شود.

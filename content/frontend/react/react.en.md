@@ -9058,3 +9058,367 @@ Trigger → Render (pure) → Reconcile (diff) → Commit (DOM) → Paint → us
 **Key insight:** `useLayoutEffect` runs before the browser paints. `useEffect` runs after paint. This is why reading DOM measurements in `useLayoutEffect` avoids visual flicker.
 
 **`flushSync`** forces a synchronous commit, bypassing batching — useful for third-party DOM integrations but should be rare.
+
+## 🧠 Question 151
+
+**ID**: react-151
+**Title**: How does React 18's concurrent scheduler work and what are priority lanes?
+**Difficulty**: Hard
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+React 18's Concurrent Mode makes rendering interruptible by assigning work to **priority lanes**. The scheduler processes higher-priority lanes first and can pause lower-priority work.
+
+**Lane priorities (high to low):**
+
+| Lane                | Examples          | Behavior                        |
+| ------------------- | ----------------- | ------------------------------- |
+| SyncLane            | `flushSync`       | Synchronous, never interrupted  |
+| InputContinuousLane | Scroll, drag      | Runs next available frame       |
+| DefaultLane         | Normal `setState` | Batched, ~5s deadline           |
+| TransitionLane      | `startTransition` | Can be interrupted, no deadline |
+| IdleLane            | Off-screen prep   | Only when idle                  |
+
+**How `startTransition` uses lanes:**
+
+```jsx
+import { startTransition, useState } from 'react';
+
+function SearchPage() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+
+  function handleChange(e) {
+    setQuery(e.target.value); // DefaultLane — updates input immediately
+
+    startTransition(() => {
+      setResults(search(e.target.value)); // TransitionLane — can be interrupted
+    });
+  }
+}
+```
+
+**How interruptibility works:**
+
+1. React starts rendering the transition (re-rendering 1,000 list items)
+2. User types another character → new DefaultLane update arrives
+3. React **abandons** the in-progress transition render
+4. React processes the keypress update immediately
+5. React restarts the transition render with the latest state
+
+**`useDeferredValue`** creates a lagging copy of a value assigned to a lower lane:
+
+```jsx
+const deferredQuery = useDeferredValue(query); // updates after urgent work settles
+```
+
+**`useTransition` vs `useDeferredValue`:**
+
+- `useTransition` — wrap the state _setter_ to mark it as low-priority
+- `useDeferredValue` — wrap the _value_ consumed by an expensive component
+
+The scheduler uses `MessageChannel` (not `setTimeout`) for sub-millisecond scheduling precision.
+
+## 🧠 Question 152
+
+**ID**: react-152
+**Title**: Why does React.StrictMode call render and effect functions twice in development?
+**Difficulty**: Medium
+**Category**: Rendering Behavior
+
+### Answer 📄
+
+React StrictMode intentionally invokes certain functions **twice** in development (not production) to expose latent bugs caused by impure functions or effects that don't clean up properly.
+
+**What gets double-invoked:**
+
+- Component render functions (the function body itself)
+- `useState` and `useReducer` initializer functions
+- `useMemo` computations
+- `useEffect` — cleanup runs, then the effect runs again (mount → unmount → remount)
+
+**What this catches:**
+
+**1. Impure render functions:**
+
+```jsx
+// Bug revealed by StrictMode double-render:
+function Counter() {
+  const [items, setItems] = useState([]);
+
+  function addItem() {
+    items.push('new'); // MUTATION — first render mutates, second render sees already-mutated array
+    setItems(items);
+  }
+
+  return <button onClick={addItem}>Add</button>;
+}
+```
+
+**2. Effects that don't clean up properly:**
+
+```jsx
+useEffect(() => {
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id); // StrictMode verifies cleanup actually works
+}, []);
+// In dev: setup → cleanup → setup (verifies cleanup)
+// In prod: setup once
+```
+
+**This is intentional, not a bug.** It simulates future React features (e.g., offscreen rendering, fast refresh) that may remount components at will.
+
+**Workaround for true one-time initialization:**
+
+```jsx
+// Module-level flag — runs once regardless of StrictMode
+let initialized = false;
+
+useEffect(() => {
+  if (initialized) return;
+  initialized = true;
+  analytics.init();
+}, []);
+```
+
+Use sparingly — if you need this pattern, it often signals the initialization should be outside React entirely (a module singleton).
+
+## 🧠 Question 153
+
+**ID**: react-153
+**Title**: What is the `useId` hook and how does it solve SSR hydration mismatches?
+**Difficulty**: Medium
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+`useId` (React 18) generates a **stable, unique ID** that is consistent between the server render and client hydration — solving a class of hydration mismatch bugs caused by randomly generated IDs.
+
+**The problem:**
+
+```jsx
+// BROKEN in SSR
+function FormField({ label }) {
+  const id = Math.random().toString(36).slice(2); // different every render!
+  return (
+    <>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} />
+    </>
+  );
+}
+// Server renders: id="xk3m2"
+// Client renders: id="ab9p1" → hydration mismatch warning
+```
+
+The server and client generate different IDs and a hydration mismatch occurs.
+
+**The fix with `useId`:**
+
+```jsx
+import { useId } from 'react';
+
+function FormField({ label }) {
+  const id = useId(); // ":r0:", ":r1:", etc. — same on server and client
+  return (
+    <>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} />
+    </>
+  );
+}
+```
+
+**How it works:** React generates IDs deterministically based on the component's position in the tree. The same component tree structure on server and client produces identical IDs.
+
+**Multiple IDs from one `useId` call:**
+
+```jsx
+function PasswordField() {
+  const id = useId();
+  return (
+    <div>
+      <label htmlFor={id + '-input'}>Password</label>
+      <input id={id + '-input'} type="password" />
+      <p id={id + '-hint'}>Must be 8+ characters</p>
+      <input aria-describedby={id + '-hint'} />
+    </div>
+  );
+}
+```
+
+**When NOT to use `useId`:**
+
+- List item `key` props → use stable data IDs from your backend
+- CSS class names → use CSS modules or static strings
+- Anything that must be human-readable in the DOM
+
+**`suppressHydrationWarning`** is the last-resort escape hatch for elements that intentionally differ between server and client (e.g., timestamps, user locale data):
+
+```jsx
+<time suppressHydrationWarning>{new Date().toLocaleString()}</time>
+```
+
+Use sparingly — it silences the warning but does not fix the underlying mismatch. React still re-renders the element on the client.
+
+## 🧠 Question 154
+
+**ID**: react-154
+**Title**: What are the data fetching strategies in Next.js App Router and when do you use each?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Next.js App Router (built on React Server Components) unifies all data fetching through the native `fetch` API extended with cache directives:
+
+**Static — build time (SSG equivalent):**
+
+```jsx
+async function Page() {
+  // Cached indefinitely — fetched once at build time
+  const data = await fetch('https://api.example.com/posts', {
+    cache: 'force-cache', // default in App Router
+  });
+  return <Posts data={await data.json()} />;
+}
+```
+
+**Dynamic — per request (SSR equivalent):**
+
+```jsx
+async function Page() {
+  // Never cached — fresh data on every request
+  const data = await fetch('https://api.example.com/user', {
+    cache: 'no-store',
+  });
+  return <Profile data={await data.json()} />;
+}
+```
+
+**ISR — time-based revalidation:**
+
+```jsx
+async function Page() {
+  const data = await fetch('https://api.example.com/posts', {
+    next: { revalidate: 60 }, // re-fetch at most once per 60 seconds
+  });
+  return <Posts data={await data.json()} />;
+}
+```
+
+**On-demand revalidation (after mutations):**
+
+```jsx
+// In a Server Action or Route Handler:
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+revalidatePath('/blog'); // invalidate by path
+revalidateTag('posts'); // invalidate by tag
+// Tag usage: fetch('...', { next: { tags: ['posts'] } })
+```
+
+**Decision tree:**
+
+```
+Data same for all users, changes rarely?  → force-cache (static)
+Data changes on a schedule?               → revalidate: N (ISR)
+Data changes after a user action?         → revalidateTag (on-demand)
+Data is user-specific or real-time?       → no-store (dynamic SSR)
+Data only needed client-side?             → SWR / TanStack Query
+```
+
+**`generateStaticParams`** — pre-renders dynamic routes at build time:
+
+```jsx
+// app/blog/[slug]/page.jsx
+export async function generateStaticParams() {
+  const posts = await fetchAllPosts();
+  return posts.map((p) => ({ slug: p.slug }));
+}
+```
+
+**Automatic deduplication:** Multiple server components fetching the same URL in the same render only trigger one network request — React deduplicates `fetch` calls automatically.
+
+## 🧠 Question 155
+
+**ID**: react-155
+**Title**: How do you safely use browser-only APIs (window, localStorage, document) in an SSR app?
+**Difficulty**: Medium
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Browser globals (`window`, `document`, `localStorage`, `navigator`) do not exist in Node.js. Accessing them during SSR throws a `ReferenceError` and breaks server rendering. The core rule: **browser-only code must run only after hydration**.
+
+**Pattern 1 — `useEffect` (safest, most common):**
+
+```jsx
+function ThemeToggle() {
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    // Runs only on the client, after hydration
+    const saved = localStorage.getItem('theme');
+    if (saved) setTheme(saved);
+  }, []);
+
+  const toggle = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('theme', next); // safe inside event handler too
+  };
+
+  return <button onClick={toggle}>{theme}</button>;
+}
+```
+
+**Pattern 2 — `typeof window` guard (for utility functions):**
+
+```jsx
+function getInitialTheme() {
+  if (typeof window === 'undefined') return 'light'; // server
+  return localStorage.getItem('theme') ?? 'light'; // client
+}
+```
+
+**Pattern 3 — `dynamic` import with `ssr: false` (Next.js):**
+
+```jsx
+import dynamic from 'next/dynamic';
+
+// Component never rendered on the server
+const Map = dynamic(() => import('./Map'), { ssr: false });
+```
+
+Use for components that fundamentally cannot run server-side (WebGL, browser extension APIs, third-party widgets).
+
+**Pattern 4 — `useSyncExternalStore` with a server snapshot:**
+
+```jsx
+function useWindowSize() {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('resize', cb);
+      return () => window.removeEventListener('resize', cb);
+    },
+    () => ({ width: window.innerWidth, height: window.innerHeight }), // client
+    () => ({ width: 0, height: 0 }), // server snapshot — prevents mismatch
+  );
+}
+```
+
+The third argument (server snapshot) is what React uses during SSR and the initial hydration render, preventing mismatches.
+
+**Common mistake — `useState` initialized with a browser value:**
+
+```jsx
+// BROKEN: runs on server, ReferenceError
+const [width, setWidth] = useState(window.innerWidth);
+
+// FIXED: lazy initializer — only runs on the client
+const [width, setWidth] = useState(() =>
+  typeof window !== 'undefined' ? window.innerWidth : 0,
+);
+```

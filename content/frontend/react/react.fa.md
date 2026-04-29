@@ -9058,3 +9058,367 @@ Trigger → Render (pure) → Reconcile (diff) → Commit (DOM) → Paint → us
 **نکته کلیدی:** `useLayoutEffect` قبل از paint اجرا می‌شود، اما `useEffect` بعد از paint. به همین دلیل اندازه‌گیری DOM در `useLayoutEffect` از flicker جلوگیری می‌کند.
 
 `flushSync` می‌تواند commit را sync و فوری کند، ولی باید به‌ندرت استفاده شود.
+
+## 🧠 سوال 151
+
+**شناسه**: react-151
+**عنوان**: concurrent scheduler در React 18 چگونه کار می‌کند و priority lane ها چه هستند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+Concurrent rendering در React 18 با استفاده از **priority lane** ها امکان interruptible شدن render را می‌دهد. scheduler lane های با اولویت بالاتر را زودتر پردازش می‌کند و می‌تواند work کم‌اولویت را pause یا discard کند.
+
+**اولویت lane ها از بالا به پایین:**
+
+| Lane                  | مثال                 | رفتار              |
+| --------------------- | -------------------- | ------------------ |
+| `SyncLane`            | `flushSync`          | کاملاً sync        |
+| `InputContinuousLane` | scroll، drag         | اولویت بالا        |
+| `DefaultLane`         | `setState` معمولی    | batched            |
+| `TransitionLane`      | `startTransition`    | قابل قطع           |
+| `IdleLane`            | آماده‌سازی offscreen | فقط در زمان بیکاری |
+
+**`startTransition` چگونه از lane استفاده می‌کند:**
+
+```jsx
+import { startTransition, useState } from 'react';
+
+function SearchPage() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+
+  function handleChange(e) {
+    setQuery(e.target.value); // اولویت بالاتر
+
+    startTransition(() => {
+      setResults(search(e.target.value)); // lane کم‌اولویت‌تر
+    });
+  }
+}
+```
+
+**interruptibility چگونه عمل می‌کند:**
+
+1. React شروع به render کردن transition می‌کند
+2. کاربر دوباره input می‌دهد
+3. React کار نیمه‌تمام transition را کنار می‌گذارد
+4. update فوری را اول انجام می‌دهد
+5. transition را از نو با state جدید شروع می‌کند
+
+**`useDeferredValue`** یک نسخه عقب‌افتاده از یک value می‌سازد که در lane پایین‌تری به‌روزرسانی می‌شود:
+
+```jsx
+const deferredQuery = useDeferredValue(query);
+```
+
+**فرق `useTransition` و `useDeferredValue`:**
+
+- `useTransition` برای mark کردن setter یا update به‌عنوان کم‌اولویت
+- `useDeferredValue` برای lag دادن به یک value مصرف‌شده توسط کامپوننت گران
+
+Scheduler برای دقت زمانی بهتر از `MessageChannel` استفاده می‌کند، نه `setTimeout`.
+
+## 🧠 سوال 152
+
+**شناسه**: react-152
+**عنوان**: چرا React.StrictMode در development تابع render و effect را دوبار صدا می‌زند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: رفتار رندرینگ
+
+### پاسخ 📄
+
+StrictMode در development بعضی توابع را **دوبار** اجرا می‌کند تا باگ‌های پنهان مربوط به توابع impure یا effect های بدون cleanup درست آشکار شوند.
+
+**چه چیزهایی دوبار اجرا می‌شوند:**
+
+- بدنه function component
+- initializer های `useState` و `useReducer`
+- محاسبات `useMemo`
+- `useEffect` که به‌صورت setup → cleanup → setup اجرا می‌شود
+
+**چه باگ‌هایی را پیدا می‌کند:**
+
+**1. render impure:**
+
+```jsx
+// اشکالی که توسط رندر دوگانه StrictMode آشکار شد:
+function Counter() {
+  const [items, setItems] = useState([]);
+
+  function addItem() {
+    items.push('new'); // MUTATION — first render mutates, second render sees already-mutated array
+    setItems(items);
+  }
+
+  return <button onClick={addItem}>Add</button>;
+}
+```
+
+**2. effect بدون cleanup درست:**
+
+```jsx
+useEffect(() => {
+  const id = setInterval(tick, 1000);
+  return () => clearInterval(id); // StrictMode verifies cleanup actually works
+}, []);
+// In dev: setup → cleanup → setup (verifies cleanup)
+// In prod: setup once
+```
+
+**این رفتار عمدی است، نه باگ.** هدف آن شبیه‌سازی قابلیت‌های آینده مثل remount شدن کامپوننت‌ها در offscreen rendering است.
+
+**اگر واقعاً initialization باید فقط یک‌بار globally انجام شود:**
+
+```jsx
+// پرچم سطح ماژول — صرف نظر از StrictMode، یک بار اجرا می‌شود
+let initialized = false;
+
+useEffect(() => {
+  if (initialized) return;
+  initialized = true;
+  analytics.init();
+}, []);
+```
+
+اما این الگو باید با احتیاط استفاده شود و معمولاً نشانه این است که آن initialization بهتر است بیرون از React قرار بگیرد.
+
+## 🧠 سوال 153
+
+**شناسه**: react-153
+**عنوان**: hook `useId` چیست و چگونه mismatch های hydration در SSR را حل می‌کند؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+`useId` در React 18 یک **شناسه یکتا و پایدار** می‌سازد که بین render سمت سرور و hydration سمت کلاینت یکسان می‌ماند. این hook نوعی از hydration mismatch را که از ID های تصادفی ایجاد می‌شود حل می‌کند.
+
+**مشکل:**
+
+```jsx
+// BROKEN in SSR
+function FormField({ label }) {
+  const id = Math.random().toString(36).slice(2); // در هر render متفاوت
+  return (
+    <>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} />
+    </>
+  );
+}
+// رندرهای سرور: id="xk3m2"
+// رندرهای کلاینت: id="ab9p1" → هشدار عدم تطابق هیدراتاسیون
+```
+
+سرور و کلاینت ID های متفاوتی تولید می‌کنند و hydration mismatch رخ می‌دهد.
+
+**راه‌حل با `useId`:**
+
+```jsx
+import { useId } from 'react';
+
+function FormField({ label }) {
+  const id = useId(); // ":r0:", ":r1:", etc. — same on server and client
+  return (
+    <>
+      <label htmlFor={id}>{label}</label>
+      <input id={id} />
+    </>
+  );
+}
+```
+
+**چگونه کار می‌کند:** React ID ها را بر اساس موقعیت کامپوننت در درخت به‌صورت deterministic تولید می‌کند. اگر ساختار tree بین سرور و کلاینت یکسان باشد، ID هم یکسان می‌شود.
+
+**ساخت چند ID از یک `useId`:**
+
+```jsx
+function PasswordField() {
+  const id = useId();
+  return (
+    <div>
+      <label htmlFor={id + '-input'}>Password</label>
+      <input id={id + '-input'} type="password" />
+      <p id={id + '-hint'}>Must be 8+ characters</p>
+      <input aria-describedby={id + '-hint'} />
+    </div>
+  );
+}
+```
+
+**چه زمانی نباید از `useId` استفاده کرد:**
+
+- برای `key` آیتم‌های لیست
+- برای class name های CSS
+- برای هر چیزی که باید human-readable باشد
+
+`suppressHydrationWarning` راه‌حل آخر برای جاهایی است که عمداً خروجی سرور و کلاینت متفاوت است، مثل timestamp:
+
+```jsx
+<time suppressHydrationWarning>{new Date().toLocaleString()}</time>
+```
+
+در استفاده از آن صرفه‌جویی کنید - این کار هشدار را بی‌صدا می‌کند اما عدم تطابق اساسی را برطرف نمی‌کند. React همچنان عنصر را در کلاینت دوباره رندر می‌کند.
+
+## 🧠 سوال 154
+
+**شناسه**: react-154
+**عنوان**: استراتژی‌های data fetching در Next.js App Router چیست و هرکدام را چه زمانی استفاده می‌کنید؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+Next.js App Router که روی React Server Components ساخته شده، data fetching را از طریق `fetch` بومی توسعه‌داده‌شده با دستورهای caching یکپارچه می‌کند.
+
+**Static — در زمان build:**
+
+```jsx
+async function Page() {
+  // به طور نامحدود ذخیره می‌شود — یک بار در زمان ساخت دریافت می‌شود
+  const data = await fetch('https://api.example.com/posts', {
+    cache: 'force-cache', // default in App Router
+  });
+  return <Posts data={await data.json()} />;
+}
+```
+
+**Dynamic — در هر request:**
+
+```jsx
+async function Page() {
+  // هرگز ذخیره نمی‌شود - داده‌ها در هر درخواست تازه می‌شوند
+  const data = await fetch('https://api.example.com/user', {
+    cache: 'no-store',
+  });
+  return <Profile data={await data.json()} />;
+}
+```
+
+**ISR — revalidate بر اساس زمان:**
+
+```jsx
+async function Page() {
+  const data = await fetch('https://api.example.com/posts', {
+    next: { revalidate: 60 }, // حداکثر هر 60 ثانیه یک بار دوباره واکشی شود
+  });
+  return <Posts data={await data.json()} />;
+}
+```
+
+**On-demand revalidation بعد از mutation:**
+
+```jsx
+// در یک اکشن سرور یا کنترل‌کننده‌ی مسیر:
+import { revalidatePath, revalidateTag } from 'next/cache';
+
+revalidatePath('/blog'); // از طریق مسیر باطل شود
+revalidateTag('posts'); // با برچسب باطل شود
+// Tag usage: fetch('...', { next: { tags: ['posts'] } })
+```
+
+**درخت تصمیم:**
+
+```text
+داده برای همه کاربران یکسان و کم‌تغییر؟ → force-cache
+داده زمان‌محور تغییر می‌کند؟ → revalidate: N
+داده بعد از action کاربر عوض می‌شود؟ → revalidateTag
+داده مخصوص کاربر یا real-time است؟ → no-store
+فقط سمت کلاینت لازم است؟ → SWR / TanStack Query
+```
+
+**`generateStaticParams`:**
+
+```jsx
+// app/blog/[slug]/page.jsx
+export async function generateStaticParams() {
+  const posts = await fetchAllPosts();
+  return posts.map((p) => ({ slug: p.slug }));
+}
+```
+
+**Deduplication خودکار:** اگر چند Server Component در یک render همان URL را fetch کنند، معمولاً فقط یک request واقعی ارسال می‌شود.
+
+## 🧠 سوال 155
+
+**شناسه**: react-155
+**عنوان**: چگونه API های مخصوص مرورگر مثل `window`، `localStorage` و `document` را در یک اپ SSR به‌صورت امن استفاده می‌کنید؟
+**سطح دشواری**: متوسط
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+Browser global ها مثل `window`، `document`، `localStorage` و `navigator` در محیط Node.js وجود ندارند. اگر هنگام SSR به آن‌ها دسترسی بگیرید، `ReferenceError` خواهید گرفت. قانون اصلی این است: **کد مخصوص مرورگر باید فقط بعد از hydration اجرا شود.**
+
+**الگوی 1 — `useEffect`:**
+
+```jsx
+function ThemeToggle() {
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    // فقط روی کلاینت، پس از هیدراتاسیون اجرا می‌شود
+    const saved = localStorage.getItem('theme');
+    if (saved) setTheme(saved);
+  }, []);
+
+  const toggle = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('theme', next); // همچنین کنترل کننده رویداد درون safe نیز وجود دارد
+  };
+
+  return <button onClick={toggle}>{theme}</button>;
+}
+```
+
+**الگوی 2 — guard با `typeof window`:**
+
+```jsx
+function getInitialTheme() {
+  if (typeof window === 'undefined') return 'light';
+  return localStorage.getItem('theme') ?? 'light';
+}
+```
+
+**الگوی 3 — import پویا با `ssr: false` در Next.js:**
+
+```jsx
+import dynamic from 'next/dynamic';
+
+// کامپوننت هرگز روی سرور رندر نشد
+const Map = dynamic(() => import('./Map'), { ssr: false });
+```
+
+برای کامپوننت‌هایی مناسب است که ذاتاً فقط در مرورگر کار می‌کنند.
+
+**الگوی 4 — `useSyncExternalStore` با server snapshot:**
+
+```jsx
+function useWindowSize() {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('resize', cb);
+      return () => window.removeEventListener('resize', cb);
+    },
+    () => ({ width: window.innerWidth, height: window.innerHeight }),
+    () => ({ width: 0, height: 0 }),
+  );
+}
+```
+
+آرگومان سوم همان server snapshot است و جلوی mismatch اولیه را می‌گیرد.
+
+**اشتباه رایج — استفاده از مقدار مرورگر در initializer مربوط به state:**
+
+```jsx
+// خراب: روی سرور اجرا می‌شود، خطای مرجع
+const [width, setWidth] = useState(window.innerWidth);
+
+// رفع شد: مقداردهی اولیه‌ی تنبل - فقط روی کلاینت اجرا می‌شود
+const [width, setWidth] = useState(() =>
+  typeof window !== 'undefined' ? window.innerWidth : 0,
+);
+```

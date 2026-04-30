@@ -34,9 +34,9 @@ version: 4.1
 
 ## 🧠 Question 1
 
-**ID**: react-001
-**Title**: What is React and what problem does it solve?
-**Difficulty**: Easy
+**ID**: react-001  
+**Title**: What is React and what problem does it solve?  
+**Difficulty**: Easy  
 **Category**: React Basics
 
 ### Answer 📄
@@ -55,9 +55,9 @@ Because React is a library rather than a framework, it integrates easily into ex
 
 ## 🧠 Question 2
 
-**ID**: react-002
-**Title**: What is the Virtual DOM and how does React use it?
-**Difficulty**: Easy
+**ID**: react-002  
+**Title**: What is the Virtual DOM and how does React use it?  
+**Difficulty**: Easy  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -87,9 +87,9 @@ function Counter() {
 
 ## 🧠 Question 3
 
-**ID**: react-003
-**Title**: What is JSX and how does it work under the hood?
-**Difficulty**: Easy
+**ID**: react-003  
+**Title**: What is JSX and how does it work under the hood?  
+**Difficulty**: Easy  
 **Category**: JSX & Rendering
 
 ### Answer 📄
@@ -128,9 +128,9 @@ The result is a plain JavaScript object — a **React element** (vnode):
 
 ## 🧠 Question 4
 
-**ID**: react-004
-**Title**: What are functional components in React?
-**Difficulty**: Easy
+**ID**: react-004  
+**Title**: What are functional components in React?  
+**Difficulty**: Easy  
 **Category**: Components
 
 ### Answer 📄
@@ -169,9 +169,9 @@ Class components still work but are no longer the recommended approach.
 
 ## 🧠 Question 5
 
-**ID**: react-005
-**Title**: What are props in React and how do they work?
-**Difficulty**: Easy
+**ID**: react-005  
+**Title**: What are props in React and how do they work?  
+**Difficulty**: Easy  
 **Category**: Props & State
 
 ### Answer 📄
@@ -230,9 +230,9 @@ function Button({ className, ...rest }) {
 
 ## 🧠 Question 6
 
-**ID**: react-006
-**Title**: What is state in React and how is it different from props?
-**Difficulty**: Easy
+**ID**: react-006  
+**Title**: What is state in React and how is it different from props?  
+**Difficulty**: Easy  
 **Category**: Props & State
 
 ### Answer 📄
@@ -275,9 +275,9 @@ setCount(count + 1); // potentially stale in concurrent mode
 
 ## 🧠 Question 7
 
-**ID**: react-007
-**Title**: How does React handle events?
-**Difficulty**: Easy
+**ID**: react-007  
+**Title**: How does React handle events?  
+**Difficulty**: Easy  
 **Category**: Forms & Events
 
 ### Answer 📄
@@ -315,9 +315,9 @@ React 17 changed the root of event delegation from `document` to the React root 
 
 ## 🧠 Question 8
 
-**ID**: react-008
-**Title**: How does conditional rendering work in React?
-**Difficulty**: Easy
+**ID**: react-008  
+**Title**: How does conditional rendering work in React?  
+**Difficulty**: Easy  
 **Category**: JSX & Rendering
 
 ### Answer 📄
@@ -376,9 +376,9 @@ function Banner({ visible, message }) {
 
 ## 🧠 Question 9
 
-**ID**: react-009
-**Title**: How do you render lists in React and why is the `key` prop important?
-**Difficulty**: Easy
+**ID**: react-009  
+**Title**: How do you render lists in React and why is the `key` prop important?  
+**Difficulty**: Easy  
 **Category**: JSX & Rendering
 
 ### Answer 📄
@@ -428,9 +428,9 @@ When React reconciles a list, it uses `key` to match elements between the previo
 
 ## 🧠 Question 10
 
-**ID**: react-010
-**Title**: What are controlled and uncontrolled components in React?
-**Difficulty**: Easy
+**ID**: react-010  
+**Title**: What are controlled and uncontrolled components in React?  
+**Difficulty**: Easy  
 **Category**: Forms & Events
 
 ### Answer 📄
@@ -482,9 +482,9 @@ Most React forms use controlled components. Libraries like React Hook Form take 
 
 ## 🧠 Question 11
 
-**ID**: react-011
-**Title**: What is a React Fragment and when should you use it?
-**Difficulty**: Easy
+**ID**: react-011  
+**Title**: What is a React Fragment and when should you use it?  
+**Difficulty**: Easy  
 **Category**: JSX & Rendering
 
 ### Answer 📄
@@ -540,9 +540,9 @@ Fragments produce no DOM output, so they have no impact on styling or layout.
 
 ## 🧠 Question 12
 
-**ID**: react-012
-**Title**: What is the difference between class components and functional components?
-**Difficulty**: Easy
+**ID**: react-012  
+**Title**: What is the difference between class components and functional components?  
+**Difficulty**: Easy  
 **Category**: Components
 
 ### Answer 📄
@@ -602,9 +602,9 @@ Class components are fully supported but are considered legacy. All new React AP
 
 ## 🧠 Question 13
 
-**ID**: react-013
-**Title**: What is reconciliation in React?
-**Difficulty**: Medium
+**ID**: react-013  
+**Title**: What is reconciliation in React?  
+**Difficulty**: Medium  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -635,9 +635,9 @@ The reconciler is separate from the renderer. React DOM, React Native, and React
 
 ## 🧠 Question 14
 
-**ID**: react-014
-**Title**: What is prop drilling and how do you solve it?
-**Difficulty**: Easy
+**ID**: react-014  
+**Title**: What is prop drilling and how do you solve it?  
+**Difficulty**: Easy  
 **Category**: Props & State
 
 ### Answer 📄
@@ -694,9 +694,9 @@ function Layout({ children }) {
 
 ## 🧠 Question 15
 
-**ID**: react-015
-**Title**: What is the `StrictMode` component and what does it do?
-**Difficulty**: Medium
+**ID**: react-015  
+**Title**: What is the `StrictMode` component and what does it do?  
+**Difficulty**: Medium  
 **Category**: React Basics
 
 ### Answer 📄
@@ -728,9 +728,9 @@ StrictMode applies to the component subtree it wraps, so you can enable it selec
 
 ## 🧠 Question 16
 
-**ID**: react-016
-**Title**: What is `React.memo` and when does it help?
-**Difficulty**: Medium
+**ID**: react-016  
+**Title**: What is `React.memo` and when does it help?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -782,9 +782,9 @@ React.memo(MyComponent, (prevProps, nextProps) => {
 
 ## 🧠 Question 17
 
-**ID**: react-017
-**Title**: What is the `useEffect` hook and how does the dependency array work?
-**Difficulty**: Medium
+**ID**: react-017  
+**Title**: What is the `useEffect` hook and how does the dependency array work?  
+**Difficulty**: Medium  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -832,9 +832,9 @@ useEffect(() => {
 
 ## 🧠 Question 18
 
-**ID**: react-018
-**Title**: What is `useState` and how does state updating work?
-**Difficulty**: Easy
+**ID**: react-018  
+**Title**: What is `useState` and how does state updating work?  
+**Difficulty**: Easy  
 **Category**: Hooks
 
 ### Answer 📄
@@ -882,9 +882,9 @@ setState({ age: 31 }); // wrong — discards other fields
 
 ## 🧠 Question 19
 
-**ID**: react-019
-**Title**: What is `useRef` and when should you use it?
-**Difficulty**: Medium
+**ID**: react-019  
+**Title**: What is `useRef` and when should you use it?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -949,9 +949,9 @@ function Timer() {
 
 ## 🧠 Question 20
 
-**ID**: react-020
-**Title**: What is `useMemo` and when should you use it?
-**Difficulty**: Medium
+**ID**: react-020  
+**Title**: What is `useMemo` and when should you use it?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -1001,9 +1001,9 @@ React may choose to discard cached `useMemo` values (e.g., under memory pressure
 
 ## 🧠 Question 21
 
-**ID**: react-021
-**Title**: What is `useCallback` and when should you use it?
-**Difficulty**: Medium
+**ID**: react-021  
+**Title**: What is `useCallback` and when should you use it?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -1056,9 +1056,9 @@ function Parent() {
 
 ## 🧠 Question 22
 
-**ID**: react-022
-**Title**: What are the rules of hooks?
-**Difficulty**: Medium
+**ID**: react-022  
+**Title**: What are the rules of hooks?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -1102,9 +1102,9 @@ The `eslint-plugin-react-hooks` package enforces both rules automatically during
 
 ## 🧠 Question 23
 
-**ID**: react-023
-**Title**: What are custom hooks and how do you write them?
-**Difficulty**: Medium
+**ID**: react-023  
+**Title**: What are custom hooks and how do you write them?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -1161,9 +1161,9 @@ function App() {
 
 ## 🧠 Question 24
 
-**ID**: react-024
-**Title**: What is the Context API and how do you use it?
-**Difficulty**: Medium
+**ID**: react-024  
+**Title**: What is the Context API and how do you use it?  
+**Difficulty**: Medium  
 **Category**: Context API
 
 ### Answer 📄
@@ -1226,9 +1226,9 @@ For large applications with frequently changing state, prefer a dedicated state 
 
 ## 🧠 Question 25
 
-**ID**: react-025
-**Title**: What is `useReducer` and when should you use it instead of `useState`?
-**Difficulty**: Medium
+**ID**: react-025  
+**Title**: What is `useReducer` and when should you use it instead of `useState`?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -1283,9 +1283,9 @@ function Counter() {
 
 ## 🧠 Question 26
 
-**ID**: react-026
-**Title**: What is `useLayoutEffect` and how does it differ from `useEffect`?
-**Difficulty**: Hard
+**ID**: react-026  
+**Title**: What is `useLayoutEffect` and how does it differ from `useEffect`?  
+**Difficulty**: Hard  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -1335,9 +1335,9 @@ function Tooltip({ targetRef, content }) {
 
 ## 🧠 Question 27
 
-**ID**: react-027
-**Title**: What are Error Boundaries in React?
-**Difficulty**: Medium
+**ID**: react-027  
+**Title**: What are Error Boundaries in React?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -1391,9 +1391,9 @@ Wrap distinct sections of the UI in separate Error Boundaries so a crash in one 
 
 ## 🧠 Question 28
 
-**ID**: react-028
-**Title**: What are Portals in React?
-**Difficulty**: Medium
+**ID**: react-028  
+**Title**: What are Portals in React?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -1445,9 +1445,9 @@ function App() {
 
 ## 🧠 Question 29
 
-**ID**: react-029
-**Title**: What is `useImperativeHandle` and when do you need `forwardRef`?
-**Difficulty**: Hard
+**ID**: react-029  
+**Title**: What is `useImperativeHandle` and when do you need `forwardRef`?  
+**Difficulty**: Hard  
 **Category**: Hooks
 
 ### Answer 📄
@@ -1503,9 +1503,9 @@ playerRef.current.play();
 
 ## 🧠 Question 30
 
-**ID**: react-030
-**Title**: What is `React.lazy` and how does it work with `Suspense`?
-**Difficulty**: Medium
+**ID**: react-030  
+**Title**: What is `React.lazy` and how does it work with `Suspense`?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -1570,9 +1570,9 @@ const About = lazy(() => import('./pages/About'));
 
 ## 🧠 Question 31
 
-**ID**: react-031
-**Title**: How does React batch state updates?
-**Difficulty**: Hard
+**ID**: react-031  
+**Title**: How does React batch state updates?  
+**Difficulty**: Hard  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -1620,9 +1620,9 @@ Use `flushSync` sparingly — it forces synchronous rendering which reduces perf
 
 ## 🧠 Question 32
 
-**ID**: react-032
-**Title**: What is `useTransition` and when should you use it?
-**Difficulty**: Hard
+**ID**: react-032  
+**Title**: What is `useTransition` and when should you use it?  
+**Difficulty**: Hard  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -1669,9 +1669,9 @@ function SearchPage() {
 
 ## 🧠 Question 33
 
-**ID**: react-033
-**Title**: What is `useDeferredValue` and how does it differ from debouncing?
-**Difficulty**: Hard
+**ID**: react-033  
+**Title**: What is `useDeferredValue` and how does it differ from debouncing?  
+**Difficulty**: Hard  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -1719,9 +1719,9 @@ const Results = memo(function Results({ query }) {
 
 ## 🧠 Question 34
 
-**ID**: react-034
-**Title**: What are React Server Components?
-**Difficulty**: Hard
+**ID**: react-034  
+**Title**: What are React Server Components?  
+**Difficulty**: Hard  
 **Category**: Server Components
 
 ### Answer 📄
@@ -1771,9 +1771,9 @@ async function UsersPage() {
 
 ## 🧠 Question 35
 
-**ID**: react-035
-**Title**: What is hydration in React SSR and what causes hydration mismatches?
-**Difficulty**: Hard
+**ID**: react-035  
+**Title**: What is hydration in React SSR and what causes hydration mismatches?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -1815,9 +1815,9 @@ return isMounted ? <ClientOnlyComponent /> : null;
 
 ## 🧠 Question 36
 
-**ID**: react-036
-**Title**: What is React Fiber?
-**Difficulty**: Hard
+**ID**: react-036  
+**Title**: What is React Fiber?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -1859,9 +1859,9 @@ React maintains two Fiber trees: the **current tree** (what is on screen) and th
 
 ## 🧠 Question 37
 
-**ID**: react-037
-**Title**: What is the difference between the render phase and the commit phase in React?
-**Difficulty**: Hard
+**ID**: react-037  
+**Title**: What is the difference between the render phase and the commit phase in React?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -1902,9 +1902,9 @@ Commit Phase (synchronous):
 
 ## 🧠 Question 38
 
-**ID**: react-038
-**Title**: What is Concurrent React and what does it enable?
-**Difficulty**: Hard
+**ID**: react-038  
+**Title**: What is Concurrent React and what does it enable?  
+**Difficulty**: Hard  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -1940,9 +1940,9 @@ ReactDOM.render(<App />, document.getElementById('root'));
 
 ## 🧠 Question 39
 
-**ID**: react-039
-**Title**: What is `Suspense` in React and how does it work?
-**Difficulty**: Hard
+**ID**: react-039  
+**Title**: What is `Suspense` in React and how does it work?  
+**Difficulty**: Hard  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -2003,9 +2003,9 @@ The inner boundary shows `<FeedSkeleton />` while the feed loads, while the head
 
 ## 🧠 Question 40
 
-**ID**: react-040
-**Title**: What is the `key` prop and what happens when you use index as a key?
-**Difficulty**: Medium
+**ID**: react-040  
+**Title**: What is the `key` prop and what happens when you use index as a key?  
+**Difficulty**: Medium  
 **Category**: JSX & Rendering
 
 ### Answer 📄
@@ -2049,9 +2049,9 @@ const [items, setItems] = useState(['Alice', 'Bob', 'Carol']);
 
 ## 🧠 Question 41
 
-**ID**: react-041
-**Title**: What is `useId` and when do you need it?
-**Difficulty**: Medium
+**ID**: react-041  
+**Title**: What is `useId` and when do you need it?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -2085,9 +2085,9 @@ function PasswordField() {
 
 ## 🧠 Question 42
 
-**ID**: react-042
-**Title**: What is `useSyncExternalStore` and when should you use it?
-**Difficulty**: Hard
+**ID**: react-042  
+**Title**: What is `useSyncExternalStore` and when should you use it?  
+**Difficulty**: Hard  
 **Category**: Hooks
 
 ### Answer 📄
@@ -2130,9 +2130,9 @@ All major state management libraries (Zustand, Redux, Valtio) use `useSyncExtern
 
 ## 🧠 Question 43
 
-**ID**: react-043
-**Title**: What is `useInsertionEffect` and when is it used?
-**Difficulty**: Hard
+**ID**: react-043  
+**Title**: What is `useInsertionEffect` and when is it used?  
+**Difficulty**: Hard  
 **Category**: Hooks
 
 ### Answer 📄
@@ -2166,9 +2166,9 @@ React computes DOM mutations (render phase complete)
 
 ## 🧠 Question 44
 
-**ID**: react-044
-**Title**: What is `useDebugValue` and how is it used?
-**Difficulty**: Easy
+**ID**: react-044  
+**Title**: What is `useDebugValue` and how is it used?  
+**Difficulty**: Easy  
 **Category**: Hooks
 
 ### Answer 📄
@@ -2207,9 +2207,9 @@ function useUser(id) {
 
 ## 🧠 Question 45
 
-**ID**: react-045
-**Title**: What is the difference between `createElement` and JSX?
-**Difficulty**: Easy
+**ID**: react-045  
+**Title**: What is the difference between `createElement` and JSX?  
+**Difficulty**: Easy  
 **Category**: JSX & Rendering
 
 ### Answer 📄
@@ -2269,9 +2269,9 @@ You would write `React.createElement` directly only when:
 
 ## 🧠 Question 46
 
-**ID**: react-046
-**Title**: What is the `children` prop and what patterns can you use with it?
-**Difficulty**: Easy
+**ID**: react-046  
+**Title**: What is the `children` prop and what patterns can you use with it?  
+**Difficulty**: Easy  
 **Category**: Components
 
 ### Answer 📄
@@ -2337,9 +2337,9 @@ React.Children.toArray(children).filter(Boolean);
 
 ## 🧠 Question 47
 
-**ID**: react-047
-**Title**: What are Higher-Order Components (HOCs) and when are they used?
-**Difficulty**: Medium
+**ID**: react-047  
+**Title**: What are Higher-Order Components (HOCs) and when are they used?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -2384,9 +2384,9 @@ In modern React, custom hooks have replaced most HOC use cases. Hooks are simple
 
 ## 🧠 Question 48
 
-**ID**: react-048
-**Title**: What is the render prop pattern?
-**Difficulty**: Medium
+**ID**: react-048  
+**Title**: What is the render prop pattern?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -2440,9 +2440,9 @@ Custom hooks have largely superseded render props for logic sharing. The hook ve
 
 ## 🧠 Question 49
 
-**ID**: react-049
-**Title**: What is state colocation and why does it matter?
-**Difficulty**: Medium
+**ID**: react-049  
+**Title**: What is state colocation and why does it matter?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -2497,9 +2497,9 @@ State colocation naturally reduces re-renders without needing `React.memo`, `use
 
 ## 🧠 Question 50
 
-**ID**: react-050
-**Title**: What is the compound component pattern?
-**Difficulty**: Hard
+**ID**: react-050  
+**Title**: What is the compound component pattern?  
+**Difficulty**: Hard  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -2575,9 +2575,9 @@ function App() {
 
 ## 🧠 Question 51
 
-**ID**: react-051
-**Title**: How does `useEffect` cleanup work and why is it important?
-**Difficulty**: Medium
+**ID**: react-051  
+**Title**: How does `useEffect` cleanup work and why is it important?  
+**Difficulty**: Medium  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -2626,9 +2626,9 @@ function UserProfile({ userId }) {
 
 ## 🧠 Question 52
 
-**ID**: react-052
-**Title**: What is lifting state up in React?
-**Difficulty**: Easy
+**ID**: react-052  
+**Title**: What is lifting state up in React?  
+**Difficulty**: Easy  
 **Category**: Props & State
 
 ### Answer 📄
@@ -2680,9 +2680,9 @@ function TemperatureConverter() {
 
 ## 🧠 Question 53
 
-**ID**: react-053
-**Title**: What is React's reconciliation diffing algorithm in detail?
-**Difficulty**: Hard
+**ID**: react-053  
+**Title**: What is React's reconciliation diffing algorithm in detail?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -2722,9 +2722,9 @@ For component elements of the same type, React reuses the instance and updates p
 
 ## 🧠 Question 54
 
-**ID**: react-054
-**Title**: What is `React.cloneElement` and when is it used?
-**Difficulty**: Medium
+**ID**: react-054  
+**Title**: What is `React.cloneElement` and when is it used?  
+**Difficulty**: Medium  
 **Category**: Components
 
 ### Answer 📄
@@ -2774,9 +2774,9 @@ function RadioGroup({ name, children }) {
 
 ## 🧠 Question 55
 
-**ID**: react-055
-**Title**: How do you handle forms in React with validation?
-**Difficulty**: Medium
+**ID**: react-055  
+**Title**: How do you handle forms in React with validation?  
+**Difficulty**: Medium  
 **Category**: Forms & Events
 
 ### Answer 📄
@@ -2841,9 +2841,9 @@ function SignUpForm() {
 
 ## 🧠 Question 56
 
-**ID**: react-056
-**Title**: What is `forwardRef` in React?
-**Difficulty**: Medium
+**ID**: react-056  
+**Title**: What is `forwardRef` in React?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -2903,9 +2903,9 @@ function Input({ ref, ...props }) {
 
 ## 🧠 Question 57
 
-**ID**: react-057
-**Title**: What is the React profiler and how do you use it to find performance issues?
-**Difficulty**: Medium
+**ID**: react-057  
+**Title**: What is the React profiler and how do you use it to find performance issues?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -2952,9 +2952,9 @@ The `Profiler` component has a small but non-zero overhead — use it selectivel
 
 ## 🧠 Question 58
 
-**ID**: react-058
-**Title**: What is windowing (virtualization) and when do you need it in React?
-**Difficulty**: Medium
+**ID**: react-058  
+**Title**: What is windowing (virtualization) and when do you need it in React?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -3008,9 +3008,9 @@ For simple cases with a few hundred items, `React.memo` + `useMemo` filtering is
 
 ## 🧠 Question 59
 
-**ID**: react-059
-**Title**: What are the differences between React 17 and React 18?
-**Difficulty**: Medium
+**ID**: react-059  
+**Title**: What are the differences between React 17 and React 18?  
+**Difficulty**: Medium  
 **Category**: React Basics
 
 ### Answer 📄
@@ -3052,9 +3052,9 @@ React 18 StrictMode now mounts → unmounts → remounts effects in development 
 
 ## 🧠 Question 60
 
-**ID**: react-060
-**Title**: What is `startTransition` and how is it different from `useTransition`?
-**Difficulty**: Medium
+**ID**: react-060  
+**Title**: What is `startTransition` and how is it different from `useTransition`?  
+**Difficulty**: Medium  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3111,9 +3111,9 @@ Use `startTransition` when you don't need `isPending`; use `useTransition` when 
 
 ## 🧠 Question 61
 
-**ID**: react-061
-**Title**: How does React's synthetic event system work?
-**Difficulty**: Medium
+**ID**: react-061  
+**Title**: How does React's synthetic event system work?  
+**Difficulty**: Medium  
 **Category**: React Internals
 
 ### Answer 📄
@@ -3176,9 +3176,9 @@ Use `onClickCapture` instead of `onClick` to handle events in the capture phase 
 
 ## 🧠 Question 62
 
-**ID**: react-062
-**Title**: What is `flushSync` and when do you need it?
-**Difficulty**: Hard
+**ID**: react-062  
+**Title**: What is `flushSync` and when do you need it?  
+**Difficulty**: Hard  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3226,9 +3226,9 @@ useLayoutEffect(() => {
 
 ## 🧠 Question 63
 
-**ID**: react-063
-**Title**: What is the `use()` hook in React 19?
-**Difficulty**: Medium
+**ID**: react-063  
+**Title**: What is the `use()` hook in React 19?  
+**Difficulty**: Medium  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3277,9 +3277,9 @@ function Component({ show }) {
 
 ## 🧠 Question 64
 
-**ID**: react-064
-**Title**: What is `useOptimistic` in React 19?
-**Difficulty**: Medium
+**ID**: react-064  
+**Title**: What is `useOptimistic` in React 19?  
+**Difficulty**: Medium  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3336,9 +3336,9 @@ const [optimisticState, addOptimistic] = useOptimistic(
 
 ## 🧠 Question 65
 
-**ID**: react-065
-**Title**: What is `useActionState` in React 19?
-**Difficulty**: Medium
+**ID**: react-065  
+**Title**: What is `useActionState` in React 19?  
+**Difficulty**: Medium  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3391,9 +3391,9 @@ const [state, formAction, isPending] = useActionState(action, initialState);
 
 ## 🧠 Question 66
 
-**ID**: react-066
-**Title**: What are React Server Actions?
-**Difficulty**: Hard
+**ID**: react-066  
+**Title**: What are React Server Actions?  
+**Difficulty**: Hard  
 **Category**: Server Components
 
 ### Answer 📄
@@ -3460,9 +3460,9 @@ function UserForm() {
 
 ## 🧠 Question 67
 
-**ID**: react-067
-**Title**: What is `useFormStatus` in React 19?
-**Difficulty**: Medium
+**ID**: react-067  
+**Title**: What is `useFormStatus` in React 19?  
+**Difficulty**: Medium  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3522,9 +3522,9 @@ function SubmitButton() {
 
 ## 🧠 Question 68
 
-**ID**: react-068
-**Title**: What are the ref improvements in React 19?
-**Difficulty**: Easy
+**ID**: react-068  
+**Title**: What are the ref improvements in React 19?  
+**Difficulty**: Easy  
 **Category**: React Basics
 
 ### Answer 📄
@@ -3579,9 +3579,9 @@ Previously you had to manually check for `null` inside the ref callback (React c
 
 ## 🧠 Question 69
 
-**ID**: react-069
-**Title**: How does `Suspense` work for data fetching and how does it integrate with frameworks?
-**Difficulty**: Hard
+**ID**: react-069  
+**Title**: How does `Suspense` work for data fetching and how does it integrate with frameworks?  
+**Difficulty**: Hard  
 **Category**: Concurrent React
 
 ### Answer 📄
@@ -3647,9 +3647,9 @@ function UserProfile({ id }) {
 
 ## 🧠 Question 70
 
-**ID**: react-070
-**Title**: How does error handling work with Suspense and Error Boundaries?
-**Difficulty**: Hard
+**ID**: react-070  
+**Title**: How does error handling work with Suspense and Error Boundaries?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -3731,9 +3731,9 @@ function Component() {
 
 ## 🧠 Question 71
 
-**ID**: react-071
-**Title**: What is `React.cache()` in React 19?
-**Difficulty**: Hard
+**ID**: react-071  
+**Title**: What is `React.cache()` in React 19?  
+**Difficulty**: Hard  
 **Category**: Server Components
 
 ### Answer 📄
@@ -3778,9 +3778,9 @@ async function UserAvatar({ id }) {
 
 ## 🧠 Question 72
 
-**ID**: react-072
-**Title**: What is lazy initialization in `useState`?
-**Difficulty**: Medium
+**ID**: react-072  
+**Title**: What is lazy initialization in `useState`?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -3832,9 +3832,9 @@ const [state, dispatch] = useReducer(reducer, arg, initFn);
 
 ## 🧠 Question 73
 
-**ID**: react-073
-**Title**: How do you prevent memory leaks in React components?
-**Difficulty**: Medium
+**ID**: react-073  
+**Title**: How do you prevent memory leaks in React components?  
+**Difficulty**: Medium  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -3899,9 +3899,9 @@ React 18 StrictMode deliberately mounts → unmounts → remounts effects in dev
 
 ## 🧠 Question 74
 
-**ID**: react-074
-**Title**: What is `React.Children` and when do you use it?
-**Difficulty**: Medium
+**ID**: react-074  
+**Title**: What is `React.Children` and when do you use it?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -3956,9 +3956,9 @@ function Tabs({ tabs }) {
 
 ## 🧠 Question 75
 
-**ID**: react-075
-**Title**: What is `displayName` in React and why does it matter?
-**Difficulty**: Easy
+**ID**: react-075  
+**Title**: What is `displayName` in React and why does it matter?  
+**Difficulty**: Easy  
 **Category**: React Basics
 
 ### Answer 📄
@@ -4010,9 +4010,9 @@ Libraries like `styled-components`, `Apollo Client`, and `react-query` set `disp
 
 ## 🧠 Question 76
 
-**ID**: react-076
-**Title**: How do you test React components with React Testing Library?
-**Difficulty**: Medium
+**ID**: react-076  
+**Title**: How do you test React components with React Testing Library?  
+**Difficulty**: Medium  
 **Category**: React Basics
 
 ### Answer 📄
@@ -4080,9 +4080,9 @@ test('shows user data after loading', async () => {
 
 ## 🧠 Question 77
 
-**ID**: react-077
-**Title**: How do you test custom hooks in React?
-**Difficulty**: Medium
+**ID**: react-077  
+**Title**: How do you test custom hooks in React?  
+**Difficulty**: Medium  
 **Category**: Hooks
 
 ### Answer 📄
@@ -4153,9 +4153,9 @@ Always wrap state-changing calls in `act()` to flush React's update queue before
 
 ## 🧠 Question 78
 
-**ID**: react-078
-**Title**: What is `act()` in React testing and why is it necessary?
-**Difficulty**: Medium
+**ID**: react-078  
+**Title**: What is `act()` in React testing and why is it necessary?  
+**Difficulty**: Medium  
 **Category**: React Internals
 
 ### Answer 📄
@@ -4211,9 +4211,9 @@ If you see `Warning: An update to Component inside a test was not wrapped in act
 
 ## 🧠 Question 79
 
-**ID**: react-079
-**Title**: Why does `useContext` cause unnecessary re-renders and how do you solve it?
-**Difficulty**: Hard
+**ID**: react-079  
+**Title**: Why does `useContext` cause unnecessary re-renders and how do you solve it?  
+**Difficulty**: Hard  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -4297,9 +4297,9 @@ React does not have a built-in context selector API. The recommended approach is
 
 ## 🧠 Question 80
 
-**ID**: react-080
-**Title**: What is the `key` prop trick for resetting component state?
-**Difficulty**: Medium
+**ID**: react-080  
+**Title**: What is the `key` prop trick for resetting component state?  
+**Difficulty**: Medium  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -4354,9 +4354,9 @@ useEffect(() => {
 
 ## 🧠 Question 81
 
-**ID**: react-081
-**Title**: What is the headless component pattern?
-**Difficulty**: Medium
+**ID**: react-081  
+**Title**: What is the headless component pattern?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4414,9 +4414,9 @@ function DarkModeSwitch() {
 
 ## 🧠 Question 82
 
-**ID**: react-082
-**Title**: What is the Provider pattern in React?
-**Difficulty**: Medium
+**ID**: react-082  
+**Title**: What is the Provider pattern in React?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4480,9 +4480,9 @@ function AppProviders({ children }) {
 
 ## 🧠 Question 83
 
-**ID**: react-083
-**Title**: What are Presentational and Container components?
-**Difficulty**: Easy
+**ID**: react-083  
+**Title**: What are Presentational and Container components?  
+**Difficulty**: Easy  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4550,9 +4550,9 @@ The key insight — separating concerns — remains valid; the mechanism (two co
 
 ## 🧠 Question 84
 
-**ID**: react-084
-**Title**: What is feature-based folder structure in React?
-**Difficulty**: Easy
+**ID**: react-084  
+**Title**: What is feature-based folder structure in React?  
+**Difficulty**: Easy  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4620,9 +4620,9 @@ export type { User, AuthState } from './types';
 
 ## 🧠 Question 85
 
-**ID**: react-085
-**Title**: What are barrel files and what are their trade-offs?
-**Difficulty**: Medium
+**ID**: react-085  
+**Title**: What are barrel files and what are their trade-offs?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4664,9 +4664,9 @@ If `ModuleA` is in a barrel that `ModuleA` also imports from, you get circular d
 
 ## 🧠 Question 86
 
-**ID**: react-086
-**Title**: Why does React favor composition over inheritance?
-**Difficulty**: Easy
+**ID**: react-086  
+**Title**: Why does React favor composition over inheritance?  
+**Difficulty**: Easy  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4720,9 +4720,9 @@ Custom hooks are the primary mechanism for sharing logic. They compose naturally
 
 ## 🧠 Question 87
 
-**ID**: react-087
-**Title**: How do you choose between local state, lifted state, Context, and external stores?
-**Difficulty**: Medium
+**ID**: react-087  
+**Title**: How do you choose between local state, lifted state, Context, and external stores?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -4783,9 +4783,9 @@ const count = useStore((state) => state.count);
 
 ## 🧠 Question 88
 
-**ID**: react-088
-**Title**: What is Zustand and how does it work?
-**Difficulty**: Medium
+**ID**: react-088  
+**Title**: What is Zustand and how does it work?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -4856,9 +4856,9 @@ const useStore = create(
 
 ## 🧠 Question 89
 
-**ID**: react-089
-**Title**: What is Redux Toolkit and how does it modernize Redux?
-**Difficulty**: Medium
+**ID**: react-089  
+**Title**: What is Redux Toolkit and how does it modernize Redux?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -4940,9 +4940,9 @@ RTK shines for large teams needing strict patterns and time-travel debugging. Zu
 
 ## 🧠 Question 90
 
-**ID**: react-090
-**Title**: What is TanStack Query and how does it manage server state?
-**Difficulty**: Medium
+**ID**: react-090  
+**Title**: What is TanStack Query and how does it manage server state?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -4992,9 +4992,9 @@ Server state is fundamentally different from client state — it lives remotely,
 
 ## 🧠 Question 91
 
-**ID**: react-091
-**Title**: How do you implement optimistic updates with TanStack Query?
-**Difficulty**: Hard
+**ID**: react-091  
+**Title**: How do you implement optimistic updates with TanStack Query?  
+**Difficulty**: Hard  
 **Category**: State Management
 
 ### Answer 📄
@@ -5039,9 +5039,9 @@ const toggleTodo = useMutation({
 
 ## 🧠 Question 92
 
-**ID**: react-092
-**Title**: How do you build a multi-step form in React?
-**Difficulty**: Medium
+**ID**: react-092  
+**Title**: How do you build a multi-step form in React?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5116,9 +5116,9 @@ function MultiStepForm() {
 
 ## 🧠 Question 93
 
-**ID**: react-093
-**Title**: What is the polymorphic component pattern ("as" prop)?
-**Difficulty**: Medium
+**ID**: react-093  
+**Title**: What is the polymorphic component pattern ("as" prop)?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5164,9 +5164,9 @@ function Text<T extends React.ElementType = 'p'>({
 
 ## 🧠 Question 94
 
-**ID**: react-094
-**Title**: What is the slot pattern in React?
-**Difficulty**: Medium
+**ID**: react-094  
+**Title**: What is the slot pattern in React?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5212,9 +5212,9 @@ function PageLayout({ header, sidebar, children, footer }) {
 
 ## 🧠 Question 95
 
-**ID**: react-095
-**Title**: How do you handle accessibility (a11y) in React?
-**Difficulty**: Medium
+**ID**: react-095  
+**Title**: How do you handle accessibility (a11y) in React?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5288,9 +5288,9 @@ function Modal({ isOpen, onClose, children }) {
 
 ## 🧠 Question 96
 
-**ID**: react-096
-**Title**: How do you implement internationalization (i18n) in React?
-**Difficulty**: Medium
+**ID**: react-096  
+**Title**: How do you implement internationalization (i18n) in React?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5368,9 +5368,9 @@ document.documentElement.lang = i18n.language;
 
 ## 🧠 Question 97
 
-**ID**: react-097
-**Title**: What is a design system in the context of React component libraries?
-**Difficulty**: Medium
+**ID**: react-097  
+**Title**: What is a design system in the context of React component libraries?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5434,9 +5434,9 @@ function Button({ intent, size, className, ...props }) {
 
 ## 🧠 Question 98
 
-**ID**: react-098
-**Title**: What is a good testing strategy for a React application?
-**Difficulty**: Medium
+**ID**: react-098  
+**Title**: What is a good testing strategy for a React application?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5497,9 +5497,9 @@ test('user can sign in', async ({ page }) => {
 
 ## 🧠 Question 99
 
-**ID**: react-099
-**Title**: How do you design a good component API in React?
-**Difficulty**: Medium
+**ID**: react-099  
+**Title**: How do you design a good component API in React?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5568,9 +5568,9 @@ This pattern keeps data presentation and event response cleaner.
 
 ## 🧠 Question 100
 
-**ID**: react-100
-**Title**: What is micro-frontend architecture with React?
-**Difficulty**: Hard
+**ID**: react-100  
+**Title**: What is micro-frontend architecture with React?  
+**Difficulty**: Hard  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -5629,9 +5629,9 @@ function App() {
 
 ## 🧠 Question 101
 
-**ID**: react-101
-**Title**: How does code splitting work in React beyond basic `React.lazy`?
-**Difficulty**: Medium
+**ID**: react-101  
+**Title**: How does code splitting work in React beyond basic `React.lazy`?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -5705,9 +5705,9 @@ function NavItem() {
 
 ## 🧠 Question 102
 
-**ID**: react-102
-**Title**: How do you analyze and reduce a React app's bundle size?
-**Difficulty**: Medium
+**ID**: react-102  
+**Title**: How do you analyze and reduce a React app's bundle size?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -5761,9 +5761,9 @@ After optimization, measure FCP and TBT in Lighthouse to confirm user-visible im
 
 ## 🧠 Question 103
 
-**ID**: react-103
-**Title**: How do Core Web Vitals apply to React applications?
-**Difficulty**: Hard
+**ID**: react-103  
+**Title**: How do Core Web Vitals apply to React applications?  
+**Difficulty**: Hard  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -5839,9 +5839,9 @@ onCLS((metric) =>
 
 ## 🧠 Question 104
 
-**ID**: react-104
-**Title**: What are the pitfalls of `React.memo` and how do you use its comparison function?
-**Difficulty**: Hard
+**ID**: react-104  
+**Title**: What are the pitfalls of `React.memo` and how do you use its comparison function?  
+**Difficulty**: Hard  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -5897,9 +5897,9 @@ const MemoizedRow = React.memo(
 
 ## 🧠 Question 105
 
-**ID**: react-105
-**Title**: How do you implement debounce and throttle in React hooks?
-**Difficulty**: Medium
+**ID**: react-105  
+**Title**: How do you implement debounce and throttle in React hooks?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -5985,9 +5985,9 @@ function useThrottle(value, interval) {
 
 ## 🧠 Question 106
 
-**ID**: react-106
-**Title**: How do you implement infinite scroll in React?
-**Difficulty**: Medium
+**ID**: react-106  
+**Title**: How do you implement infinite scroll in React?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6065,9 +6065,9 @@ const products = data?.pages.flatMap((page) => page.items) ?? [];
 
 ## 🧠 Question 107
 
-**ID**: react-107
-**Title**: How do you use the React Profiler to find performance bottlenecks?
-**Difficulty**: Medium
+**ID**: react-107  
+**Title**: How do you use the React Profiler to find performance bottlenecks?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6118,9 +6118,9 @@ function onRenderCallback(id, phase, actualDuration, baseDuration) {
 
 ## 🧠 Question 108
 
-**ID**: react-108
-**Title**: What are the performance trade-offs of CSS-in-JS vs CSS Modules?
-**Difficulty**: Medium
+**ID**: react-108  
+**Title**: What are the performance trade-offs of CSS-in-JS vs CSS Modules?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6182,9 +6182,9 @@ For performance-sensitive apps: CSS Modules + Tailwind or vanilla-extract.
 
 ## 🧠 Question 109
 
-**ID**: react-109
-**Title**: How do you optimize images in a React application?
-**Difficulty**: Easy
+**ID**: react-109  
+**Title**: How do you optimize images in a React application?  
+**Difficulty**: Easy  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6261,9 +6261,9 @@ function BlurImage({ src, lqip, alt, width, height }) {
 
 ## 🧠 Question 110
 
-**ID**: react-110
-**Title**: How does Streaming SSR work in React 18?
-**Difficulty**: Hard
+**ID**: react-110  
+**Title**: How does Streaming SSR work in React 18?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -6321,9 +6321,9 @@ function App() {
 
 ## 🧠 Question 111
 
-**ID**: react-111
-**Title**: What is tree shaking and how do you ensure it works in a React project?
-**Difficulty**: Medium
+**ID**: react-111  
+**Title**: What is tree shaking and how do you ensure it works in a React project?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6380,9 +6380,9 @@ import { FiSearch } from 'react-icons/fi'; // only FiSearch in bundle
 
 ## 🧠 Question 112
 
-**ID**: react-112
-**Title**: How do you optimize animation performance in React?
-**Difficulty**: Medium
+**ID**: react-112  
+**Title**: How do you optimize animation performance in React?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6460,9 +6460,9 @@ elements.forEach((el, i) => {
 
 ## 🧠 Question 113
 
-**ID**: react-113
-**Title**: What is partial hydration and the islands architecture?
-**Difficulty**: Hard
+**ID**: react-113  
+**Title**: What is partial hydration and the islands architecture?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -6512,9 +6512,9 @@ function CommentSection({ postId }) {
 
 ## 🧠 Question 114
 
-**ID**: react-114
-**Title**: How do you handle long tasks and keep React apps responsive?
-**Difficulty**: Hard
+**ID**: react-114  
+**Title**: How do you handle long tasks and keep React apps responsive?  
+**Difficulty**: Hard  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6590,9 +6590,9 @@ function useWorker(url) {
 
 ## 🧠 Question 115
 
-**ID**: react-115
-**Title**: How do you monitor React application performance in production?
-**Difficulty**: Medium
+**ID**: react-115  
+**Title**: How do you monitor React application performance in production?  
+**Difficulty**: Medium  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6664,9 +6664,9 @@ sendToAnalytics({ name: 'cart-open', value: m.duration });
 
 ## 🧠 Question 116
 
-**ID**: react-116
-**Title**: What is the complete checklist for avoiding unnecessary re-renders in React?
-**Difficulty**: Hard
+**ID**: react-116  
+**Title**: What is the complete checklist for avoiding unnecessary re-renders in React?  
+**Difficulty**: Hard  
 **Category**: Performance Optimization
 
 ### Answer 📄
@@ -6754,9 +6754,9 @@ Pass data through props or render props for subtrees that update often.
 
 ## 🧠 Question 117
 
-**ID**: react-117
-**Title**: How do you use TypeScript with React for advanced type safety?
-**Difficulty**: Medium
+**ID**: react-117  
+**Title**: How do you use TypeScript with React for advanced type safety?  
+**Difficulty**: Medium  
 **Category**: Architecture & Patterns
 
 ### Answer 📄
@@ -6855,9 +6855,9 @@ function Card({ title, className, children, ...props }: CardProps) {
 
 ## 🧠 Question 118
 
-**ID**: react-118
-**Title**: What are the key differences between React DOM and React Native?
-**Difficulty**: Easy
+**ID**: react-118  
+**Title**: What are the key differences between React DOM and React Native?  
+**Difficulty**: Easy  
 **Category**: React Basics
 
 ### Answer 📄
@@ -6911,9 +6911,9 @@ const shadow = Platform.select({
 
 ## 🧠 Question 119
 
-**ID**: react-119
-**Title**: What does `StrictMode` actually do in React 18 and why do effects run twice?
-**Difficulty**: Medium
+**ID**: react-119  
+**Title**: What does `StrictMode` actually do in React 18 and why do effects run twice?  
+**Difficulty**: Medium  
 **Category**: React Internals
 
 ### Answer 📄
@@ -6965,9 +6965,9 @@ useEffect(() => {
 
 ## 🧠 Question 120
 
-**ID**: react-120
-**Title**: What are React's priority lanes and how does the concurrent scheduler work?
-**Difficulty**: Hard
+**ID**: react-120  
+**Title**: What are React's priority lanes and how does the concurrent scheduler work?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -7024,9 +7024,9 @@ Understanding lanes explains why `useTransition` works: wrapping an update in `s
 
 ## 🧠 Question 121
 
-**ID**: react-121
-**Title**: What is a stale closure in React and how does it cause bugs in `useEffect`?
-**Difficulty**: Medium
+**ID**: react-121  
+**Title**: What is a stale closure in React and how does it cause bugs in `useEffect`?  
+**Difficulty**: Medium  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7084,9 +7084,9 @@ The `exhaustive-deps` ESLint rule catches most stale closure bugs at authoring t
 
 ## 🧠 Question 122
 
-**ID**: react-122
-**Title**: What causes infinite re-render loops in React and how do you fix them?
-**Difficulty**: Medium
+**ID**: react-122  
+**Title**: What causes infinite re-render loops in React and how do you fix them?  
+**Difficulty**: Medium  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7137,9 +7137,9 @@ Fix: memoize callbacks with `useCallback`, or restructure data flow to be unidir
 
 ## 🧠 Question 123
 
-**ID**: react-123
-**Title**: Why do object and array literals in JSX cause unnecessary re-renders?
-**Difficulty**: Easy
+**ID**: react-123  
+**Title**: Why do object and array literals in JSX cause unnecessary re-renders?  
+**Difficulty**: Easy  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7185,9 +7185,9 @@ This issue only matters for children wrapped in `React.memo` or values used in `
 
 ## 🧠 Question 124
 
-**ID**: react-124
-**Title**: What happens when you update state inside a render function?
-**Difficulty**: Easy
+**ID**: react-124  
+**Title**: What happens when you update state inside a render function?  
+**Difficulty**: Easy  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7227,9 +7227,9 @@ React allows this pattern only when the update is **conditional** and based on a
 
 ## 🧠 Question 125
 
-**ID**: react-125
-**Title**: How do race conditions occur in `useEffect` data fetching and how do you prevent them?
-**Difficulty**: Hard
+**ID**: react-125  
+**Title**: How do race conditions occur in `useEffect` data fetching and how do you prevent them?  
+**Difficulty**: Hard  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7289,9 +7289,9 @@ useEffect(() => {
 
 ## 🧠 Question 126
 
-**ID**: react-126
-**Title**: What are common mistakes when updating objects and arrays in React state?
-**Difficulty**: Easy
+**ID**: react-126  
+**Title**: What are common mistakes when updating objects and arrays in React state?  
+**Difficulty**: Easy  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7350,9 +7350,9 @@ setState(
 
 ## 🧠 Question 127
 
-**ID**: react-127
-**Title**: How does reading stale state inside async callbacks lead to bugs?
-**Difficulty**: Medium
+**ID**: react-127  
+**Title**: How does reading stale state inside async callbacks lead to bugs?  
+**Difficulty**: Medium  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7411,9 +7411,9 @@ Refs are the standard escape hatch when you need the latest value inside a long-
 
 ## 🧠 Question 128
 
-**ID**: react-128
-**Title**: What is the `exhaustive-deps` ESLint rule and when (if ever) should you suppress it?
-**Difficulty**: Medium
+**ID**: react-128  
+**Title**: What is the `exhaustive-deps` ESLint rule and when (if ever) should you suppress it?  
+**Difficulty**: Medium  
 **Category**: Edge Cases & Pitfalls
 
 ### Answer 📄
@@ -7478,9 +7478,9 @@ Suppressing without understanding the warning is how stale closure bugs are intr
 
 ## 🧠 Question 129
 
-**ID**: react-129
-**Title**: How do you split and compose multiple Context providers to avoid unnecessary re-renders?
-**Difficulty**: Medium
+**ID**: react-129  
+**Title**: How do you split and compose multiple Context providers to avoid unnecessary re-renders?  
+**Difficulty**: Medium  
 **Category**: Context API
 
 ### Answer 📄
@@ -7553,9 +7553,9 @@ This is the single most impactful optimization for Context-heavy applications.
 
 ## 🧠 Question 130
 
-**ID**: react-130
-**Title**: How do you combine `useContext` and `useReducer` as a lightweight global state solution?
-**Difficulty**: Medium
+**ID**: react-130  
+**Title**: How do you combine `useContext` and `useReducer` as a lightweight global state solution?  
+**Difficulty**: Medium  
 **Category**: Context API
 
 ### Answer 📄
@@ -7626,9 +7626,9 @@ function AddToCartButton({ product }) {
 
 ## 🧠 Question 131
 
-**ID**: react-131
-**Title**: What are context selectors and why does React not have them natively?
-**Difficulty**: Hard
+**ID**: react-131  
+**Title**: What are context selectors and why does React not have them natively?  
+**Difficulty**: Hard  
 **Category**: Context API
 
 ### Answer 📄
@@ -7677,9 +7677,9 @@ For truly granular subscriptions across a large app, Zustand or Jotai is the pra
 
 ## 🧠 Question 132
 
-**ID**: react-132
-**Title**: How do you test a component that consumes a React Context?
-**Difficulty**: Medium
+**ID**: react-132  
+**Title**: How do you test a component that consumes a React Context?  
+**Difficulty**: Medium  
 **Category**: Context API
 
 ### Answer 📄
@@ -7752,9 +7752,9 @@ Adding an `initialState` prop to your Provider from the start is a low-cost chan
 
 ## 🧠 Question 133
 
-**ID**: react-133
-**Title**: How does React Hook Form work and why does it outperform controlled components?
-**Difficulty**: Medium
+**ID**: react-133  
+**Title**: How does React Hook Form work and why does it outperform controlled components?  
+**Difficulty**: Medium  
 **Category**: Forms & Events
 
 ### Answer 📄
@@ -7830,9 +7830,9 @@ const { register, handleSubmit } = useForm({ resolver: zodResolver(schema) });
 
 ## 🧠 Question 134
 
-**ID**: react-134
-**Title**: How do you handle dynamic form fields (add/remove rows) in React?
-**Difficulty**: Medium
+**ID**: react-134  
+**Title**: How do you handle dynamic form fields (add/remove rows) in React?  
+**Difficulty**: Medium  
 **Category**: Forms & Events
 
 ### Answer 📄
@@ -7918,9 +7918,9 @@ function InvoiceForm() {
 
 ## 🧠 Question 135
 
-**ID**: react-135
-**Title**: How do you handle file uploads in React?
-**Difficulty**: Medium
+**ID**: react-135  
+**Title**: How do you handle file uploads in React?  
+**Difficulty**: Medium  
 **Category**: Forms & Events
 
 ### Answer 📄
@@ -8017,9 +8017,9 @@ Always revoke object URLs created with `URL.createObjectURL` in a cleanup functi
 
 ## 🧠 Question 136
 
-**ID**: react-136
-**Title**: How do you cancel a fetch request when a component unmounts using `AbortController`?
-**Difficulty**: Medium
+**ID**: react-136  
+**Title**: How do you cancel a fetch request when a component unmounts using `AbortController`?  
+**Difficulty**: Medium  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -8083,9 +8083,9 @@ useEffect(() => {
 
 ## 🧠 Question 137
 
-**ID**: react-137
-**Title**: What is the synchronization mental model for `useEffect` and how is it different from lifecycle thinking?
-**Difficulty**: Medium
+**ID**: react-137  
+**Title**: What is the synchronization mental model for `useEffect` and how is it different from lifecycle thinking?  
+**Difficulty**: Medium  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -8132,9 +8132,9 @@ Every `useEffect` should be readable as: _"Keep [external system] synchronized w
 
 ## 🧠 Question 138
 
-**ID**: react-138
-**Title**: How do you migrate class component lifecycle methods to hooks?
-**Difficulty**: Easy
+**ID**: react-138  
+**Title**: How do you migrate class component lifecycle methods to hooks?  
+**Difficulty**: Easy  
 **Category**: Effects & Lifecycle
 
 ### Answer 📄
@@ -8223,9 +8223,9 @@ useLayoutEffect(() => {
 
 ## 🧠 Question 139
 
-**ID**: react-139
-**Title**: What are the rules of the Client/Server boundary and the `"use client"` directive?
-**Difficulty**: Medium
+**ID**: react-139  
+**Title**: What are the rules of the Client/Server boundary and the `"use client"` directive?  
+**Difficulty**: Medium  
 **Category**: Server Components
 
 ### Answer 📄
@@ -8301,9 +8301,9 @@ Server Components passed as `children` to a Client Component are rendered on the
 
 ## 🧠 Question 140
 
-**ID**: react-140
-**Title**: How do React Server Components handle data fetching compared to client components?
-**Difficulty**: Medium
+**ID**: react-140  
+**Title**: How do React Server Components handle data fetching compared to client components?  
+**Difficulty**: Medium  
 **Category**: Server Components
 
 ### Answer 📄
@@ -8392,9 +8392,9 @@ async function Dashboard() {
 
 ## 🧠 Question 141
 
-**ID**: react-141
-**Title**: How do you pass data from a Server Component to a Client Component?
-**Difficulty**: Medium
+**ID**: react-141  
+**Title**: How do you pass data from a Server Component to a Client Component?  
+**Difficulty**: Medium  
 **Category**: Server Components
 
 ### Answer 📄
@@ -8476,9 +8476,9 @@ export default async function Layout() {
 
 ## 🧠 Question 142
 
-**ID**: react-142
-**Title**: What is the difference between server state and client state, and which tools handle each?
-**Difficulty**: Medium
+**ID**: react-142  
+**Title**: What is the difference between server state and client state, and which tools handle each?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -8522,9 +8522,9 @@ const { data } = useSWR('/api/user', fetcher); // SWR — simpler alternative
 
 ## 🧠 Question 143
 
-**ID**: react-143
-**Title**: What is normalized state and why does it matter in large React applications?
-**Difficulty**: Hard
+**ID**: react-143  
+**Title**: What is normalized state and why does it matter in large React applications?  
+**Difficulty**: Hard  
 **Category**: State Management
 
 ### Answer 📄
@@ -8596,9 +8596,9 @@ const usersSlice = createSlice({
 
 ## 🧠 Question 144
 
-**ID**: react-144
-**Title**: How does Jotai's atomic model differ from Redux and Zustand?
-**Difficulty**: Medium
+**ID**: react-144  
+**Title**: How does Jotai's atomic model differ from Redux and Zustand?  
+**Difficulty**: Medium  
 **Category**: State Management
 
 ### Answer 📄
@@ -8664,9 +8664,9 @@ Jotai feels like `useState` that can be shared across components — the right f
 
 ## 🧠 Question 145
 
-**ID**: react-145
-**Title**: How are React hooks implemented internally using a linked list?
-**Difficulty**: Hard
+**ID**: react-145  
+**Title**: How are React hooks implemented internally using a linked list?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -8720,9 +8720,9 @@ React uses position in the linked list, not names or keys. Each render must call
 
 ## 🧠 Question 146
 
-**ID**: react-146
-**Title**: Why must hooks be called in the same order every render — what breaks internally if you don't?
-**Difficulty**: Hard
+**ID**: react-146  
+**Title**: Why must hooks be called in the same order every render — what breaks internally if you don't?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -8781,9 +8781,9 @@ function UserProfile({ isLoggedIn }) {
 
 ## 🧠 Question 147
 
-**ID**: react-147
-**Title**: How does Suspense work internally — what is the "throw a Promise" mechanism?
-**Difficulty**: Hard
+**ID**: react-147  
+**Title**: How does Suspense work internally — what is the "throw a Promise" mechanism?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -8863,9 +8863,9 @@ function UserCard({ userPromise }) {
 
 ## 🧠 Question 148
 
-**ID**: react-148
-**Title**: How would you build a minimal React renderer from scratch?
-**Difficulty**: Hard
+**ID**: react-148  
+**Title**: How would you build a minimal React renderer from scratch?  
+**Difficulty**: Hard  
 **Category**: React Internals
 
 ### Answer 📄
@@ -8965,9 +8965,9 @@ function commitWork(fiber) {
 
 ## 🧠 Question 149
 
-**ID**: react-149
-**Title**: What triggers a re-render in React, and how can you prevent unnecessary ones?
-**Difficulty**: Medium
+**ID**: react-149  
+**Title**: What triggers a re-render in React, and how can you prevent unnecessary ones?  
+**Difficulty**: Medium  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -9017,9 +9017,9 @@ function Parent() {
 
 ## 🧠 Question 150
 
-**ID**: react-150
-**Title**: Walk through the React rendering pipeline from state change to painted pixels.
-**Difficulty**: Medium
+**ID**: react-150  
+**Title**: Walk through the React rendering pipeline from state change to painted pixels.  
+**Difficulty**: Medium  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -9061,9 +9061,9 @@ Trigger → Render (pure) → Reconcile (diff) → Commit (DOM) → Paint → us
 
 ## 🧠 Question 151
 
-**ID**: react-151
-**Title**: How does React 18's concurrent scheduler work and what are priority lanes?
-**Difficulty**: Hard
+**ID**: react-151  
+**Title**: How does React 18's concurrent scheduler work and what are priority lanes?  
+**Difficulty**: Hard  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -9122,9 +9122,9 @@ The scheduler uses `MessageChannel` (not `setTimeout`) for sub-millisecond sched
 
 ## 🧠 Question 152
 
-**ID**: react-152
-**Title**: Why does React.StrictMode call render and effect functions twice in development?
-**Difficulty**: Medium
+**ID**: react-152  
+**Title**: Why does React.StrictMode call render and effect functions twice in development?  
+**Difficulty**: Medium  
 **Category**: Rendering Behavior
 
 ### Answer 📄
@@ -9186,9 +9186,9 @@ Use sparingly — if you need this pattern, it often signals the initialization 
 
 ## 🧠 Question 153
 
-**ID**: react-153
-**Title**: What is the `useId` hook and how does it solve SSR hydration mismatches?
-**Difficulty**: Medium
+**ID**: react-153  
+**Title**: What is the `useId` hook and how does it solve SSR hydration mismatches?  
+**Difficulty**: Medium  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -9264,9 +9264,9 @@ Use sparingly — it silences the warning but does not fix the underlying mismat
 
 ## 🧠 Question 154
 
-**ID**: react-154
-**Title**: What are the data fetching strategies in Next.js App Router and when do you use each?
-**Difficulty**: Hard
+**ID**: react-154  
+**Title**: What are the data fetching strategies in Next.js App Router and when do you use each?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -9343,9 +9343,9 @@ export async function generateStaticParams() {
 
 ## 🧠 Question 155
 
-**ID**: react-155
-**Title**: How do you safely use browser-only APIs (window, localStorage, document) in an SSR app?
-**Difficulty**: Medium
+**ID**: react-155  
+**Title**: How do you safely use browser-only APIs (window, localStorage, document) in an SSR app?  
+**Difficulty**: Medium  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -9425,9 +9425,9 @@ const [width, setWidth] = useState(() =>
 
 ## 🧠 Question 156
 
-**ID**: react-156
-**Title**: How does selective hydration work with Suspense in React 18?
-**Difficulty**: Hard
+**ID**: react-156  
+**Title**: How does selective hydration work with Suspense in React 18?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄
@@ -9498,9 +9498,9 @@ In Next.js App Router, this is automatic — every `<Suspense>` boundary is a st
 
 ## 🧠 Question 157
 
-**ID**: react-157
-**Title**: How do you handle authentication in SSR — cookie-based auth and middleware patterns?
-**Difficulty**: Hard
+**ID**: react-157  
+**Title**: How do you handle authentication in SSR — cookie-based auth and middleware patterns?  
+**Difficulty**: Hard  
 **Category**: SSR / Hydration
 
 ### Answer 📄

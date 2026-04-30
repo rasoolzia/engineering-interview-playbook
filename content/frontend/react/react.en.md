@@ -9422,3 +9422,159 @@ const [width, setWidth] = useState(() =>
   typeof window !== 'undefined' ? window.innerWidth : 0,
 );
 ```
+
+## 🧠 Question 156
+
+**ID**: react-156
+**Title**: How does selective hydration work with Suspense in React 18?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+React 18's selective hydration allows different parts of the page to hydrate **independently and in priority order**, rather than waiting for the entire JS bundle before anything becomes interactive.
+
+**The problem with React 17 SSR:**
+
+```
+Server → sends complete HTML
+Client → downloads ALL JS → hydrates EVERYTHING at once → page becomes interactive
+(blocking: if JS is large, nothing is interactive until it's all done)
+```
+
+**React 18 with Suspense boundaries:**
+
+```jsx
+<Suspense fallback={<HeaderSkeleton />}>
+  <Header /> {/* hydrates independently */}
+</Suspense>
+
+<Suspense fallback={<MainSkeleton />}>
+  <Main /> {/* hydrates independently */}
+</Suspense>
+
+<Suspense fallback={<CommentsSkeleton />}>
+  <Comments /> {/* lowest priority — hydrates last */}
+</Suspense>
+```
+
+Each `<Suspense>` boundary becomes an **independent hydration unit**. React streams each section's HTML as its data resolves and hydrates each section as its JS chunk loads — without blocking other sections.
+
+**User-interaction priority boost:**
+If a user clicks on a section that hasn't hydrated yet, React immediately prioritizes it:
+
+```
+User clicks Comments (not yet hydrated)
+→ React pauses hydrating Main
+→ Synchronously hydrates Comments first
+→ Click event fires immediately
+→ React resumes hydrating Main
+```
+
+**The server API:**
+
+```jsx
+// Node.js server
+import { renderToPipeableStream } from 'react-dom/server';
+
+const { pipe } = renderToPipeableStream(<App />, {
+  bootstrapScripts: ['/main.js'],
+  onShellReady() {
+    res.statusCode = 200;
+    pipe(res); // starts streaming immediately, without waiting for all data
+  },
+});
+```
+
+**Three problems solved by React 18 streaming + selective hydration:**
+
+| Problem                             | React 17 SSR     | React 18                          |
+| ----------------------------------- | ---------------- | --------------------------------- |
+| Must fetch all data before HTML     | ✗ wait for all   | ✓ streams as data resolves        |
+| Must load all JS before hydrating   | ✗ all-or-nothing | ✓ hydrates sections independently |
+| Must hydrate all before interactive | ✗ blocking       | ✓ prioritizes interacted sections |
+
+In Next.js App Router, this is automatic — every `<Suspense>` boundary is a streaming boundary and selective hydration is enabled by default.
+
+## 🧠 Question 157
+
+**ID**: react-157
+**Title**: How do you handle authentication in SSR — cookie-based auth and middleware patterns?
+**Difficulty**: Hard
+**Category**: SSR / Hydration
+
+### Answer 📄
+
+Authentication in SSR requires reading credentials on the server to render personalized content while keeping tokens secure.
+
+**Why cookies, not localStorage:**
+`localStorage` is browser-only and unavailable during SSR. `httpOnly` cookies are sent with every HTTP request (including SSR), making them the standard for SSR authentication.
+
+**Next.js App Router — reading cookies in Server Components:**
+
+```jsx
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+async function DashboardPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth-token')?.value;
+
+  if (!token) redirect('/login');
+
+  const user = await validateToken(token); // server-side validation
+  return <Dashboard user={user} />;
+}
+```
+
+**Next.js Middleware — protecting routes at the edge:**
+
+```jsx
+// middleware.ts — runs before every request, at the CDN edge
+import { NextResponse } from 'next/server';
+
+export function middleware(request) {
+  const token = request.cookies.get('auth-token')?.value;
+
+  if (!token && request.nextUrl.pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/api/protected/:path*'],
+};
+```
+
+**Secure cookie settings:**
+
+| Flag                         | Purpose                                |
+| ---------------------------- | -------------------------------------- |
+| `httpOnly`                   | JS cannot read it → XSS resistant      |
+| `Secure`                     | Only sent over HTTPS                   |
+| `SameSite=Lax`               | CSRF protection for most cases         |
+| Short expiry + refresh token | Limits blast radius if token is stolen |
+
+**Avoiding hydration mismatches with auth state:**
+
+```jsx
+// PROBLEM: server renders unauthenticated, client reads token → mismatch
+function Header() {
+  const user = getClientSideUser(); // reads from localStorage — not available on server
+  return <div>{user ? user.name : 'Guest'}</div>;
+}
+
+// SOLUTION: pass user from server down as props — consistent on both sides
+async function Layout({ children }) {
+  const user = await getServerUser(); // reads from httpOnly cookie on server
+  return (
+    <>
+      <Header user={user} /> {/* same value on server and client */}
+      {children}
+    </>
+  );
+}
+```
+
+**Token refresh:** Implement refresh logic in middleware so the cookie is updated before server components even run — keeping auth state fresh without client round-trips.

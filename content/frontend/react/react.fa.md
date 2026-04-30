@@ -9422,3 +9422,159 @@ const [width, setWidth] = useState(() =>
   typeof window !== 'undefined' ? window.innerWidth : 0,
 );
 ```
+
+## 🧠 سوال 156
+
+**شناسه**: react-156
+**عنوان**: selective hydration همراه با Suspense در React 18 چگونه کار می‌کند؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+Selective hydration در React 18 اجازه می‌دهد بخش‌های مختلف صفحه **به‌صورت مستقل و بر اساس اولویت** hydrate شوند، نه اینکه کل صفحه تا بارگیری همه JS منتظر بماند.
+
+**مشکل در SSR مدل قدیمی‌تر:**
+
+```text
+Server → sends complete HTML
+Client → downloads ALL JS → hydrates EVERYTHING at once → page becomes interactive
+(مسدود کردن: اگر JS بزرگ باشد، تا زمانی که همه چیز تمام نشود، هیچ چیز تعاملی نیست)
+```
+
+**React 18 با مرزهای Suspense:**
+
+```jsx
+<Suspense fallback={<HeaderSkeleton />}>
+  <Header /> {/* hydrates independently */}
+</Suspense>
+
+<Suspense fallback={<MainSkeleton />}>
+  <Main /> {/* hydrates independently */}
+</Suspense>
+
+<Suspense fallback={<CommentsSkeleton />}>
+  <Comments /> {/* lowest priority — hydrates last */}
+</Suspense>
+```
+
+هر مرز `<Suspense>` یک **واحد hydration مستقل** می‌شود. React HTML هر بخش را به‌مرور stream می‌کند و هر قسمت را وقتی chunk JS خودش آماده شد hydrate می‌کند، بدون اینکه بقیه را block کند.
+
+**افزایش اولویت بر اساس تعامل کاربر:**
+اگر کاربر روی بخشی که هنوز hydrate نشده کلیک کند، React همان بخش را در اولویت قرار می‌دهد:
+
+```text
+User clicks Comments
+→ React pauses hydrating Main
+→ Hydrates Comments first
+→ Click event fires
+→ Resumes Main
+```
+
+**API سمت سرور:**
+
+```jsx
+// Node.js server
+import { renderToPipeableStream } from 'react-dom/server';
+
+const { pipe } = renderToPipeableStream(<App />, {
+  bootstrapScripts: ['/main.js'],
+  onShellReady() {
+    res.statusCode = 200;
+    pipe(res); // بلافاصله شروع به پخش می‌کند، بدون اینکه منتظر تمام داده‌ها بماند
+  },
+});
+```
+
+**سه مشکلی که React 18 حل می‌کند:**
+
+| مشکل                                                  | React 17 | React 18          |
+| ----------------------------------------------------- | -------- | ----------------- |
+| نیاز به آماده بودن همه data قبل از HTML               | بله      | نه، stream می‌شود |
+| نیاز به لود شدن همه JS قبل از hydration               | بله      | نه، مستقل         |
+| نیاز به کامل شدن همه hydration قبل از interactive شدن | بله      | نه، اولویت‌دار    |
+
+در Next.js App Router، این کار خودکار است - هر مرز `<Suspense>` یک مرز جریان است و هیدراسیون انتخابی به طور پیش‌فرض فعال است.
+
+## 🧠 سوال 157
+
+**شناسه**: react-157
+**عنوان**: authentication را در SSR چگونه مدیریت می‌کنید — الگوهای cookie-based auth و middleware چیست؟
+**سطح دشواری**: سخت
+**دسته‌بندی**: SSR / Hydration
+
+### پاسخ 📄
+
+Authentication در SSR یعنی باید credential را روی سرور بخوانید تا محتوای شخصی‌سازی‌شده را درست رندر کنید و در عین حال token ها امن بمانند.
+
+**چرا cookie و نه `localStorage`:**
+`localStorage` فقط در مرورگر وجود دارد و در SSR در دسترس نیست. اما cookie های `httpOnly` با هر HTTP request فرستاده می‌شوند، از جمله request مربوط به SSR، و به همین دلیل انتخاب استاندارد برای auth در SSR هستند.
+
+**خواندن cookie در Server Component های Next.js App Router:**
+
+```jsx
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+async function DashboardPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('auth-token')?.value;
+
+  if (!token) redirect('/login');
+
+  const user = await validateToken(token); // اعتبارسنجی سمت سرور
+  return <Dashboard user={user} />;
+}
+```
+
+**Middleware در Next.js — محافظت از route ها در لبه شبکه:**
+
+```jsx
+// middleware.ts - قبل از هر درخواست، در لبه CDN اجرا می‌شود
+import { NextResponse } from 'next/server';
+
+export function middleware(request) {
+  const token = request.cookies.get('auth-token')?.value;
+
+  if (!token && request.nextUrl.pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*', '/api/protected/:path*'],
+};
+```
+
+**تنظیمات امن cookie:**
+
+| Flag                         | هدف                                   |
+| ---------------------------- | ------------------------------------- |
+| `httpOnly`                   | جاوااسکریپت مرورگر به آن دسترسی ندارد |
+| `Secure`                     | فقط روی HTTPS                         |
+| `SameSite=Lax`               | کاهش ریسک CSRF                        |
+| expiry کوتاه + refresh token | محدود کردن اثر سرقت token             |
+
+**جلوگیری از hydration mismatch در auth state:**
+
+```jsx
+// مشکل: سرور Guest رندر می‌کند، کلاینت user واقعی را می‌خواند
+function Header() {
+  const user = getClientSideUser(); // از localStorage می‌خواند — روی سرور در دسترس نیست
+  return <div>{user ? user.name : 'Guest'}</div>;
+}
+
+// راه‌حل: user را از سرور بگیرید و به props بدهید
+async function Layout({ children }) {
+  const user = await getServerUser(); // از کوکی httpOnly روی سرور می‌خواند
+  return (
+    <>
+      <Header user={user} /> {/* مقدار یکسان در سرور و کلاینت */}
+      {children}
+    </>
+  );
+}
+```
+
+**Token refresh:** بهتر است منطق refresh را در middleware یا لایه سروری قرار دهید تا قبل از اجرای Server Component ها، cookie به‌روزرسانی شده باشد و state احراز هویت تازه بماند.

@@ -1,32 +1,91 @@
-# Engineering Interview Playbook
+# Developer Interview Handbook
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/rasoolzia/engineering-interview-playbook?style=social)](https://github.com/rasoolzia/engineering-interview-playbook)
-[![GitHub forks](https://img.shields.io/github/forks/rasoolzia/engineering-interview-playbook?style=social)](https://github.com/rasoolzia/engineering-interview-playbook)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/rasoolzia/developer-interview-handbook?style=social)](https://github.com/rasoolzia/developer-interview-handbook)
+[![GitHub forks](https://img.shields.io/github/forks/rasoolzia/developer-interview-handbook?style=social)](https://github.com/rasoolzia/developer-interview-handbook)
 
-## About the Project
+A practical, open-source handbook of **real-world interview questions** for **frontend, backend, and software engineering** roles — curated for modern web development.
 
-**Engineering Interview Playbook** is an open-source collection of real-world programming and technical interview questions, organized by topic and available in **English** and **Persian (Farsi)**.
+This repository contains:
 
-The goal is simple: help developers prepare better for job interviews at tech companies — from startups to big tech.
+- A curated **question bank** (organized by topic)
+- A **public JSON API** (under `public/api`) used by the website UI
 
-Questions are organized by category (Frontend, Backend, Algorithms, System Design, and more) with separate JSON files for English and Persian. This structure improves maintainability and powers a fast, visual, and interactive user experience on the website.
+Live site: **https://interview.mrzd.ir**
 
-See it in action: [https://playbook.mrzd.ir](https://playbook.mrzd.ir)
+---
 
-This repo will eventually power an interactive web app where users can:
+## What’s inside
 
-- Browse questions by category
-- Filter by difficulty (Easy / Medium / Hard)
-- Switch between English and Persian
-- Search keywords
-- View code snippets and follow-up questions
+Topics include (and will expand over time):
 
-## Current Structure (Category-based JSON files)
+- **Frontend**: HTML, CSS, JavaScript, TypeScript, React, Next.js, Vite, tooling, performance
+- **Backend**: APIs, databases, auth, caching, scalability fundamentals
+- **Browser & Web Platform**: rendering, event loop, networking, storage, security basics
+- **Software Engineering**: architecture, design principles, clean code, code review, maintainability
+- **Testing**: unit/integration/e2e concepts and tooling
+- **General**: fundamentals, debugging, CLI, Git, package managers, etc.
 
-We chose the **per-category** approach (one file per topic per language) because:
+> Note: Content is organized for fast browsing and future growth. The website reads from `public/api` to provide a searchable and visual experience.
 
-- Fewer files → easier to manage
-- One fetch per category → better performance in the future app
-- Clear separation of languages → easier translation and review
-- Still granular enough for contributions
+---
+
+## Repository structure
+
+High-level layout:
+
+- `content/` — source content organized by domain/topic (frontend, backend, general, software-engineering, testing, …)
+- `public/api/` — website-ready JSON files (what the web app fetches)
+
+This separation keeps authoring/editing clean (`content/`) while serving a stable interface to the UI (`public/api/`).
+
+---
+
+## Data format (JSON)
+
+Questions are stored as JSON objects and grouped by category/topic.  
+Exact schemas may evolve, but each question typically includes fields like:
+
+- `question`
+- `answer` (or notes / key points)
+- `difficulty` (optional: easy/medium/hard)
+- `tags` (optional)
+- `links` / `references` (optional)
+
+If you’re adding content, please follow the existing patterns in the nearest topic file.
+
+---
+
+## Contributing
+
+Contributions are welcome and encouraged.
+
+### Best ways to contribute
+
+- **Suggest new questions / topics**: open an **Issue**
+- **Fix typos, improve answers, add questions**: open a **Pull Request**
+
+### Guidelines (lightweight)
+
+- Keep questions **practical** and aligned with real interview scenarios
+- Prefer **clear, structured answers** (bullets > walls of text)
+- Add references when helpful (official docs, specs, well-known articles)
+- Avoid company-confidential or proprietary questions
+
+---
+
+## Roadmap (rough)
+
+- Improve consistency of the JSON schema across categories
+- Add difficulty ratings everywhere
+- Add better tagging & cross-topic search
+- Add more system-design and backend scalability content
+- Expand multilingual support (where applicable)
+
+---
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
+
+If you use this project in your own app/site, attribution is appreciated.
